@@ -1,0 +1,100 @@
+PLATFORM := defined("PLATFORM") or shell("uname"):trim
+MACHINE := defined("MACHINE") or shell("uname -m"):trim
+DEBUG := defined("DEBUG")
+
+CC := defined("CC") or "cc"
+AS := defined("AS") or CC
+CFLAGS := ["-pipe"]
+LDFLAGS := []
+PREBUILDS := []
+
+if defined("CFLAGS") then
+	CFLAGS:grow(defined("CFLAGS") / " ")
+end
+
+pkgconfig := fun(Args) do
+	expr('pkg-config {Args}') => fun() shell('pkg-config', Args):trim
+end
+
+c_compile := fun(Source, Object) do
+	execute(CC, '-c', CFLAGS, '-o', Object, Source)
+end
+
+c_includes := fun(Target) do
+	var Lines := shell(CC, '-c', CFLAGS, '-M -MG', Target:source)
+	Lines := Lines:replace("\\\n ", "")
+	Lines := Lines[Lines:find(": ") + 2, 0]:trim
+	var Files := Lines / r"[^\\]( +)"
+	for File in Files do
+		File := file(File:replace("\\ ", " "))
+	end
+	check(Files)
+	ret Files
+end
+
+as_compile := fun(Source, Object) do
+	execute(AS, '-c', CFLAGS, '-o', Object, Source)
+end
+
+as_includes := fun(Target) do
+	ret []
+end
+
+var SourceTypes := {
+	"c" is [c_includes, c_compile],
+	"cpp" is [c_includes, c_compile],
+	"s" is [as_includes, as_compile]
+}
+
+c_program := fun(Executable, Objects, Libraries) do
+	var Sources := []
+	for Object in Objects or [] do
+		for Extension, Functions in SourceTypes do
+			var Source := Object % Extension
+			if Source:exists then
+				Sources:put(Source)
+				var Scan := Source:scan("INCLUDES")[PREBUILDS] => Functions[1]
+				Object[Source, Scan] => (Functions[2] !! [Source])
+				exit
+			end
+		end
+	end
+	Executable[Objects, Libraries] => fun(Executable) do
+		execute(CC, '-o', Executable, Objects, Libraries, LDFLAGS)
+	end
+end
+
+c_library := fun(Library, Objects, Libraries) do
+	var Sources := []
+	for Object in Objects or [] do
+		for Extension, Functions in SourceTypes do
+			var Source := Object % Extension
+			if Source:exists then
+				Sources:put(Source)
+				var Scan := Source:scan("INCLUDES")[PREBUILDS] => Functions[1]
+				Object[Source, Scan] => (Functions[2] !! [Source])
+				exit
+			end
+		end
+	end
+	Library[Objects, Libraries] => fun(Executable) do
+		execute('ar', 'rcs', Library, Objects, Libraries)
+	end
+end
+
+PREFIX := old or file('{getenv("DESTDIR") or ""}{defined("PREFIX") or "/usr/local"}')
+INSTALL := meta("install")
+
+install := fun(Source, Target, Mode) do
+	Target[Source] => fun(Target) do
+		print(Source, " -> ", Target, "\n")
+		Target:dir:mkdir
+		Source:copy(Target)
+		Mode and execute("chmod", Mode, Target)
+	end
+	INSTALL[Target]
+	ret Target
+end
+
+TEST := meta("test")
+

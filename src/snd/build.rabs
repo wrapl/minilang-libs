@@ -1,0 +1,4 @@
+CFLAGS := old + [pkgconfig("--cflags lilv-0")]
+LDFLAGS := old + [pkgconfig("--libs lilv-0")]
+
+DEFAULT[so_module("snd/lilv.so", [file("lilv.o")])]

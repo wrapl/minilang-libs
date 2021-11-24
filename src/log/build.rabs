@@ -1,0 +1,12 @@
+scope("zlog";) do
+	let Dir := file("zlog")
+	let Lib := Dir / "src/libzlog.a" => fun(Lib) do
+		Dir:rmdir:mkdir:chdir
+		execute("wget https://github.com/HardySimpson/zlog/archive/latest-stable.tar.gz -O- | tar xvzP --strip-components=1")
+		execute("make clean")
+		execute("make WARNINGS=")
+	end
+	PREBUILDS := old + [Lib]
+	CFLAGS := old + ["-I", file("zlog/src")]
+	DEFAULT[so_module("log/zlog.so", [file("zlog.o")], [Lib])]
+end

@@ -1,0 +1,13 @@
+LIBUV := file("lib/libuv_a.a") => fun() do
+	let Dir := file("libuv"):rmdir:mkdir:chdir
+	execute("wget -nv https://dist.libuv.org/dist/v1.42.0/libuv-v1.42.0.tar.gz -O- | tar xzP --strip-components=1")
+	execute('CFLAGS=-fpic cmake . -DCMAKE_INSTALL_PREFIX={PATH} -DCMAKE_BUILD_TYPE=Release')
+	execute("make -j4")
+	execute("make install")
+end
+
+
+scope("libevent";) do
+	LDFLAGS := old + ["-levent"]
+	DEFAULT[so_module("event/libevent.so", [file("libevent.o")])]
+end

@@ -1,6 +1,8 @@
 #include <minilang/ml_library.h>
 #include <minilang/ml_macros.h>
 #include <minilang/ml_object.h>
+#include <minilang/ml_stream.h>
+#include <minilang/ml_thread.h>
 #define HAVE_PTHREADS
 #include <onion/onion.h>
 #include <onion/block.h>
@@ -13,24 +15,46 @@
 #include <string.h>
 #include <stdio.h>
 
+static ML_FLAGS2(OnionModeT,
+	"One", O_ONE,
+	"OneLoop", O_ONE_LOOP,
+	"Threaded", O_THREADED,
+	"DetachListen", O_DETACH_LISTEN,
+	"Systemd", O_SYSTEMD,
+	"Poll", O_POLL,
+	"Pool", O_POOL,
+	"NoSIGPIPE", O_NO_SIGPIPE,
+	"NoSIGTERM", O_NO_SIGTERM,
+	"SSLAvailable", O_SSL_AVAILABLE,
+	"SSLEnabed", O_SSL_ENABLED,
+	"ThreadsAvailable", O_THREADS_AVAILABLE,
+	"ThreadsEnabled", O_THREADS_ENABLED,
+	"Detached", O_DETACHED,
+	"Listening", O_LISTENING
+);
+
 typedef struct {
 	const ml_type_t *Type;
 	onion *Handle;
 } ml_onion_t;
 
-extern ml_type_t OnionT[];
+ML_TYPE(OnionT, (), "onion");
 
-ML_FUNCTION(Onion) {
+ML_METHOD(OnionT) {
 	ml_onion_t *Onion = new(ml_onion_t);
 	Onion->Type = OnionT;
-	Onion->Handle = onion_new(Count >= 1 ? ml_integer_value(Args[0]) : 0);
+	Onion->Handle = onion_new(0);
 	onion_set_client_data(Onion->Handle, Onion, NULL);
 	return (ml_value_t *)Onion;
 }
 
-ML_TYPE(OnionT, (), "onion",
-	.Constructor = (ml_value_t *)Onion
-);
+ML_METHOD(OnionT, OnionModeT) {
+	ml_onion_t *Onion = new(ml_onion_t);
+	Onion->Type = OnionT;
+	Onion->Handle = onion_new(ml_flags_value(Args[0]));
+	onion_set_client_data(Onion->Handle, Onion, NULL);
+	return (ml_value_t *)Onion;
+}
 
 ML_METHOD("listen", OnionT) {
 	ml_onion_t *Onion = (ml_onion_t *)Args[0];
@@ -46,9 +70,94 @@ ML_METHOD("listen_stop", OnionT) {
 typedef struct {
 	const ml_type_t *Type;
 	onion_handler *Handle;
+	ml_context_t *Context;
+	ml_value_t *Callback;
 } ml_onion_handler_t;
 
 ML_TYPE(OnionHandlerT, (), "onion-handler");
+
+typedef struct {
+	const ml_type_t *Type;
+	onion_request *Handle;
+} ml_onion_request_t;
+
+ML_TYPE(OnionRequestT, (), "onion-request");
+
+typedef struct {
+	const ml_type_t *Type;
+	onion_response *Handle;
+} ml_onion_response_t;
+
+ML_TYPE(OnionResponseT, (MLStreamT), "onion-response");
+
+typedef struct {
+	ml_state_t Base;
+	ml_value_t *Args[2];
+	onion_connection_status Status;
+} ml_onion_state_t;
+
+ML_TYPE(OnionStateT, (), "onion-state");
+
+static ML_ENUM2(OnionConnectionStatusT,
+	"NotProcessed", OCS_NOT_PROCESSED,
+	"NeedMoreData", OCS_NEED_MORE_DATA,
+	"Processed", OCS_PROCESSED,
+	"CloseConnection", OCS_CLOSE_CONNECTION,
+	"KeepAlive", OCS_KEEP_ALIVE,
+	"Websocket", OCS_WEBSOCKET,
+	"RequestReady", OCS_REQUEST_READY,
+	"InternalError", OCS_INTERNAL_ERROR,
+	"NotImplemented", OCS_NOT_IMPLEMENTED,
+	"Forbidden", OCS_FORBIDDEN,
+	"Yield", OCS_YIELD
+);
+
+static ml_value_t *ml_onion_state_run(ml_onion_state_t *State, ml_value_t *Result) {
+	if (ml_is_error(Result)) {
+		printf("Error: %s\n", ml_error_message(Result));
+		ml_source_t Source;
+		int Level = 0;
+		while (ml_error_source(Result, Level++, &Source)) {
+			printf("\t%s:%d\n", Source.Name, Source.Line);
+		}
+		State->Status = OCS_INTERNAL_ERROR;
+		return Result;
+	}
+	if (State->Status == OCS_NOT_PROCESSED) {
+		if (ml_is(Result, OnionConnectionStatusT)) {
+			State->Status = ml_enum_value(Result);
+		} else {
+			State->Status = OCS_PROCESSED;
+		}
+	}
+	//ml_onion_request_t *Request = (ml_onion_request_t *)State->Args[0];
+	//ml_onion_request_t *Response = (ml_onion_request_t *)State->Args[1];
+	//onion_request_free(Request->Handle);
+	//onion_response_free(Response->Handle);
+	return Result;
+}
+
+static onion_connection_status ml_onion_handler(ml_onion_handler_t *Handler, onion_request *Req, onion_response *Res) {
+	ml_onion_request_t *Request = new(ml_onion_request_t);
+	Request->Type = OnionRequestT;
+	Request->Handle = Req;
+	ml_onion_response_t *Response = new(ml_onion_response_t);
+	Response->Type = OnionResponseT;
+	Response->Handle = Res;
+	ml_onion_state_t *State = new(ml_onion_state_t);
+	State->Base.Type = OnionStateT;
+	State->Base.run = (void *)ml_onion_state_run;
+	State->Base.Context = Handler->Context;
+	State->Args[0] = (ml_value_t *)Request;
+	State->Args[1] = (ml_value_t *)Response;
+	State->Status = OCS_NOT_PROCESSED;
+	ml_call((ml_state_t *)State, Handler->Callback, 2, State->Args);
+	if (State->Status == OCS_NOT_PROCESSED) {
+		return (State->Status = OCS_YIELD);
+	} else {
+		return State->Status;
+	}
+}
 
 ML_METHOD("get_root_handler", OnionT) {
 	ml_onion_t *Onion = (ml_onion_t *)Args[0];
@@ -61,15 +170,53 @@ ML_METHOD("get_root_handler", OnionT) {
 ML_METHOD("set_root_handler", OnionT, OnionHandlerT) {
 	ml_onion_t *Onion = (ml_onion_t *)Args[0];
 	ml_onion_handler_t *Handler = (ml_onion_handler_t *)Args[1];
+	if (onion_flags(Onion->Handle) & O_THREADS_ENABLED) {
+		ml_value_t *Error = ml_is_threadsafe(Handler->Callback);
+		if (Error) return Error;
+	}
 	onion_set_root_handler(Onion->Handle, Handler->Handle);
 	return Args[0];
+}
+
+ML_METHODX("set_root_handler", OnionT, MLFunctionT) {
+	ml_onion_t *Onion = (ml_onion_t *)Args[0];
+	if (onion_flags(Onion->Handle) & O_THREADS_ENABLED) {
+		ml_value_t *Error = ml_is_threadsafe(Args[1]);
+		if (Error) ML_RETURN(Error);
+	}
+	ml_onion_handler_t *Handler = new(ml_onion_handler_t);
+	Handler->Type = OnionHandlerT;
+	Handler->Handle = onion_handler_new((void *)ml_onion_handler, Handler, NULL);
+	Handler->Context = Caller->Context;
+	Handler->Callback = Args[1];
+	onion_set_root_handler(Onion->Handle, Handler->Handle);
+	ML_RETURN(Onion);
 }
 
 ML_METHOD("set_internal_error_handler", OnionT, OnionHandlerT) {
 	ml_onion_t *Onion = (ml_onion_t *)Args[0];
 	ml_onion_handler_t *Handler = (ml_onion_handler_t *)Args[1];
+	if (onion_flags(Onion->Handle) & O_THREADS_ENABLED) {
+		ml_value_t *Error = ml_is_threadsafe(Handler->Callback);
+		if (Error) return Error;
+	}
 	onion_set_internal_error_handler(Onion->Handle, Handler->Handle);
 	return Args[0];
+}
+
+ML_METHODX("set_internal_error_handler", OnionT, MLFunctionT) {
+	ml_onion_t *Onion = (ml_onion_t *)Args[0];
+	if (onion_flags(Onion->Handle) & O_THREADS_ENABLED) {
+		ml_value_t *Error = ml_is_threadsafe(Args[1]);
+		if (Error) ML_RETURN(Error);
+	}
+	ml_onion_handler_t *Handler = new(ml_onion_handler_t);
+	Handler->Type = OnionHandlerT;
+	Handler->Handle = onion_handler_new((void *)ml_onion_handler, Handler, NULL);
+	Handler->Context = Caller->Context;
+	Handler->Callback = Args[1];
+	onion_set_internal_error_handler(Onion->Handle, Handler->Handle);
+	ML_RETURN(Onion);
 }
 
 ML_METHOD("set_hostname", OnionT, MLStringT) {
@@ -83,13 +230,6 @@ ML_METHOD("set_port", OnionT, MLStringT) {
 	onion_set_port(Onion->Handle, ml_string_value(Args[1]));
 	return Args[0];
 }
-
-typedef struct {
-	const ml_type_t *Type;
-	onion_request *Handle;
-} ml_onion_request_t;
-
-ML_TYPE(OnionRequestT, (), "onion-request");
 
 ML_METHOD("get_path", OnionRequestT) {
 	ml_onion_request_t *Request = (ml_onion_request_t *)Args[0];
@@ -133,13 +273,6 @@ ML_METHOD("get_data", OnionRequestT) {
 	return ml_string(onion_block_data(Block), onion_block_size(Block));
 }
 
-typedef struct {
-	const ml_type_t *Type;
-	onion_response *Handle;
-} ml_onion_response_t;
-
-ML_TYPE(OnionResponseT, (), "onion-response");
-
 ML_METHOD("set_code", OnionResponseT, MLIntegerT) {
 	ml_onion_response_t *Response = (ml_onion_response_t *)Args[0];
 	onion_response_set_code(Response->Handle, ml_integer_value(Args[1]));
@@ -173,81 +306,22 @@ ML_METHOD("flush", OnionResponseT) {
 	return Args[0];
 }
 
-typedef struct {
-	ml_state_t Base;
-	ml_value_t *Args[2];
-	onion_connection_status Status;
-} ml_onion_state_t;
-
-ML_TYPE(OnionStateT, (), "onion-state");
-
-static ML_ENUM2(OnionConnectionStatusT,
-	"NotProcessed", OCS_NOT_PROCESSED,
-	"NeedMoreData", OCS_NEED_MORE_DATA,
-	"Processed", OCS_PROCESSED,
-	"CloseConnection", OCS_CLOSE_CONNECTION,
-	"KeepAlive", OCS_KEEP_ALIVE,
-	"Websocket", OCS_WEBSOCKET,
-	"RequestReady", OCS_REQUEST_READY,
-	"InternalError", OCS_INTERNAL_ERROR,
-	"NotImplemented", OCS_NOT_IMPLEMENTED,
-	"Forbidden", OCS_FORBIDDEN,
-	"Yield", OCS_YIELD
-);
-
-static ml_value_t *ml_onion_state_run(ml_onion_state_t *State, ml_value_t *Result) {
-	if (Result->Type == MLErrorT) {
-		printf("Error: %s\n", ml_error_message(Result));
-		ml_source_t Source;
-		int Level = 0;
-		while (ml_error_source(Result, Level++, &Source)) {
-			printf("\t%s:%d\n", Source.Name, Source.Line);
-		}
-		State->Status = OCS_INTERNAL_ERROR;
-		return Result;
-	}
-	if (State->Status == OCS_NOT_PROCESSED) {
-		if (Result->Type == OnionConnectionStatusT) {
-			State->Status = ml_enum_value(Result);
-		} else {
-			State->Status = OCS_PROCESSED;
-		}
-	}
-	//ml_onion_request_t *Request = (ml_onion_request_t *)State->Args[0];
-	//ml_onion_request_t *Response = (ml_onion_request_t *)State->Args[1];
-	//onion_request_free(Request->Handle);
-	//onion_response_free(Response->Handle);
-	return Result;
-}
-
-static onion_connection_status ml_onion_handler(ml_value_t *Callback, onion_request *Req, onion_response *Res) {
-	ml_onion_request_t *Request = new(ml_onion_request_t);
-	Request->Type = OnionRequestT;
-	Request->Handle = Req;
-	ml_onion_response_t *Response = new(ml_onion_response_t);
-	Response->Type = OnionResponseT;
-	Response->Handle = Res;
-	ml_onion_state_t *State = new(ml_onion_state_t);
-	State->Base.Type = OnionStateT;
-	State->Base.run = (void *)ml_onion_state_run;
-	State->Base.Context = &MLRootContext;
-	// TODO: Replace this with the proper context
-	State->Args[0] = (ml_value_t *)Request;
-	State->Args[1] = (ml_value_t *)Response;
-	State->Status = OCS_NOT_PROCESSED;
-	Callback->Type->call((ml_state_t *)State, Callback, 2, State->Args);
-	if (State->Status == OCS_NOT_PROCESSED) {
-		return (State->Status = OCS_YIELD);
+static void ML_TYPED_FN(ml_stream_write, OnionResponseT, ml_state_t *Caller, ml_onion_response_t *Response, const void *Address, int Count) {
+	ssize_t Result = onion_response_write(Response->Handle, Address, Count);
+	if (Result < 0) {
+		ML_ERROR("OnionError", "Error writing response");
 	} else {
-		return State->Status;
+		ML_RETURN(ml_integer(Result));
 	}
 }
 
-ML_METHOD(OnionHandlerT, MLFunctionT) {
+ML_METHODX(OnionHandlerT, MLFunctionT) {
 	ml_onion_handler_t *Handler = new(ml_onion_handler_t);
 	Handler->Type = OnionHandlerT;
-	Handler->Handle = onion_handler_new((void *)ml_onion_handler, Args[0], NULL);
-	return (ml_value_t*)Handler;
+	Handler->Handle = onion_handler_new((void *)ml_onion_handler, Handler, NULL);
+	Handler->Context = Caller->Context;
+	Handler->Callback = Args[0];
+	ML_RETURN(Handler);
 }
 
 ML_METHOD(OnionHandlerT, MLStringT) {
@@ -274,9 +348,10 @@ ML_METHOD("add", OnionHandlerT, OnionHandlerT) {
 typedef struct ml_onion_url_t {
 	const ml_type_t *Type;
 	onion_url *Handle;
+	stringmap_t Callbacks[1];
 } ml_onion_url_t;
 
-ML_TYPE(OnionUrlT, (), "onion-url");
+extern ml_type_t OnionUrlT[];
 
 ML_METHOD("root_url", OnionT) {
 	ml_onion_t *Onion = (ml_onion_t *)Args[0];
@@ -286,17 +361,25 @@ ML_METHOD("root_url", OnionT) {
 	return (ml_value_t *)Url;
 }
 
-static ml_value_t *ml_onion_url_new_fn(void *Data, int Count, ml_value_t **Args) {
+ML_FUNCTION(OnionUrl) {
 	ml_onion_url_t *Url = new(ml_onion_url_t);
 	Url->Type = OnionUrlT;
 	Url->Handle = onion_url_new();
 	return (ml_value_t *)Url;
 }
 
-ML_METHOD("add", OnionUrlT, MLStringT, MLFunctionT) {
+ML_TYPE(OnionUrlT, (), "onion-url",
+	.Constructor = (ml_value_t *)OnionUrl
+);
+
+ML_METHODX("add", OnionUrlT, MLStringT, MLFunctionT) {
 	ml_onion_url_t *Url = (ml_onion_url_t *)Args[0];
-	onion_url_add_with_data(Url->Handle, ml_string_value(Args[1]), ml_onion_handler, Args[2], NULL);
-	return Args[0];
+	ml_onion_handler_t *Handler = new(ml_onion_handler_t);
+	Handler->Type = OnionHandlerT;
+	Handler->Context = Caller->Context;
+	Handler->Callback = Args[2];
+	onion_url_add_with_data(Url->Handle, ml_string_value(Args[1]), ml_onion_handler, Handler, NULL);
+	ML_RETURN(Url);
 }
 
 ML_METHOD("add", OnionUrlT, MLStringT, OnionHandlerT) {
@@ -321,75 +404,58 @@ ML_METHOD("to_handler", OnionUrlT) {
 }
 
 typedef struct ml_onion_websocket_t {
-	const ml_type_t *Type;
+	ml_state_t Base;
 	onion_websocket *Handle;
 	ml_value_t *Callback;
-	ml_stringbuffer_t Buffer[1];
+	ml_value_t *Args[1];
 } ml_onion_websocket_t;
 
-extern ml_type_t OnionWebsocketT[];
+static void ml_onion_websocket_run(ml_onion_websocket_t *Websocket, ml_value_t *Result) {
+}
 
 static onion_connection_status ml_onion_websocket_callback(ml_onion_websocket_t *Websocket, onion_websocket *Handle, ssize_t DataReadyLength) {
+	ml_stringbuffer_t Buffer[1] = {ML_STRINGBUFFER_INIT};
 	if (DataReadyLength >= 0) {
-		char Buffer[128];
-		ml_value_t *Result = MLNil;
-		while (DataReadyLength > 128) {
-			int Size = onion_websocket_read(Handle, Buffer, 128);
-			if (Size < 0) {
-				Result = ml_error("ReadError", "Error reading from websocket: %s", strerror(errno));
-				goto done;
-			}
-			ml_stringbuffer_write(Websocket->Buffer, Buffer, Size);
-			DataReadyLength -= Size;
-		}
+		char Temp[128];
 		while (DataReadyLength > 0) {
-			int Size = onion_websocket_read(Handle, Buffer, DataReadyLength);
-			if (Size < 0) {
-				Result = ml_error("ReadError", "Error reading from websocket: %s", strerror(errno));
-				goto done;
+			int Request = DataReadyLength < 128 ? DataReadyLength : 128;
+			int Actual = onion_websocket_read(Handle, Temp, Request);
+			if (Actual < 0) {
+				Websocket->Args[0] = ml_error("ReadError", "Error reading from websocket: %s", strerror(errno));
+				ml_call((ml_state_t *)Websocket, Websocket->Callback, 1, Websocket->Args);
+				return OCS_INTERNAL_ERROR;
 			}
-			ml_stringbuffer_write(Websocket->Buffer, Buffer, Size);
-			DataReadyLength -= Size;
+			ml_stringbuffer_write(Buffer, Temp, Actual);
+			DataReadyLength -= Actual;
 		}
-	done:
-		if (Result->Type == MLErrorT) {
-			printf("Error: %s\n", ml_error_message(Result));
-			ml_source_t Source;
-			int Level = 0;
-			while (ml_error_source(Result, Level++, &Source)) {
-				printf("\t%s:%d\n", Source.Name, Source.Line);
-			}
-			return OCS_INTERNAL_ERROR;
-		}
-		if (Result->Type == OnionConnectionStatusT) {
-			return ml_enum_value(Result);
-		} else {
-			return OCS_NEED_MORE_DATA;
-		}
+		Websocket->Args[0] = ml_stringbuffer_get_value(Buffer);
+		ml_call((ml_state_t *)Websocket, Websocket->Callback, 1, Websocket->Args);
+		return OCS_NEED_MORE_DATA;
 	} else {
-		ml_value_t *Result = ml_simple_inline(Websocket->Callback, 1, MLNil);
-		if (Result->Type == OnionConnectionStatusT) {
-			return ml_enum_value(Result);
-		} else {
-			return OCS_CLOSE_CONNECTION;
-		}
+		Websocket->Args[0] = MLNil;
+		ml_call((ml_state_t *)Websocket, Websocket->Callback, 1, Websocket->Args);
+		return OCS_CLOSE_CONNECTION;
 	}
 }
 
-ML_FUNCTION(OnionWebsocket) {
-	ML_CHECK_ARG_COUNT(2);
-	ML_CHECK_ARG_TYPE(0, OnionRequestT);
-	ML_CHECK_ARG_TYPE(1, OnionResponseT);
+extern ml_type_t OnionWebsocketT[];
+
+ML_FUNCTIONX(OnionWebsocket) {
+	ML_CHECKX_ARG_COUNT(2);
+	ML_CHECKX_ARG_TYPE(0, OnionRequestT);
+	ML_CHECKX_ARG_TYPE(1, OnionResponseT);
 	ml_onion_request_t *Request = (ml_onion_request_t *)Args[0];
 	ml_onion_response_t *Response = (ml_onion_response_t *)Args[1];
 	onion_websocket *Handle = onion_websocket_new(Request->Handle, Response->Handle);
-	if (!Handle) return MLNil;
+	if (!Handle) ML_RETURN(MLNil);
 	ml_onion_websocket_t *Websocket = new(ml_onion_websocket_t);
-	Websocket->Type = OnionWebsocketT;
+	Websocket->Base.Type = OnionWebsocketT;
+	Websocket->Base.Context = Caller->Context;
+	Websocket->Base.run = (ml_state_fn)ml_onion_websocket_run;
 	Websocket->Handle = Handle;
 	onion_websocket_set_userdata(Handle, Websocket, NULL);
 	onion_websocket_set_callback(Websocket->Handle, (void *)ml_onion_websocket_callback);
-	return (ml_value_t *)Websocket;
+	ML_RETURN(Websocket);
 }
 
 ML_TYPE(OnionWebsocketT, (), "onion-websocket",
@@ -443,6 +509,8 @@ void ml_library_entry0(ml_value_t **Slot) {
 		GC_pthread_exit, GC_pthread_sigmask
 	);
 #include "onion_init.c"
+	stringmap_insert(OnionT->Exports, "mode", OnionModeT);
+	stringmap_insert(OnionT->Exports, "url", OnionUrlT);
 	stringmap_insert(OnionT->Exports, "handler", OnionHandlerT);
 	stringmap_insert(OnionT->Exports, "websocket", OnionWebsocketT);
 	stringmap_insert(OnionT->Exports, "connection_status", OnionConnectionStatusT);

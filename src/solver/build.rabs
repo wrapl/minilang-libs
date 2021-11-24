@@ -1,0 +1,9 @@
+scope("kiwi";) do
+	let Dir := file("kiwi") => fun(Dir) do
+		Dir:rmdir
+		execute("git clone https://github.com/nucleic/kiwi", Dir)
+	end
+	PREBUILDS := old + [Dir]
+	CFLAGS := old + ["-I", file("kiwi")]
+	DEFAULT[so_module("solver/kiwi.so", [file("kiwi.o")])]
+end

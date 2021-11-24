@@ -57,7 +57,7 @@ end
 
 mini_module := fun(Name) do
 	let Library := MODULE_DIR / Name
-	let Source := file(Name)
+	let Source := file((Name / "/")[-1])
 	install(Library, InstallModules / Name)
 	Library[Source] => fun(Target) do
 		print(Source, " -> ", Target, "\n")
@@ -88,5 +88,10 @@ CFLAGS := [
 LDFLAGS := ["-lm", "-ldl", '-Wl,--dynamic-list={file("exports.lst")}']
 
 subdir("db")
+subdir("event")
+subdir("fmt")
+subdir("log")
+subdir("parse")
 subdir("snd")
+subdir("solver")
 subdir("web")

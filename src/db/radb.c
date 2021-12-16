@@ -184,7 +184,7 @@ ML_METHOD("set", CborStoreT, MLIntegerT, MLAnyT) {
 	size_t Index = ml_integer_value_fast(Args[1]);
 	string_store_writer_t Writer[1];
 	string_store_writer_open(Writer, Store->Handle, Index);
-	ml_value_t *Error = ml_cbor_write(Args[2], Writer, (void *)string_store_writer_write);
+	ml_value_t *Error = ml_cbor_write(Args[2], Writer, (void *)string_store_writer_write, NULL);
 	if (Error) return Error;
 	return Args[2];
 }
@@ -298,7 +298,7 @@ ML_METHOD("close", CborIndexT) {
 ML_METHOD("insert", CborIndexT, MLAnyT) {
 	ml_string_index_t *Store = (ml_string_index_t *)Args[0];
 	CHECK_HANDLE(Store);
-	ml_cbor_t Cbor = ml_to_cbor(Args[1]);
+	ml_cbor_t Cbor = ml_to_cbor(Args[1], NULL);
 	if (!Cbor.Length) return Cbor.Error;
 	size_t Index = string_index_insert(Store->Handle, Cbor.Data, Cbor.Length);
 	return ml_integer(Index);
@@ -307,7 +307,7 @@ ML_METHOD("insert", CborIndexT, MLAnyT) {
 ML_METHOD("search", CborIndexT, MLAnyT) {
 	ml_string_index_t *Store = (ml_string_index_t *)Args[0];
 	CHECK_HANDLE(Store);
-	ml_cbor_t Cbor = ml_to_cbor(Args[1]);
+	ml_cbor_t Cbor = ml_to_cbor(Args[1], NULL);
 	if (!Cbor.Length) return Cbor.Error;
 	size_t Index = string_index_search(Store->Handle, Cbor.Data, Cbor.Length);
 	if (Index == INVALID_INDEX) return MLNil;

@@ -15,7 +15,7 @@
 #include <string.h>
 #include <stdio.h>
 
-static ML_FLAGS2(OnionModeT,
+static ML_FLAGS2(OnionModeT, "onion::mode",
 	"One", O_ONE,
 	"OneLoop", O_ONE_LOOP,
 	"Threaded", O_THREADED,
@@ -98,7 +98,7 @@ typedef struct {
 
 ML_TYPE(OnionStateT, (), "onion-state");
 
-static ML_ENUM2(OnionConnectionStatusT,
+static ML_ENUM2(OnionConnectionStatusT, "onion::connection_status",
 	"NotProcessed", OCS_NOT_PROCESSED,
 	"NeedMoreData", OCS_NEED_MORE_DATA,
 	"Processed", OCS_PROCESSED,
@@ -468,7 +468,7 @@ ML_METHOD("set_callback", OnionWebsocketT, MLFunctionT) {
 	return Args[0];
 }
 
-static ML_ENUM2(OnionWebsocketOpcodeT,
+static ML_ENUM2(OnionWebsocketOpcodeT, "onion::websocket_opcode",
 	"Text", OWS_TEXT,
 	"Binary", OWS_BINARY,
 	"ConnectionClose", OWS_CONNECTION_CLOSE,

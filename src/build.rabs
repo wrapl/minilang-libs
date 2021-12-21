@@ -90,6 +90,7 @@ LDFLAGS := ["-lm", "-ldl", '-Wl,--dynamic-list={file("exports.lst")}']
 subdir("db")
 subdir("event")
 subdir("fmt")
+subdir("img")
 subdir("log")
 subdir("parse")
 subdir("snd")

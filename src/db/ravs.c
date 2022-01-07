@@ -68,10 +68,9 @@ ML_METHOD("changes", VersionStoreT, MLIntegerT) {
 ML_METHOD("add", VersionStoreT, MLAnyT) {
 	ml_version_store_t *Store = (ml_version_store_t *)Args[0];
 	CHECK_HANDLE(Store);
-	ml_stringbuffer_t Buffer[1] = {ML_STRINGBUFFER_INIT};
-	ml_cbor_write(Args[1], Buffer, (void *)ml_stringbuffer_write, NULL);
-	int Length = Buffer->Length;
-	size_t Index = version_store_value_create(Store->Handle, ml_stringbuffer_get_string(Buffer), Length);
+	ml_cbor_t Cbor = ml_to_cbor(Args[1]);
+	if (!Cbor.Length) return Cbor.Error;
+	size_t Index = version_store_value_create(Store->Handle, Cbor.Data, Cbor.Length);
 	return ml_integer(Index);
 }
 
@@ -79,20 +78,10 @@ ML_METHOD("set", VersionStoreT, MLIntegerT, MLAnyT) {
 	ml_version_store_t *Store = (ml_version_store_t *)Args[0];
 	CHECK_HANDLE(Store);
 	size_t Index = ml_integer_value_fast(Args[1]);
-	ml_stringbuffer_t Buffer[1] = {ML_STRINGBUFFER_INIT};
-	ml_cbor_write(Args[2], Buffer, (void *)ml_stringbuffer_write, NULL);
-	int Length = Buffer->Length;
-	version_store_value_update(Store->Handle, Index, ml_stringbuffer_get_string(Buffer), Length);
+	ml_cbor_t Cbor = ml_to_cbor(Args[2]);
+	if (!Cbor.Length) return Cbor.Error;
+	version_store_value_update(Store->Handle, Index, Cbor.Data, Cbor.Length);
 	return MLNil;
-}
-
-static ml_value_t *ml_value_fn(ml_value_t *Callback, ml_value_t *Value) {
-	return ml_simple_inline(Callback, 1, Value);
-}
-
-static ml_tag_t ml_value_tag_fn(uint64_t Tag, ml_value_t *Callback, void **Data) {
-	Data[0] = ml_simple_inline(Callback, 1, ml_integer(Tag));
-	return (ml_tag_t)ml_value_fn;
 }
 
 ML_METHOD("get", VersionStoreT, MLIntegerT) {
@@ -102,7 +91,7 @@ ML_METHOD("get", VersionStoreT, MLIntegerT) {
 	size_t Length = version_store_value_size(Store->Handle, Index);
 	void *Buffer = GC_malloc_atomic(Length);
 	version_store_value_get(Store->Handle, Index, Buffer, Length);
-	ml_cbor_reader_t *Cbor = ml_cbor_reader_new(Count > 2 ? Args[2] : MLNil, (void *)ml_value_tag_fn);
+	ml_cbor_reader_t *Cbor = ml_cbor_reader_new(NULL);
 	ml_cbor_reader_read(Cbor, Buffer, Length);
 	return ml_cbor_reader_get(Cbor);
 }
@@ -133,7 +122,7 @@ ML_METHOD("get", VersionStoreT, MLIntegerT, MLIntegerT) {
 	size_t Length = version_store_value_revision_size(Store->Handle, Index, Change);
 	void *Buffer = GC_malloc_atomic(Length);
 	version_store_value_revision_get(Store->Handle, Index, Change, Buffer, Length);
-	ml_cbor_reader_t *Cbor = ml_cbor_reader_new(Count > 2 ? Args[2] : MLNil, (void *)ml_value_tag_fn);
+	ml_cbor_reader_t *Cbor = ml_cbor_reader_new(NULL);
 	ml_cbor_reader_read(Cbor, Buffer, Length);
 	return ml_cbor_reader_get(Cbor);
 }

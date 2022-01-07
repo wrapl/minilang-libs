@@ -151,22 +151,13 @@ ML_METHOD("close", CborStoreT) {
 	return MLNil;
 }
 
-static ml_value_t *ml_value_fn(ml_value_t *Callback, ml_value_t *Value) {
-	return ml_simple_inline(Callback, 1, Value);
-}
-
-static ml_tag_t ml_value_tag_fn(uint64_t Tag, ml_value_t *Callback, void **Data) {
-	Data[0] = ml_simple_inline(Callback, 1, ml_integer(Tag));
-	return (ml_tag_t)ml_value_fn;
-}
-
 ML_METHOD("get", CborStoreT, MLIntegerT) {
 	ml_string_store_t *Store = (ml_string_store_t *)Args[0];
 	CHECK_HANDLE(Store);
 	size_t Index = ml_integer_value_fast(Args[1]);
 	size_t Length = string_store_size(Store->Handle, Index);
 	if (Length == INVALID_INDEX) return ml_error("IndexError", "Invalid index");
-	ml_cbor_reader_t *Cbor = ml_cbor_reader_new(Count > 2 ? Args[2] : MLNil, (void *)ml_value_tag_fn);
+	ml_cbor_reader_t *Cbor = ml_cbor_reader_new(NULL);
 	string_store_reader_t Reader[1];
 	string_store_reader_open(Reader, Store->Handle, Index);
 	unsigned char Buffer[16];
@@ -184,7 +175,8 @@ ML_METHOD("set", CborStoreT, MLIntegerT, MLAnyT) {
 	size_t Index = ml_integer_value_fast(Args[1]);
 	string_store_writer_t Writer[1];
 	string_store_writer_open(Writer, Store->Handle, Index);
-	ml_value_t *Error = ml_cbor_write(Args[2], Writer, (void *)string_store_writer_write, NULL);
+	ml_cbor_writer_t *CborWriter = ml_cbor_writer_new(Writer, (void *)string_store_writer_write);
+	ml_value_t *Error = ml_cbor_write(CborWriter, Args[2]);
 	if (Error) return Error;
 	return Args[2];
 }
@@ -298,7 +290,7 @@ ML_METHOD("close", CborIndexT) {
 ML_METHOD("insert", CborIndexT, MLAnyT) {
 	ml_string_index_t *Store = (ml_string_index_t *)Args[0];
 	CHECK_HANDLE(Store);
-	ml_cbor_t Cbor = ml_to_cbor(Args[1], NULL);
+	ml_cbor_t Cbor = ml_to_cbor(Args[1]);
 	if (!Cbor.Length) return Cbor.Error;
 	size_t Index = string_index_insert(Store->Handle, Cbor.Data, Cbor.Length);
 	return ml_integer(Index);
@@ -307,7 +299,7 @@ ML_METHOD("insert", CborIndexT, MLAnyT) {
 ML_METHOD("search", CborIndexT, MLAnyT) {
 	ml_string_index_t *Store = (ml_string_index_t *)Args[0];
 	CHECK_HANDLE(Store);
-	ml_cbor_t Cbor = ml_to_cbor(Args[1], NULL);
+	ml_cbor_t Cbor = ml_to_cbor(Args[1]);
 	if (!Cbor.Length) return Cbor.Error;
 	size_t Index = string_index_search(Store->Handle, Cbor.Data, Cbor.Length);
 	if (Index == INVALID_INDEX) return MLNil;
@@ -322,7 +314,7 @@ ML_METHOD("get", CborIndexT, MLIntegerT) {
 	char *Bytes = snew(Size + 1);
 	string_index_get(Store->Handle, Index, Bytes, Size);
 	ml_cbor_t Cbor = {{Bytes}, Size};
-	return ml_from_cbor(Cbor, MLNil, (void *)ml_value_tag_fn);
+	return ml_from_cbor(Cbor, NULL);
 }
 
 void ml_library_entry0(ml_value_t **Slot) {

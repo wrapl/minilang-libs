@@ -91,7 +91,7 @@ ML_METHOD("get", VersionStoreT, MLIntegerT) {
 	size_t Length = version_store_value_size(Store->Handle, Index);
 	void *Buffer = GC_malloc_atomic(Length);
 	version_store_value_get(Store->Handle, Index, Buffer, Length);
-	ml_cbor_reader_t *Cbor = ml_cbor_reader_new(NULL);
+	ml_cbor_reader_t *Cbor = ml_cbor_reader_new(NULL, NULL);
 	ml_cbor_reader_read(Cbor, Buffer, Length);
 	return ml_cbor_reader_get(Cbor);
 }
@@ -122,7 +122,7 @@ ML_METHOD("get", VersionStoreT, MLIntegerT, MLIntegerT) {
 	size_t Length = version_store_value_revision_size(Store->Handle, Index, Change);
 	void *Buffer = GC_malloc_atomic(Length);
 	version_store_value_revision_get(Store->Handle, Index, Change, Buffer, Length);
-	ml_cbor_reader_t *Cbor = ml_cbor_reader_new(NULL);
+	ml_cbor_reader_t *Cbor = ml_cbor_reader_new(NULL, NULL);
 	ml_cbor_reader_read(Cbor, Buffer, Length);
 	return ml_cbor_reader_get(Cbor);
 }

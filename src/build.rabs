@@ -87,11 +87,19 @@ CFLAGS := [
 ]
 LDFLAGS := ["-lm", "-ldl", '-Wl,--dynamic-list={file("exports.lst")}']
 
+DEBUG := defined("DEBUG")
+
+if DEBUG then
+	CFLAGS := old + ["-O2", "-g"]
+	LDFLAGS := old + ["-g"]
+end
+
 subdir("db")
 subdir("event")
 subdir("fmt")
 subdir("img")
 subdir("log")
+subdir("net")
 subdir("parse")
 subdir("snd")
 subdir("solver")

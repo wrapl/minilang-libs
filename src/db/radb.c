@@ -157,7 +157,7 @@ ML_METHOD("get", CborStoreT, MLIntegerT) {
 	size_t Index = ml_integer_value_fast(Args[1]);
 	size_t Length = string_store_size(Store->Handle, Index);
 	if (Length == INVALID_INDEX) return ml_error("IndexError", "Invalid index");
-	ml_cbor_reader_t *Cbor = ml_cbor_reader_new(NULL);
+	ml_cbor_reader_t *Cbor = ml_cbor_reader_new(NULL, NULL);
 	string_store_reader_t Reader[1];
 	string_store_reader_open(Reader, Store->Handle, Index);
 	unsigned char Buffer[16];
@@ -175,7 +175,7 @@ ML_METHOD("set", CborStoreT, MLIntegerT, MLAnyT) {
 	size_t Index = ml_integer_value_fast(Args[1]);
 	string_store_writer_t Writer[1];
 	string_store_writer_open(Writer, Store->Handle, Index);
-	ml_cbor_writer_t *CborWriter = ml_cbor_writer_new(Writer, (void *)string_store_writer_write);
+	ml_cbor_writer_t *CborWriter = ml_cbor_writer_new(Writer, (void *)string_store_writer_write, NULL);
 	ml_value_t *Error = ml_cbor_write(CborWriter, Args[2]);
 	if (Error) return Error;
 	return Args[2];

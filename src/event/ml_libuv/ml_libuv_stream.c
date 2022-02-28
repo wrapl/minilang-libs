@@ -27,7 +27,7 @@ static void ml_uv_connection_cb(uv_stream_t *Server, int Status) {
 	ml_value_t **Args = ml_alloc_args(1);
 	Args[0] = (ml_value_t *)C;
 	ml_uv_handle_t *S = (ml_uv_handle_t *)Server->data;
-	ml_state_t *Caller = (ml_state_t *)ml_result_state_new(S->Context);
+	ml_state_t *Caller = (ml_state_t *)ml_result_state(S->Context);
 	ml_call(Caller, S->Callback, 1, Args);
 }
 
@@ -79,7 +79,7 @@ static void ml_uv_read_cb(uv_stream_t *Stream, ssize_t Count, const uv_buf_t *Bu
 	Cached->Next = CachedBuffers;
 	CachedBuffers = Cached;
 	ml_uv_handle_t *S = (ml_uv_handle_t *)Stream->data;
-	ml_state_t *Caller = (ml_state_t *)ml_result_state_new(S->Context);
+	ml_state_t *Caller = (ml_state_t *)ml_result_state(S->Context);
 	ml_call(Caller, S->Callback, 1, Args);
 }
 

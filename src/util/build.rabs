@@ -1,0 +1,1 @@
+DEFAULT[so_module("util/bitset.so", [file("bitset.o"), file("roaring.o")])]

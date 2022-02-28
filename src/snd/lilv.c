@@ -17,13 +17,13 @@ ML_TYPE(PluginT, (), "lilv-plugin");
 ML_METHOD("name", PluginT) {
 	const LilvPlugin *Plugin = ((plugin_t *)Args[0])->Handle;
 	const char *Name = lilv_node_as_string(lilv_plugin_get_name(Plugin));
-	return ml_cstring(Name);
+	return ml_string(Name, -1);
 }
 
 ML_METHOD("uri", PluginT) {
 	const LilvPlugin *Plugin = ((plugin_t *)Args[0])->Handle;
 	const char *Name = lilv_node_as_string(lilv_plugin_get_uri(Plugin));
-	return ml_cstring(Name);
+	return ml_string(Name, -1);
 }
 
 ML_TYPE(PortT, (), "lilv-port");

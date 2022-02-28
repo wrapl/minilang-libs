@@ -215,35 +215,35 @@ ML_ENUM2(CurlOptionT, "curl::option",
 
 ML_METHOD("set", CurlT, CurlOptionT, MLNilT) {
 	curl_t *Curl = (curl_t *)Args[0];
-	CURLoption Option = ml_enum_value(Args[1]);
+	CURLoption Option = ml_enum_value_value(Args[1]);
 	curl_easy_setopt(Curl->Handle, Option, 0);
 	return (ml_value_t *)Curl;
 }
 
 ML_METHOD("set", CurlT, CurlOptionT, MLBooleanT) {
 	curl_t *Curl = (curl_t *)Args[0];
-	CURLoption Option = ml_enum_value(Args[1]);
+	CURLoption Option = ml_enum_value_value(Args[1]);
 	curl_easy_setopt(Curl->Handle, Option, ml_boolean_value(Args[2]));
 	return (ml_value_t *)Curl;
 }
 
 ML_METHOD("set", CurlT, CurlOptionT, MLIntegerT) {
 	curl_t *Curl = (curl_t *)Args[0];
-	CURLoption Option = ml_enum_value(Args[1]);
+	CURLoption Option = ml_enum_value_value(Args[1]);
 	curl_easy_setopt(Curl->Handle, Option, ml_integer_value(Args[2]));
 	return (ml_value_t *)Curl;
 }
 
 ML_METHOD("set", CurlT, CurlOptionT, MLStringT) {
 	curl_t *Curl = (curl_t *)Args[0];
-	CURLoption Option = ml_enum_value(Args[1]);
+	CURLoption Option = ml_enum_value_value(Args[1]);
 	curl_easy_setopt(Curl->Handle, Option, ml_string_value(Args[2]));
 	return (ml_value_t *)Curl;
 }
 
 ML_METHOD("set", CurlT, CurlOptionT, MLListT) {
 	curl_t *Curl = (curl_t *)Args[0];
-	CURLoption Option = ml_enum_value(Args[1]);
+	CURLoption Option = ml_enum_value_value(Args[1]);
 	struct curl_slist *List = NULL;
 	ML_LIST_FOREACH(Args[2], Iter) List = curl_slist_append(List, ml_string_value(Iter->Value));
 	curl_easy_setopt(Curl->Handle, Option, List);
@@ -300,7 +300,7 @@ static size_t stream_write_callback(char *Buffer, size_t Size, size_t N, callbac
 
 ML_METHODX("set", CurlT, CurlOptionT, MLStreamT) {
 	curl_t *Curl = (curl_t *)Args[0];
-	CURLoption Option = ml_enum_value(Args[1]);
+	CURLoption Option = ml_enum_value_value(Args[1]);
 	callback_state_t *State = new(callback_state_t);
 	State->Base.Context = Caller->Context;
 	State->Base.run = (ml_state_fn)callback_state_run;
@@ -347,7 +347,7 @@ static size_t function_callback(char *Buffer, size_t Size, size_t N, callback_st
 
 ML_METHODX("set", CurlT, CurlOptionT, MLFunctionT) {
 	curl_t *Curl = (curl_t *)Args[0];
-	CURLoption Option = ml_enum_value(Args[1]);
+	CURLoption Option = ml_enum_value_value(Args[1]);
 	callback_state_t *State = new(callback_state_t);
 	State->Base.Context = Caller->Context;
 	State->Base.run = (ml_state_fn)callback_state_run;

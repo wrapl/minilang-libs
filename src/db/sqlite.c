@@ -55,7 +55,7 @@ ML_FUNCTION(MLSqlite) {
 	ML_CHECK_ARG_TYPE(0, MLStringT);
 	ML_CHECK_ARG_TYPE(1, MLSqliteOpenFlags);
 	const char *FileName = ml_string_value(Args[0]);
-	int Flags = ml_flags_value(Args[1]);
+	int Flags = ml_flags_value_value(Args[1]);
 	const char *VFS = NULL;
 	if (Count > 2) {
 		ML_CHECK_ARG_TYPE(2, MLStringT);

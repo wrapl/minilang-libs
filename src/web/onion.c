@@ -51,7 +51,7 @@ ML_METHOD(OnionT) {
 ML_METHOD(OnionT, OnionModeT) {
 	ml_onion_t *Onion = new(ml_onion_t);
 	Onion->Type = OnionT;
-	Onion->Handle = onion_new(ml_flags_value(Args[0]));
+	Onion->Handle = onion_new(ml_flags_value_value(Args[0]));
 	onion_set_client_data(Onion->Handle, Onion, NULL);
 	return (ml_value_t *)Onion;
 }
@@ -125,7 +125,7 @@ static ml_value_t *ml_onion_state_run(ml_onion_state_t *State, ml_value_t *Resul
 	}
 	if (State->Status == OCS_NOT_PROCESSED) {
 		if (ml_is(Result, OnionConnectionStatusT)) {
-			State->Status = ml_enum_value(Result);
+			State->Status = ml_enum_value_value(Result);
 		} else {
 			State->Status = OCS_PROCESSED;
 		}
@@ -478,7 +478,7 @@ static ML_ENUM2(OnionWebsocketOpcodeT, "onion::websocket_opcode",
 
 ML_METHOD("set_opcode", OnionWebsocketT, OnionWebsocketOpcodeT) {
 	ml_onion_websocket_t *Websocket = (ml_onion_websocket_t *)Args[0];
-	onion_websocket_set_opcode(Websocket->Handle, ml_enum_value(Args[1]));
+	onion_websocket_set_opcode(Websocket->Handle, ml_enum_value_value(Args[1]));
 	return Args[0];
 }
 

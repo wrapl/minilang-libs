@@ -15,8 +15,6 @@ ML_TYPE(MLValueParserT, (MLParserT), "value-parser");
 
 static ml_value_t Skip[1] = {{MLAnyT}};
 
-
-
 static mpc_val_t *ml_mpc_apply_value(mpc_val_t *Value) {
 	return ml_string(Value, -1);
 }
@@ -52,7 +50,7 @@ static mpc_val_t *ml_mpc_value_to(mpc_val_t *_, void *Value) {
 	return Value;
 }
 
-ML_METHOD("=>", MLStringParserT, MLAnyT) {
+ML_METHOD("@", MLStringParserT, MLAnyT) {
 	ml_mpc_parser_t *Parser = new(ml_mpc_parser_t);
 	Parser->Type = MLValueParserT;
 	Parser->Handle = mpc_apply_to(((ml_mpc_parser_t *)Args[0])->Handle, ml_mpc_value_to, Args[1]);

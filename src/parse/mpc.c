@@ -273,17 +273,21 @@ ML_METHOD("|", MLValueParserT, MLValueParserT) {
 	return (ml_value_t *)Parser;
 }
 
-extern mpc_parser_t *mpc_orv(int n, mpc_parser_t **parsers);
 extern mpc_parser_t *mpc_andv(int n, mpc_fold_t f, mpc_parser_t **parsers);
 
-static ml_value_t *ml_mpc_seq(void *Data, int Count, ml_value_t **Args) {
+ML_FUNCTION(Seq) {
 	mpc_parser_t *Parsers[Count];
 	for (int I = 0; I < Count; ++I) {
-		ml_mpc_parser_t *Arg = (ml_mpc_parser_t *)Args[I];
-		if (Arg->Type == MLValueParserT) {
+		if (ml_is(Args[I], MLValueParserT)) {
+			ml_mpc_parser_t *Arg = (ml_mpc_parser_t *)Args[I];
 			Parsers[I] = Arg->Handle;
-		} else if (Arg->Type == MLStringParserT) {
+		} else if (ml_is(Args[I], MLStringParserT)) {
+			ml_mpc_parser_t *Arg = (ml_mpc_parser_t *)Args[I];
 			Parsers[I] = mpc_apply(Arg->Handle, ml_mpc_apply_value);
+		} else if (ml_is(Args[I], MLStringT)) {
+			Parsers[I] = mpc_apply(mpc_string(ml_string_value(Args[I])), ml_mpc_apply_value);
+		} else if (ml_is(Args[I], MLRegexT)) {
+			Parsers[I] = mpc_apply(mpc_re(ml_regex_pattern(Args[I])), ml_mpc_apply_value);
 		} else {
 			ML_CHECK_ARG_TYPE(I, MLParserT);
 		}
@@ -291,6 +295,68 @@ static ml_value_t *ml_mpc_seq(void *Data, int Count, ml_value_t **Args) {
 	ml_mpc_parser_t *Parser = new(ml_mpc_parser_t);
 	Parser->Type = MLValueParserT;
 	Parser->Handle = mpc_andv(Count, ml_mpc_fold_list, Parsers);
+	return (ml_value_t *)Parser;
+}
+
+typedef struct {
+	ml_mpc_parser_t Base;
+	ml_value_t *Name;
+} ml_mpc_field_t;
+
+ML_TYPE(MLFieldT, (MLValueParserT), "mpc::field");
+
+ML_METHOD("as", MLValueParserT, MLStringT) {
+	ml_mpc_field_t *Field = new(ml_mpc_field_t);
+	Field->Base.Type = MLFieldT;
+	Field->Base.Handle = ((ml_mpc_parser_t *)Args[0])->Handle;
+	Field->Name = Args[1];
+	return (ml_value_t *)Field;
+}
+
+ML_METHOD("as", MLStringParserT, MLStringT) {
+	ml_mpc_field_t *Field = new(ml_mpc_field_t);
+	Field->Base.Type = MLFieldT;
+	Field->Base.Handle = mpc_apply(((ml_mpc_parser_t *)Args[0])->Handle, ml_mpc_apply_value);
+	Field->Name = Args[1];
+	return (ml_value_t *)Field;
+}
+
+static mpc_val_t *ml_mpc_fold_map(int Count, mpc_val_t **Values) {
+	ml_value_t *Map = ml_map();
+	ml_value_t **Names = Values[Count];
+	--Count;
+	for (int I = 0; I < Count; ++I) {
+		if (Names[I]) ml_map_insert(Map, Names[I], (ml_value_t *)Values[I]);
+	}
+	return Map;
+}
+
+ML_FUNCTION(Map) {
+	ml_value_t **Names = anew(ml_value_t *, Count);
+	mpc_parser_t *Parsers[Count + 1];
+	for (int I = 0; I < Count; ++I) {
+		if (ml_is(Args[I], MLFieldT)) {
+			ml_mpc_field_t *Arg = (ml_mpc_field_t *)Args[I];
+			Names[I] = Arg->Name;
+			Parsers[I] = Arg->Base.Handle;
+		} else if (ml_is(Args[I], MLValueParserT)) {
+			ml_mpc_parser_t *Arg = (ml_mpc_parser_t *)Args[I];
+			Parsers[I] = Arg->Handle;
+		} else if (ml_is(Args[I], MLStringParserT)) {
+			ml_mpc_parser_t *Arg = (ml_mpc_parser_t *)Args[I];
+			Parsers[I] = mpc_apply(Arg->Handle, ml_mpc_apply_value);
+		} else if (ml_is(Args[I], MLStringT)) {
+			Parsers[I] = mpc_apply(mpc_string(ml_string_value(Args[I])), ml_mpc_apply_value);
+		} else if (ml_is(Args[I], MLRegexT)) {
+			Parsers[I] = mpc_apply(mpc_re(ml_regex_pattern(Args[I])), ml_mpc_apply_value);
+		} else {
+			ML_CHECK_ARG_TYPE(I, MLParserT);
+		}
+	}
+	Parsers[Count] = mpc_lift_val(Names);
+	ml_mpc_parser_t *Parser = new(ml_mpc_parser_t);
+	Parser->Type = MLValueParserT;
+	Parser->Handle = mpc_andv(Count + 1, ml_mpc_fold_map, Parsers);
 	return (ml_value_t *)Parser;
 }
 
@@ -395,7 +461,7 @@ static ml_value_t *ml_mpc_new(void *Data, int Count, ml_value_t **Args) {
 	return (ml_value_t *)Parser;
 }
 
-static ml_value_t *ml_mpc_re(void *Data, int Count, ml_value_t **Args) {
+static ml_value_t *ml_mpc_regex(void *Data, int Count, ml_value_t **Args) {
 	ML_CHECK_ARG_COUNT(1);
 	ML_CHECK_ARG_TYPE(0, MLStringT);
 	ml_mpc_parser_t *Parser = new(ml_mpc_parser_t);
@@ -404,14 +470,21 @@ static ml_value_t *ml_mpc_re(void *Data, int Count, ml_value_t **Args) {
 	return (ml_value_t *)Parser;
 }
 
-static ml_value_t *ml_mpc_any(void *Data, int Count, ml_value_t **Args) {
+extern mpc_parser_t *mpc_orv(int n, mpc_parser_t **parsers);
+
+ML_FUNCTION(Any) {
 	mpc_parser_t *Parsers[Count];
 	for (int I = 0; I < Count; ++I) {
-		ml_mpc_parser_t *Arg = (ml_mpc_parser_t *)Args[I];
-		if (Arg->Type == MLValueParserT) {
+		if (ml_is(Args[I], MLValueParserT)) {
+			ml_mpc_parser_t *Arg = (ml_mpc_parser_t *)Args[I];
 			Parsers[I] = Arg->Handle;
-		} else if (Arg->Type == MLStringParserT) {
+		} else if (ml_is(Args[I], MLStringParserT)) {
+			ml_mpc_parser_t *Arg = (ml_mpc_parser_t *)Args[I];
 			Parsers[I] = mpc_apply(Arg->Handle, ml_mpc_apply_value);
+		} else if (ml_is(Args[I], MLStringT)) {
+			Parsers[I] = mpc_apply(mpc_string(ml_string_value(Args[I])), ml_mpc_apply_value);
+		} else if (ml_is(Args[I], MLRegexT)) {
+			Parsers[I] = mpc_apply(mpc_re(ml_regex_pattern(Args[I])), ml_mpc_apply_value);
 		} else {
 			ML_CHECK_ARG_TYPE(I, MLParserT);
 		}
@@ -478,10 +551,11 @@ static ml_value_t *ml_mpc_string(void *Data, int Count, ml_value_t **Args) {
 void ml_library_entry0(ml_value_t **Slot) {
 #include "mpc_init.c"
 	Slot[0] = ml_module(
-		"seq", ml_cfunction(NULL, ml_mpc_seq),
+		"seq", Seq,
+		"map", Map,
+		"any", Any,
 		"new", ml_cfunction(NULL, ml_mpc_new),
-		"re", ml_cfunction(NULL, ml_mpc_re),
-		"any", ml_cfunction(NULL, ml_mpc_any),
+		"regex", ml_cfunction(NULL, ml_mpc_regex),
 		"char", ml_cfunction(NULL, ml_mpc_char),
 		"range", ml_cfunction(NULL, ml_mpc_range),
 		"oneof", ml_cfunction(NULL, ml_mpc_oneof),

@@ -78,6 +78,38 @@ static ml_value_t *ML_TYPED_FN(query_param, MLStringT, ml_value_t *Param, const 
 	return NULL;
 }
 
+static ml_value_t *ML_TYPED_FN(query_param, MLUUIDT, ml_value_t *Param, const char **Value, int *Length) {
+	char *IdString = snew(UUID_STR_LEN);
+	uuid_unparse_lower(ml_uuid_value(Param), IdString);
+	*Value = IdString;
+	*Length = UUID_STR_LEN - 1;
+	return NULL;
+}
+
+static ml_value_t *ML_TYPED_FN(query_param, MLTimeT, ml_value_t *Param, const char **Value, int *Length) {
+	struct timespec Time[1];
+	ml_time_value(Param, Time);
+	struct tm TM = {0,};
+	gmtime_r(&Time->tv_sec, &TM);
+	char *Temp = snew(60);
+	size_t Actual;
+	unsigned long NSec = Time->tv_nsec;
+	if (NSec) {
+		int Width = 9;
+		while (NSec % 10 == 0) {
+			--Width;
+			NSec /= 10;
+		}
+		Actual = strftime(Temp, 40, "%FT%T", &TM);
+		Actual += sprintf(Temp + Actual, ".%0*luZ", Width, NSec);
+	} else {
+		Actual = strftime(Temp, 60, "%FT%TZ", &TM);
+	}
+	*Value = Temp;
+	*Length = Actual;
+	return NULL;
+}
+
 static ml_value_t *query_params(query_t *Query, int Count, ml_value_t **Args) {
 	Query->NumParams = Count;
 	const char **Values = Query->Values = anew(const char *, Count);

@@ -62,6 +62,12 @@ static ml_value_t *query_param(ml_value_t *Param, const char **Value, int *Lengt
 	return function(Param, Value, Length);
 }
 
+static ml_value_t *ML_TYPED_FN(query_param, MLNilT, ml_value_t *Param, const char **Value, int *Length) {
+	*Value = NULL;
+	*Length = 0;
+	return NULL;
+}
+
 static ml_value_t *ML_TYPED_FN(query_param, MLIntegerT, ml_value_t *Param, const char **Value, int *Length) {
 	*Length = asprintf((char **)Value, "%ld", ml_integer_value(Param));
 	return NULL;

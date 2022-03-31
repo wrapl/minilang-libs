@@ -15,7 +15,7 @@ static void ml_logger_call(ml_state_t *Caller, ml_logger_t *Logger, int Count, m
 	if (!zlog_category_needless_level(Logger->Category, Logger->Level)) {
 		ml_stringbuffer_t Buffer[1] = {ML_STRINGBUFFER_INIT};
 		for (int I = 0; I < Count; ++I) {
-			ml_stringbuffer_simple_append(Buffer, Args[I]);
+			ml_stringbuffer_simple_append(Buffer, ml_deref(Args[I]));
 		}
 		ml_source_t Source = ml_debugger_source(Caller);
 		zlog(Logger->Category, Source.Name, strlen(Source.Name), "", 0, Source.Line, Logger->Level, "%s", ml_stringbuffer_get_string(Buffer));

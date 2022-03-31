@@ -36,3 +36,15 @@ scope("ravs";) do
 	PREBUILDS := old + [Lib]
 	DEFAULT[so_module("db/ravs.so", [file("ravs.o")], [Lib])]
 end
+
+scope("postgres";) do
+	CFLAGS := old + [
+		pkgconfig("--cflags gio-2.0"),
+		pkgconfig("--cflags libpq")
+	]
+	LDFLAGS := old + [
+		pkgconfig("--libs gio-2.0"),
+		pkgconfig("--libs libpq")
+	]
+	DEFAULT[so_module("db/postgres.so", [file("postgres.o")])]
+end

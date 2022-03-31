@@ -9,3 +9,14 @@ scope("mpc";) do
 	PREBUILDS := old + [MPC]
 	DEFAULT[so_module("parse/mpc.so", [file("mpc.o"), file("mpc/mpc.o")])]
 end
+
+scope("cleri";) do
+	let Obj := file("libcleri/src"):mkdir
+	CFLAGS := old + ['-I{file("libcleri/inc")}']
+	let Objects := [file("ml_cleri.o")]
+	for Source in Obj:ls(r".*\.c") do
+		Objects:put(Obj / (Source % "o" basename ()))
+	end
+	LDFLAGS := old + ["-lpcre2-8"]
+	DEFAULT[so_module("parse/cleri.so", Objects)]
+end

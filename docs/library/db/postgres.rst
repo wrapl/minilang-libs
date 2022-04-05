@@ -10,28 +10,29 @@ db/postgres
 .. _type-connection:
 
 :mini:`type connection`
-   *TBD*
+   A connection to a Postgresql database.
 
 
-:mini:`meth (Arg₁: connection):prepare(Arg₂: string)`
-   *TBD*
+:mini:`meth connection(Settings: map): connection`
+   Connects to a Postgresql database with the supplied settings.
 
 
-:mini:`meth (Arg₁: connection):query(Arg₂: string, ...)`
-   *TBD*
+:mini:`meth connection(Name₁ is Value₁, ...): connection`
+   Connects to a Postgresql database with the supplied settings.
 
 
-:mini:`meth connection(Arg₁: map)`
-   *TBD*
+:mini:`meth (Connection: connection):prepare(SQL: string): statement`
+   Creates a prepared statement on :mini:`Connection`.
 
 
-:mini:`meth connection(Arg₁₁ is Value₁, ...)`
-   *TBD*
+:mini:`meth (Connection: connection):query(SQL: string, Arg: any, ...): list[tuple] | nil`
+   Executes :mini:`SQL` on :mini:`Connection`,  with arguments :mini:`Argᵢ` if supplied.
+   Returns a list of tuples (for ``SELECT``,  etc) or :mini:`nil` for commands without results.
 
 
 .. _type-statement:
 
 :mini:`type statement < function`
-   *TBD*
+   A prepared statement. Calling a statement executes the prepared statement on the associated connection,  with the provided arguments (if any).
 
 

@@ -27,7 +27,8 @@ static void ml_logger_call(ml_state_t *Caller, ml_logger_t *Logger, int Count, m
 	ML_RETURN(MLNil);
 }
 
-ML_TYPE(MLLoggerT, (), "logger",
+ML_TYPE(MLLoggerT, (MLFunctionT), "logger",
+// A logger (category + level). Calling a logger generates a log entry with the supplied arguments.
 	.call = (void *)ml_logger_call
 );
 
@@ -45,9 +46,12 @@ typedef struct {
 	stringmap_t Loggers[1];
 } ml_category_t;
 
-extern ml_type_t MLCategoryT[];
+extern ml_type_t CategoryT[];
 
-ML_FUNCTIONX(MLCategory) {
+ML_FUNCTIONX(Category) {
+//<Name?:string
+//>category
+// Returns a new logging category. If :mini:`Name` is omitted, a name will be inferred from the calling function.
 	const char *Name;
 	if (Count > 0) {
 		ML_CHECKX_ARG_TYPE(0, MLStringT);
@@ -56,7 +60,7 @@ ML_FUNCTIONX(MLCategory) {
 		Name = ml_debugger_source(Caller).Name;
 	}
 	ml_category_t *Category = new(ml_category_t);
-	Category->Type = MLCategoryT;
+	Category->Type = CategoryT;
 	Category->Handle = zlog_get_category(Name);
 	stringmap_insert(Category->Loggers, "debug", ml_logger(Category->Handle, ZLOG_LEVEL_DEBUG));
 	stringmap_insert(Category->Loggers, "info", ml_logger(Category->Handle, ZLOG_LEVEL_INFO));
@@ -67,11 +71,16 @@ ML_FUNCTIONX(MLCategory) {
 	ML_RETURN(Category);
 }
 
-ML_TYPE(MLCategoryT, (), "category",
-	.Constructor = (ml_value_t *)MLCategory
+ML_TYPE(CategoryT, (), "category",
+// A logging category.
+	.Constructor = (ml_value_t *)Category
 );
 
-ML_METHOD("::", MLCategoryT, MLStringT) {
+ML_METHOD("::", CategoryT, MLStringT) {
+//<Category
+//<Level
+//>logger
+// Returns the logger for :mini:`Category` with level :mini:`Level`.
 	ml_category_t *Category = (ml_category_t *)Args[0];
 	ml_logger_t *Logger = (ml_logger_t *)stringmap_search(Category->Loggers, ml_string_value(Args[1]));
 	if (!Logger) return ml_error("NameError", "Unknown logging level");
@@ -83,5 +92,5 @@ void ml_library_entry0(ml_value_t **Slot) {
 	if (zlog_init("zlog.conf")) {
 		printf("Failed to load zlog config\n");
 	}
-	Slot[0] = (ml_value_t *)MLCategoryT;
+	Slot[0] = (ml_value_t *)CategoryT;
 }

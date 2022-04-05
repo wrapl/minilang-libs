@@ -22,6 +22,7 @@ struct connection_t {
 };
 
 ML_TYPE(ConnectionT, (), "postgres::connection");
+// A connection to a Postgresql database.
 
 typedef ml_value_t *(*recv_fn)(const char *Value, int Length);
 
@@ -131,6 +132,12 @@ static ml_value_t *query_params(query_t *Query, int Count, ml_value_t **Args) {
 }
 
 ML_METHODVX("query", ConnectionT, MLStringT) {
+//<Connection
+//<SQL
+//<Arg
+//>list[tuple]|nil
+// Executes :mini:`SQL` on :mini:`Connection`, with arguments :mini:`Arg/i` if supplied.
+// Returns a list of tuples (for ``SELECT``, etc) or :mini:`nil` for commands without results.
 	connection_t *Connection = (connection_t *)Args[0];
 	query_t *Query = new(query_t);
 	Query->Caller = Caller;
@@ -148,6 +155,10 @@ ML_METHODVX("query", ConnectionT, MLStringT) {
 }
 
 ML_METHODX("prepare", ConnectionT, MLStringT) {
+//<Connection
+//<SQL
+//>statement
+// Creates a prepared statement on :mini:`Connection`.
 	connection_t *Connection = (connection_t *)Args[0];
 	query_t *Query = new(query_t);
 	Query->Caller = Caller;
@@ -182,6 +193,7 @@ static void statement_call(ml_state_t *Caller, statement_t *Statement, int Count
 }
 
 ML_TYPE(StatementT, (MLFunctionT), "postgres::statement",
+// A prepared statement. Calling a statement executes the prepared statement on the associated connection, with the provided arguments (if any).
 	.call = (void *)statement_call
 );
 
@@ -329,6 +341,9 @@ static ml_value_t *connection(const char **Keywords, const char **Values) {
 }
 
 ML_METHOD(ConnectionT, MLMapT) {
+//<Settings
+//>connection
+// Connects to a Postgresql database with the supplied settings.
 	int NumParams = ml_map_size(Args[0]);
 	const char **Keywords = anew(const char *, NumParams + 1);
 	const char **Values = anew(const char *, NumParams + 1);
@@ -344,6 +359,9 @@ ML_METHOD(ConnectionT, MLMapT) {
 }
 
 ML_METHODV(ConnectionT, MLNamesT) {
+//<Name,Value
+//>connection
+// Connects to a Postgresql database with the supplied settings.
 	int NumParams = ml_names_length(Args[0]);
 	const char **Keywords = anew(const char *, NumParams + 1);
 	const char **Values = anew(const char *, NumParams + 1);

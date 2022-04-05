@@ -4,6 +4,9 @@
 #include <stdio.h>
 #include "csv.h"
 
+#undef ML_CATEGORY
+#define ML_CATEGORY "fmt/csv"
+
 extern ml_type_t CsvT[];
 
 typedef struct csv_row_t csv_row_t;

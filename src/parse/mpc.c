@@ -4,6 +4,9 @@
 #include <gc/gc.h>
 #include "mpc/mpc.h"
 
+#undef ML_CATEGORY
+#define ML_CATEGORY "parse/mpc"
+
 typedef struct ml_mpc_parser_t {
 	const ml_type_t *Type;
 	mpc_parser_t *Handle;

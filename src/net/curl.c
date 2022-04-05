@@ -4,6 +4,9 @@
 #include <minilang/ml_stream.h>
 #include <curl/curl.h>
 
+#undef ML_CATEGORY
+#define ML_CATEGORY "net/curl"
+
 typedef struct {
 	ml_type_t *Type;
 	CURL *Handle;

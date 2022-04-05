@@ -5,6 +5,9 @@
 #include <libgen.h>
 #include <stdio.h>
 
+#undef ML_CATEGORY
+#define ML_CATEGORY "db/ravs"
+
 #define CHECK_HANDLE(STORE) \
 	if (!(STORE)->Handle) { \
 		return ml_error("RadbError", "Ravs handle is closed"); \

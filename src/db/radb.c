@@ -1,9 +1,13 @@
 #include <minilang/ml_library.h>
 #include <minilang/ml_macros.h>
 #include <minilang/ml_cbor.h>
+#include <minilang/ml_stream.h>
 #include "radb/radb.h"
 #include <libgen.h>
 #include <stdio.h>
+
+#undef ML_CATEGORY
+#define ML_CATEGORY "db/radb"
 
 #define CHECK_HANDLE(STORE) \
 	if (!(STORE)->Handle) { \
@@ -26,28 +30,12 @@ typedef struct ml_string_store_reader_t {
 } ml_string_store_reader_t;
 
 ML_TYPE(StringStoreT, (), "string-store");
-ML_TYPE(StringStoreWriterT, (), "string-store-writer");
-ML_TYPE(StringStoreReaderT, (), "string-store-reader");
+// A store for strings.
 
-ML_FUNCTION(StringStoreCreate) {
-	ML_CHECK_ARG_COUNT(2);
-	ML_CHECK_ARG_TYPE(0, MLStringT);
-	ML_CHECK_ARG_TYPE(1, MLIntegerT);
-	size_t ChunkSize = 0;
-	if (Count > 2) {
-		ML_CHECK_ARG_TYPE(2, MLIntegerT);
-		ChunkSize = ml_integer_value_fast(Args[2]);
-	}
-	ml_string_store_t *Store = new(ml_string_store_t);
-	Store->Type = StringStoreT;
-	Store->Handle = string_store_create(ml_string_value(Args[0]), ml_integer_value_fast(Args[1]), ChunkSize);
-	CHECK_HANDLE(Store);
-	return (ml_value_t *)Store;
-}
-
-ML_FUNCTION(StringStoreOpen) {
-	ML_CHECK_ARG_COUNT(1);
-	ML_CHECK_ARG_TYPE(0, MLStringT);
+ML_METHOD(StringStoreT, MLStringT) {
+//<Path
+//>string_store
+// Opens an existing string store at :mini:`Path`.
 	ml_string_store_t *Store = new(ml_string_store_t);
 	Store->Type = StringStoreT;
 	Store->Handle = string_store_open(ml_string_value(Args[0]));
@@ -55,7 +43,36 @@ ML_FUNCTION(StringStoreOpen) {
 	return (ml_value_t *)Store;
 }
 
+ML_METHOD(StringStoreT, MLStringT, MLIntegerT) {
+//<Path
+//<NodeSize
+//>string_store
+// Creates a new string store at :mini:`Path` with node size :mini:`NodeSize` and default chunk size.
+	size_t ChunkSize = 0;
+	ml_string_store_t *Store = new(ml_string_store_t);
+	Store->Type = StringStoreT;
+	Store->Handle = string_store_create(ml_string_value(Args[0]), ml_integer_value_fast(Args[1]), ChunkSize);
+	CHECK_HANDLE(Store);
+	return (ml_value_t *)Store;
+}
+
+ML_METHOD(StringStoreT, MLStringT, MLIntegerT, MLIntegerT) {
+//<Path
+//<NodeSize
+//<ChunkSize
+//>string_store
+// Creates a new string store at :mini:`Path` with node size :mini:`NodeSize` and chunk size :mini:`ChunkSize`.
+	size_t ChunkSize = ml_integer_value_fast(Args[2]);
+	ml_string_store_t *Store = new(ml_string_store_t);
+	Store->Type = StringStoreT;
+	Store->Handle = string_store_create(ml_string_value(Args[0]), ml_integer_value_fast(Args[1]), ChunkSize);
+	CHECK_HANDLE(Store);
+	return (ml_value_t *)Store;
+}
+
 ML_METHOD("close", StringStoreT) {
+//<Store
+// Closes :mini:`Store`.
 	ml_string_store_t *Store = (ml_string_store_t *)Args[0];
 	CHECK_HANDLE(Store);
 	string_store_close(Store->Handle);
@@ -64,6 +81,10 @@ ML_METHOD("close", StringStoreT) {
 }
 
 ML_METHOD("get", StringStoreT, MLIntegerT) {
+//<Store
+//<Index
+//>string
+// Returns the entry at :mini:`Index` in :mini:`Store`.
 	ml_string_store_t *Store = (ml_string_store_t *)Args[0];
 	CHECK_HANDLE(Store);
 	size_t Index = ml_integer_value_fast(Args[1]);
@@ -76,12 +97,25 @@ ML_METHOD("get", StringStoreT, MLIntegerT) {
 }
 
 ML_METHOD("set", StringStoreT, MLIntegerT, MLStringT) {
+//<Store
+//<Index
+//<Value
+//>string
+// Stores :mini:`Value` as the entry at :mini:`Index` in :mini:`Store` and returns :mini:`Value`.
 	ml_string_store_t *Store = (ml_string_store_t *)Args[0];
 	CHECK_HANDLE(Store);
 	size_t Index = ml_integer_value_fast(Args[1]);
 	string_store_set(Store->Handle, Index, ml_string_value(Args[2]), ml_string_length(Args[2]));
 	return Args[2];
 }
+
+static void ML_TYPED_FN(ml_stream_write, StringStoreWriterT, ml_state_t *Caller, ml_string_store_writer_t *Writer, const void *Address, int Count) {
+	size_t Total = string_store_writer_write(Writer->Handle, Address, Count);
+	ML_RETURN(ml_integer(Total));
+}
+
+ML_TYPE(StringStoreWriterT, (MLStreamT), "string-store-writer");
+// A stream for writing to a string store entry.
 
 ML_METHOD("write", StringStoreT, MLIntegerT) {
 	ml_string_store_t *Store = (ml_string_store_t *)Args[0];
@@ -92,10 +126,12 @@ ML_METHOD("write", StringStoreT, MLIntegerT) {
 	return (ml_value_t *)Writer;
 }
 
-ML_METHOD("write", StringStoreWriterT, MLStringT) {
-	ml_string_store_writer_t *Writer = (ml_string_store_writer_t *)Args[0];
-	size_t Total = string_store_writer_write(Writer->Handle, ml_string_value(Args[1]), ml_string_length(Args[1]));
-	return ml_integer(Total);
+ML_TYPE(StringStoreReaderT, (MLStreamT), "string-store-reader");
+// A stream for reading from a string store entry.
+
+static void ML_TYPED_FN(ml_stream_read, StringStoreReaderT, ml_state_t *Caller, ml_string_store_reader_t *Reader, void *Address, int Count) {
+	size_t Total = string_store_reader_read(Reader->Handle, Address, Count);
+	ML_RETURN(ml_integer(Total));
 }
 
 ML_METHOD("read", StringStoreT, MLIntegerT) {
@@ -107,25 +143,10 @@ ML_METHOD("read", StringStoreT, MLIntegerT) {
 	return (ml_value_t *)Reader;
 }
 
-ML_METHOD("read", StringStoreReaderT, MLIntegerT) {
-	ml_string_store_reader_t *Reader = (ml_string_store_reader_t *)Args[0];
-	size_t Size = ml_integer_value_fast(Args[1]);
-	char *Buffer = GC_MALLOC_ATOMIC(Size);
-	size_t Length = string_store_reader_read(Reader->Handle, Buffer, Size);
-	return ml_string(Buffer, Length);
-}
-
 ML_TYPE(CborStoreT, (), "cbor-store");
 
-ML_FUNCTION(CborStoreCreate) {
-	ML_CHECK_ARG_COUNT(2);
-	ML_CHECK_ARG_TYPE(0, MLStringT);
-	ML_CHECK_ARG_TYPE(1, MLIntegerT);
+ML_METHOD(CborStoreT, MLStringT, MLIntegerT) {
 	size_t ChunkSize = 0;
-	if (Count > 2) {
-		ML_CHECK_ARG_TYPE(2, MLIntegerT);
-		ChunkSize = ml_integer_value_fast(Args[2]);
-	}
 	ml_string_store_t *Store = new(ml_string_store_t);
 	Store->Type = CborStoreT;
 	Store->Handle = string_store_create(ml_string_value(Args[0]), ml_integer_value_fast(Args[1]), ChunkSize);
@@ -133,9 +154,16 @@ ML_FUNCTION(CborStoreCreate) {
 	return (ml_value_t *)Store;
 }
 
-ML_FUNCTION(CborStoreOpen) {
-	ML_CHECK_ARG_COUNT(1);
-	ML_CHECK_ARG_TYPE(0, MLStringT);
+ML_METHOD(CborStoreT, MLStringT, MLIntegerT, MLIntegerT) {
+	size_t ChunkSize = ml_integer_value_fast(Args[2]);
+	ml_string_store_t *Store = new(ml_string_store_t);
+	Store->Type = CborStoreT;
+	Store->Handle = string_store_create(ml_string_value(Args[0]), ml_integer_value_fast(Args[1]), ChunkSize);
+	CHECK_HANDLE(Store);
+	return (ml_value_t *)Store;
+}
+
+ML_METHOD(CborStoreT, MLStringT) {
 	ml_string_store_t *Store = new(ml_string_store_t);
 	Store->Type = CborStoreT;
 	Store->Handle = string_store_open(ml_string_value(Args[0]));
@@ -320,10 +348,8 @@ ML_METHOD("get", CborIndexT, MLIntegerT) {
 void ml_library_entry0(ml_value_t **Slot) {
 #include "radb_init.c"
 	Slot[0] = ml_module("radb",
-		"string_store_create", StringStoreCreate,
-		"string_store_open", StringStoreOpen,
-		"cbor_store_create", CborStoreCreate,
-		"cbor_store_open", CborStoreOpen,
+		"string_store", StringStoreT,
+		"cbor_store", CborStoreT,
 		"string_index_create", StringIndexCreate,
 		"string_index_open", StringIndexOpen,
 		"cbor_index_create", CborIndexCreate,

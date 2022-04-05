@@ -8,7 +8,7 @@
 #pragma GCC optimize ("no-tree-loop-distribute-patterns")
 
 #undef ML_CATEGORY
-#define ML_CATEGORY "sqlite"
+#define ML_CATEGORY "db/sqlite"
 
 typedef struct {
 	ml_type_t *Type;

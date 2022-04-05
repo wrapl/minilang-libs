@@ -5,6 +5,9 @@
 #include "zlog/src/zlog.h"
 #include "zlog/src/category.h"
 
+#undef ML_CATEGORY
+#define ML_CATEGORY "log/zlog"
+
 typedef struct {
 	ml_type_t *Type;
 	zlog_category_t *Category;

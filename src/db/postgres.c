@@ -6,6 +6,9 @@
 #include <postgresql/server/catalog/pg_type_d.h>
 #include <glib-object.h>
 
+#undef ML_CATEGORY
+#define ML_CATEGORY "db/postgres"
+
 typedef struct connection_t connection_t;
 typedef struct statement_t statement_t;
 typedef struct query_t query_t;

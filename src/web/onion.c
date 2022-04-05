@@ -15,6 +15,9 @@
 #include <string.h>
 #include <stdio.h>
 
+#undef ML_CATEGORY
+#define ML_CATEGORY "web/onion"
+
 static ML_FLAGS2(OnionModeT, "onion::mode",
 	"One", O_ONE,
 	"OneLoop", O_ONE_LOOP,

@@ -1,6 +1,9 @@
 #include <minilang/ml_gir.h>
 #include <cairo.h>
 
+#undef ML_CATEGORY
+#define ML_CATEGORY "img/cairo"
+
 ml_type_t *CairoContextT;
 ml_type_t *CairoSurfaceT;
 ml_type_t *CairoOperatorT;

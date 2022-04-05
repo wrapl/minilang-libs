@@ -2,6 +2,9 @@
 #include <minilang/minilang.h>
 #include <minilang/ml_macros.h>
 
+#undef ML_CATEGORY
+#define ML_CATEGORY "util/bitset"
+
 typedef struct {
 	ml_type_t *Type;
 	roaring_bitmap_t Value[1];

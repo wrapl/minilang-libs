@@ -8,6 +8,9 @@
 #include <lexbor/dom/interfaces/element.h>
 #include <lexbor/selectors/selectors.h>
 
+#undef ML_CATEGORY
+#define ML_CATEGORY "fmt/html"
+
 static lxb_status_t serialize_fn(const lxb_char_t *Data, size_t Length, ml_stringbuffer_t *Buffer) {
 	ml_stringbuffer_write(Buffer, (const char *)Data, Length);
 	return LXB_STATUS_OK;

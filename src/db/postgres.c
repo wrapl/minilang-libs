@@ -83,9 +83,9 @@ static ml_value_t *ML_TYPED_FN(query_param, MLRealT, ml_value_t *Param, const ch
 	return NULL;
 }
 
-static ml_value_t *ML_TYPED_FN(query_param, MLStringT, ml_value_t *Param, const char **Value, int *Length) {
-	*Value = ml_string_value(Param);
-	*Length = ml_string_length(Param);
+static ml_value_t *ML_TYPED_FN(query_param, MLAddressT, ml_value_t *Param, const char **Value, int *Length) {
+	*Value = ml_address_value(Param);
+	*Length = ml_address_length(Param);
 	return NULL;
 }
 

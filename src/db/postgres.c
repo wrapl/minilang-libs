@@ -233,7 +233,7 @@ static uint8_t hexbyte(const char *P) {
 }
 
 static ml_value_t *query_recv_bytes(const char *Value, int Length) {
-	if (Value[0] == '\'' && Value[1] == 'x') {
+	if (Value[0] == '\\' && Value[1] == 'x') {
 		int Size = (Length - 2) / 2;
 		uint8_t *Copy = anew(uint8_t, Size);
 		for (const char *P = Value + 2; *P; P += 2) *Copy++ = hexbyte(P);

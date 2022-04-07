@@ -31,6 +31,7 @@ struct statement_t {
 	connection_t *Connection;
 	const char *Name;
 	recv_fn *RecvFns;
+	int NumFields;
 };
 
 struct query_t {
@@ -40,7 +41,7 @@ struct query_t {
 	recv_fn *RecvFns;
 	const char **Values;
 	int *Lengths;
-	int NumParams;
+	int NumParams, NumFields;
 };
 
 typedef struct {
@@ -180,6 +181,7 @@ static void statement_call(ml_state_t *Caller, statement_t *Statement, int Count
 	Query->Caller = Caller;
 	Query->Name = Statement->Name;
 	Query->RecvFns = Statement->RecvFns;
+	Query->NumFields = Statement->NumFields;
 	ml_value_t *Error = query_params(Query, Count, Args);
 	if (Error) ML_RETURN(Error);
 	query_t *Tail = Connection->Tail;
@@ -224,8 +226,7 @@ static ml_value_t *query_recv_uuid(const char *Value, int Length) {
 	return ml_uuid_parse(Value, Length);
 }
 
-static recv_fn *query_recv_fns(PGresult *Result) {
-	int NumFields = PQnfields(Result);
+static recv_fn *query_recv_fns(PGresult *Result, int NumFields) {
 	recv_fn *RecvFns = anew(recv_fn, NumFields);
 	for (int I = 0; I < NumFields; ++I) {
 		switch (PQftype(Result, I)) {
@@ -279,7 +280,8 @@ static gboolean connection_source_dispatch(connection_source_t *Source, GSourceF
 					Statement->Type = StatementT;
 					Statement->Name = Query->Name;
 					Statement->Connection = Connection;
-					Statement->RecvFns = query_recv_fns(Result);
+					Statement->NumFields = PQnfields(Result);
+					Statement->RecvFns = query_recv_fns(Result, Statement->NumFields);
 					Connection->Result = (ml_value_t *)Statement;
 				}
 			} else {
@@ -287,7 +289,8 @@ static gboolean connection_source_dispatch(connection_source_t *Source, GSourceF
 				case PGRES_TUPLES_OK: {
 					ml_value_t *Rows = Connection->Result = ml_list();
 					int NumFields = PQnfields(Result);
-					recv_fn *RecvFns = Query->RecvFns ?: query_recv_fns(Result);
+					recv_fn *RecvFns = Query->RecvFns;
+					if (!RecvFns || Query->NumFields != NumFields) RecvFns = query_recv_fns(Result, NumFields);
 					for (int I = 0; I < PQntuples(Result); ++I) {
 						ml_tuple_t *Row = (ml_tuple_t *)ml_tuple(NumFields);
 						for (int J = 0; J < NumFields; ++J) {

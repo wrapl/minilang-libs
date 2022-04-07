@@ -225,7 +225,7 @@ static ml_value_t *query_recv_string(const char *Value, int Length) {
 }
 
 static uint8_t hexdigit(char C) {
-	return (C <= '9') ? C - '0' : toupper(C) - 'A' + 10;
+	return (C <= '9') ? (C - '0') : (C - 'a' + 10);
 }
 
 static uint8_t hexbyte(const char *P) {
@@ -235,8 +235,8 @@ static uint8_t hexbyte(const char *P) {
 static ml_value_t *query_recv_bytes(const char *Value, int Length) {
 	if (Value[0] == '\\' && Value[1] == 'x') {
 		int Size = (Length - 2) / 2;
-		uint8_t *Copy = anew(uint8_t, Size);
-		for (const char *P = Value + 2; *P; P += 2) *Copy++ = hexbyte(P);
+		uint8_t *Copy = anew(uint8_t, Size), *Q = Copy;
+		for (const char *P = Value + 2; *P; P += 2) *Q++ = hexbyte(P);
 		return ml_address((void *)Copy, Size);
 	} else {
 		char *Copy = snew(Length + 1);

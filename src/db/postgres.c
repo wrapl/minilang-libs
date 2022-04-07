@@ -5,6 +5,7 @@
 #include <libpq-fe.h>
 #include <postgresql/server/catalog/pg_type_d.h>
 #include <glib-object.h>
+#include <ctype.h>
 
 #undef ML_CATEGORY
 #define ML_CATEGORY "db/postgres"
@@ -223,6 +224,28 @@ static ml_value_t *query_recv_string(const char *Value, int Length) {
 	return ml_string(Copy, Length);
 }
 
+static uint8_t hexdigit(char C) {
+	return (C <= '9') ? C - '0' : toupper(C) - 'A' + 10;
+}
+
+static uint8_t hexbyte(const char *P) {
+	return (hexdigit(P[0]) << 4) | hexdigit(P[1]);
+}
+
+static ml_value_t *query_recv_bytes(const char *Value, int Length) {
+	if (Value[0] == '\'' && Value[1] == 'x') {
+		int Size = (Length - 2) / 2;
+		uint8_t *Copy = anew(uint8_t, Size);
+		for (const char *P = Value + 2; *P; P += 2) *Copy++ = hexbyte(P);
+		return ml_address((void *)Copy, Size);
+	} else {
+		char *Copy = snew(Length + 1);
+		memcpy(Copy, Value, Length);
+		Copy[Length] = 0;
+		return ml_string(Copy, Length);
+	}
+}
+
 static ml_value_t *query_recv_time(const char *Value, int Length) {
 	return ml_time_parse(Value, Length);
 }
@@ -242,11 +265,11 @@ static recv_fn *query_recv_fns(PGresult *Result, int NumFields) {
 		case FLOAT4OID:
 		case FLOAT8OID: RecvFns[I] = query_recv_real; break;
 		case CHAROID:
-		case BYTEAOID:
 		case TEXTOID:
 		case JSONOID:
 		case XMLOID:
 		case VARCHAROID: RecvFns[I] = query_recv_string; break;
+		case BYTEAOID: RecvFns[I] = query_recv_bytes; break;
 		case DATEOID:
 		case TIMEOID:
 		case TIMESTAMPOID:

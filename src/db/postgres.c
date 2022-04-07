@@ -40,7 +40,7 @@ struct query_t {
 	const char *Name, *SQL;
 	recv_fn *RecvFns;
 	const char **Values;
-	int *Lengths;
+	int *Lengths, *Formats;
 	int NumParams, NumFields;
 };
 
@@ -54,50 +54,53 @@ static void query_send(PGconn *Conn, query_t *Query) {
 		if (Query->Name) {
 			PQsendPrepare(Conn, Query->Name, Query->SQL, 0, NULL);
 		} else {
-			PQsendQueryParams(Conn, Query->SQL, Query->NumParams, NULL, Query->Values, Query->Lengths, NULL, 0);
+			PQsendQueryParams(Conn, Query->SQL, Query->NumParams, NULL, Query->Values, Query->Lengths, Query->Formats, 0);
 		}
 	} else {
-		PQsendQueryPrepared(Conn, Query->Name, Query->NumParams, Query->Values, Query->Lengths, NULL, 0);
+		PQsendQueryPrepared(Conn, Query->Name, Query->NumParams, Query->Values, Query->Lengths, Query->Formats, 0);
 	}
 }
 
-static ml_value_t *query_param(ml_value_t *Param, const char **Value, int *Length) {
+static ml_value_t *query_param(ml_value_t *Param, const char **Value, int *Length, int *Format) {
 	typeof(query_param) *function = ml_typed_fn_get(ml_typeof(Param), query_param);
 	if (!function) return ml_error("TypeError", "Unable to use %s in query", ml_typeof(Param)->Name);
-	return function(Param, Value, Length);
+	return function(Param, Value, Length, Format);
 }
 
-static ml_value_t *ML_TYPED_FN(query_param, MLNilT, ml_value_t *Param, const char **Value, int *Length) {
+static ml_value_t *ML_TYPED_FN(query_param, MLNilT, ml_value_t *Param, const char **Value, int *Length, int *Format) {
 	*Value = NULL;
 	*Length = 0;
+	*Format = 0;
 	return NULL;
 }
 
-static ml_value_t *ML_TYPED_FN(query_param, MLIntegerT, ml_value_t *Param, const char **Value, int *Length) {
+static ml_value_t *ML_TYPED_FN(query_param, MLIntegerT, ml_value_t *Param, const char **Value, int *Length, int *Format) {
 	*Length = asprintf((char **)Value, "%ld", ml_integer_value(Param));
+	*Format = 0;
 	return NULL;
 }
 
-static ml_value_t *ML_TYPED_FN(query_param, MLRealT, ml_value_t *Param, const char **Value, int *Length) {
+static ml_value_t *ML_TYPED_FN(query_param, MLRealT, ml_value_t *Param, const char **Value, int *Length, int *Format) {
 	*Length = asprintf((char **)Value, "0x%a", ml_real_value(Param));
+	*Format = 0;
 	return NULL;
 }
 
-static ml_value_t *ML_TYPED_FN(query_param, MLAddressT, ml_value_t *Param, const char **Value, int *Length) {
+static ml_value_t *ML_TYPED_FN(query_param, MLAddressT, ml_value_t *Param, const char **Value, int *Length, int *Format) {
 	*Value = ml_address_value(Param);
 	*Length = ml_address_length(Param);
+	*Format = 1;
 	return NULL;
 }
 
-static ml_value_t *ML_TYPED_FN(query_param, MLUUIDT, ml_value_t *Param, const char **Value, int *Length) {
-	char *IdString = snew(UUID_STR_LEN);
-	uuid_unparse_lower(ml_uuid_value(Param), IdString);
-	*Value = IdString;
-	*Length = UUID_STR_LEN - 1;
+static ml_value_t *ML_TYPED_FN(query_param, MLUUIDT, ml_value_t *Param, const char **Value, int *Length, int *Format) {
+	*Value = (const char *)ml_uuid_value(Param);
+	*Length = sizeof(uuid_t);
+	*Format = 1;
 	return NULL;
 }
 
-static ml_value_t *ML_TYPED_FN(query_param, MLTimeT, ml_value_t *Param, const char **Value, int *Length) {
+static ml_value_t *ML_TYPED_FN(query_param, MLTimeT, ml_value_t *Param, const char **Value, int *Length, int *Format) {
 	struct timespec Time[1];
 	ml_time_value(Param, Time);
 	struct tm TM = {0,};
@@ -118,6 +121,7 @@ static ml_value_t *ML_TYPED_FN(query_param, MLTimeT, ml_value_t *Param, const ch
 	}
 	*Value = Temp;
 	*Length = Actual;
+	*Format = 0;
 	return NULL;
 }
 
@@ -125,8 +129,9 @@ static ml_value_t *query_params(query_t *Query, int Count, ml_value_t **Args) {
 	Query->NumParams = Count;
 	const char **Values = Query->Values = anew(const char *, Count);
 	int *Lengths = Query->Lengths = anew(int, Count);
+	int *Formats = Query->Formats = anew(int, Count);
 	for (int I = 0; I < Count; ++I) {
-		ml_value_t *Error = query_param(ml_deref(Args[I]), Values + I, Lengths + I);
+		ml_value_t *Error = query_param(ml_deref(Args[I]), Values + I, Lengths + I, Formats + I);
 		if (Error) return Error;
 	}
 	return NULL;

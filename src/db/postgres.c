@@ -3,7 +3,7 @@
 #include <minilang/ml_uuid.h>
 #include <minilang/ml_macros.h>
 #include <libpq-fe.h>
-#include <postgresql/server/catalog/pg_type_d.h>
+#include <server/catalog/pg_type_d.h>
 #include <glib-object.h>
 #include <ctype.h>
 

@@ -40,11 +40,13 @@ end
 scope("postgres";) do
 	CFLAGS := old + [
 		pkgconfig("--cflags gio-2.0"),
-		pkgconfig("--cflags libpq")
+		pkgconfig("--cflags libpq"),
+		'-I', expr('pg_config --pkgincludedir') => fun() shell('pg_config --pkgincludedir'):trim
 	]
 	LDFLAGS := old + [
 		pkgconfig("--libs gio-2.0"),
-		pkgconfig("--libs libpq")
+		pkgconfig("--libs libpq"),
+		'-L', expr('pg_config --pkglibdir') => fun() shell('pg_config --pkglibdir'):trim
 	]
 	DEFAULT[so_module("db/postgres.so", [file("postgres.o")])]
 end

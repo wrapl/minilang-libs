@@ -66,7 +66,7 @@ mini_module := fun(Name) do
 	end
 end
 
-CFLAGS := [
+CFLAGS := old + [
 	"-march=native",
 	"-std=gnu11", :>'--save-temps',
 	"-fstrict-aliasing",
@@ -85,7 +85,7 @@ CFLAGS := [
 	'-D{PLATFORM}',
 	"-fpic", "-I.."
 ]
-LDFLAGS := ["-lm", "-ldl", '-Wl,--dynamic-list={file("exports.lst")}']
+LDFLAGS := old + ["-lm", "-ldl", '-Wl,--dynamic-list={file("exports.lst")}']
 
 DEBUG := defined("DEBUG")
 
@@ -103,6 +103,7 @@ subdir("img")
 subdir("log")
 subdir("net")
 subdir("parse")
+:>subdir("phys")
 subdir("snd")
 subdir("solver")
 subdir("util")

@@ -55,15 +55,15 @@ fmt/html
    *TBD*
 
 
+:mini:`meth (Arg₁: element)[Arg₂: string]`
+   *TBD*
+
+
 :mini:`meth (Arg₁: element):attributes`
    *TBD*
 
 
 :mini:`meth (Arg₁: element):value`
-   *TBD*
-
-
-:mini:`meth (Arg₁: element)[Arg₂: string]`
    *TBD*
 
 

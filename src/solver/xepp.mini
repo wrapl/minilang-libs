@@ -304,7 +304,7 @@ end
 let Output := if Args[2] then
 	file(Args[2], "w")
 else
-	terminal::stdout
+	terminal::Stdout
 end
 
 for Node in Content do

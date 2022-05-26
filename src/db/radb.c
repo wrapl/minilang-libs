@@ -256,6 +256,13 @@ ML_METHOD("insert", StringIndexT, MLStringT) {
 	return ml_integer(Index);
 }
 
+ML_METHOD("delete", StringIndexT, MLStringT) {
+	ml_string_index_t *Store = (ml_string_index_t *)Args[0];
+	CHECK_HANDLE(Store);
+	size_t Index = string_index_delete(Store->Handle, ml_string_value(Args[1]), ml_string_length(Args[1]));
+	return Index == INVALID_INDEX ? MLNil : ml_integer(Index);
+}
+
 ML_METHOD("search", StringIndexT, MLStringT) {
 	ml_string_index_t *Store = (ml_string_index_t *)Args[0];
 	CHECK_HANDLE(Store);
@@ -322,6 +329,15 @@ ML_METHOD("insert", CborIndexT, MLAnyT) {
 	if (!Cbor.Length) return Cbor.Error;
 	size_t Index = string_index_insert(Store->Handle, Cbor.Data, Cbor.Length);
 	return ml_integer(Index);
+}
+
+ML_METHOD("delete", CborIndexT, MLAnyT) {
+	ml_string_index_t *Store = (ml_string_index_t *)Args[0];
+	CHECK_HANDLE(Store);
+	ml_cbor_t Cbor = ml_to_cbor(Args[1]);
+	if (!Cbor.Length) return Cbor.Error;
+	size_t Index = string_index_delete(Store->Handle, Cbor.Data, Cbor.Length);
+	return Index == INVALID_INDEX ? MLNil : ml_integer(Index);
 }
 
 ML_METHOD("search", CborIndexT, MLAnyT) {

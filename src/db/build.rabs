@@ -16,6 +16,7 @@ scope("radb";) do
 	let Lib := Dir / "libradb.a" => fun() do
 		Dir:rmdir
 		execute("git clone -b dev https://github.com/rajamukherji/radb.git", Dir)
+		:>execute("cp -rv ~/Work/Radb", Dir)
 		Dir:chdir
 		execute("make clean")
 		execute("make libradb.a RADB_MEM=GC CFLAGS=-fpic")

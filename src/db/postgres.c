@@ -94,6 +94,13 @@ static ml_value_t *ML_TYPED_FN(query_param, MLAddressT, ml_value_t *Param, const
 	return NULL;
 }
 
+static ml_value_t *ML_TYPED_FN(query_param, MLStringT, ml_value_t *Param, const char **Value, int *Length, int *Format) {
+	*Value = ml_string_value(Param);
+	*Length = ml_string_length(Param);
+	*Format = 0;
+	return NULL;
+}
+
 static ml_value_t *ML_TYPED_FN(query_param, MLUUIDT, ml_value_t *Param, const char **Value, int *Length, int *Format) {
 	*Value = (const char *)ml_uuid_value(Param);
 	*Length = sizeof(uuid_t);

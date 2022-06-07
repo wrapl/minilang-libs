@@ -1,6 +1,6 @@
 DEFAULT[so_module("fmt/csv.so", [file("csv.o"), file("libcsv.o")])]
 
-scope("html";) do
+:<scope("html";) do
 	let LEXBOR := file("lib/liblexbor_static.a") => fun() do
 		file("lexbor"):rmdir:mkdir:chdir
 		execute("wget -nv https://github.com/lexbor/lexbor/archive/refs/tags/v2.1.0.tar.gz -O- | tar xvzP --strip-components=1")
@@ -10,4 +10,6 @@ scope("html";) do
 	PREBUILDS := old + [LEXBOR]
 	CFLAGS := old + ['-I', PATH / "include"]
 	DEFAULT[so_module("fmt/html.so", [file("html.o")], [LEXBOR])]
-end
+end>:
+
+DEFAULT[so_module("fmt/html.so", [file("html.o")], ["-lgumbo"])]

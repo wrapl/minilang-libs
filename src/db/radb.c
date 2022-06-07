@@ -284,7 +284,7 @@ ML_METHOD("get", StringIndexT, MLIntegerT) {
 ML_METHOD("count", StringIndexT) {
 	ml_string_index_t *Store = (ml_string_index_t *)Args[0];
 	CHECK_HANDLE(Store);
-	return ml_integer(string_index_count(Store->Handle));
+	return ml_integer(string_index_num_entries(Store->Handle));
 }
 
 ML_TYPE(CborIndexT, (), "cbor-index");

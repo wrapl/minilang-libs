@@ -55,19 +55,19 @@ parse/cleri
    *TBD*
 
 
-:mini:`meth (Arg₁: cleri):dup`
-   *TBD*
-
-
-:mini:`meth (Arg₁: cleri):set(Arg₂: cleri)`
-   *TBD*
-
-
 :mini:`meth cleri_grammar(Arg₁: cleri)`
    *TBD*
 
 
 :mini:`meth cleri_grammar(Arg₁: cleri, Arg₂: string)`
+   *TBD*
+
+
+:mini:`meth (Arg₁: cleri):dup`
+   *TBD*
+
+
+:mini:`meth (Arg₁: cleri):set(Arg₂: cleri)`
    *TBD*
 
 

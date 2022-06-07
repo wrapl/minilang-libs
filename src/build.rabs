@@ -97,9 +97,12 @@ else
 end
 
 subdir("db")
+subdir("digest")
+subdir("enc")
 subdir("event")
 subdir("fmt")
 subdir("img")
+subdir("jupyter")
 subdir("log")
 subdir("net")
 subdir("parse")

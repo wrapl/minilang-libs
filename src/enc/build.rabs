@@ -1,0 +1,2 @@
+DEFAULT[so_module("enc/base16.so", [file("base16.o")], [])]
+DEFAULT[so_module("enc/base64.so", [file("base64.o")], [])]

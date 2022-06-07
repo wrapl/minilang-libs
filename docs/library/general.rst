@@ -87,9 +87,3 @@ general
    *TBD*
 
 
-.. _type-socket:
-
-:mini:`type socket`
-   *TBD*
-
-

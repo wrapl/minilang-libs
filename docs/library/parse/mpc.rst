@@ -177,6 +177,12 @@ parse/mpc
    Returns a new parser that matches the sequence of parsers defined by :mini:`Parserᵢ`. The parser returns a list of the parsed values.
 
 
+.. _fun-mpcregex:
+
+:mini:`fun mpcregex(Arg₁: string)`
+   *TBD*
+
+
 :mini:`meth (Arg₁: string) % (Arg₂: parser::string)`
    *TBD*
 

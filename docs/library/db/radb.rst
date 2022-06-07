@@ -17,6 +17,10 @@ db/radb
    *TBD*
 
 
+:mini:`meth (Arg₁: cbor_index):delete(Arg₂: any)`
+   *TBD*
+
+
 :mini:`meth (Arg₁: cbor_index):get(Arg₂: integer)`
    *TBD*
 
@@ -97,6 +101,10 @@ db/radb
    *TBD*
 
 
+:mini:`meth (Arg₁: string_index):delete(Arg₂: string)`
+   *TBD*
+
+
 :mini:`meth (Arg₁: string_index):get(Arg₂: integer)`
    *TBD*
 
@@ -115,12 +123,12 @@ db/radb
    A store for strings.
 
 
-:mini:`meth string_store(Path: string, NodeSize: integer, ChunkSize: integer): string_store`
-   Creates a new string store at :mini:`Path` with node size :mini:`NodeSize` and chunk size :mini:`ChunkSize`.
-
-
 :mini:`meth string_store(Path: string): string_store`
    Opens an existing string store at :mini:`Path`.
+
+
+:mini:`meth string_store(Path: string, NodeSize: integer, ChunkSize: integer): string_store`
+   Creates a new string store at :mini:`Path` with node size :mini:`NodeSize` and chunk size :mini:`ChunkSize`.
 
 
 :mini:`meth string_store(Path: string, NodeSize: integer): string_store`

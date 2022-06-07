@@ -1,1 +1,2 @@
 DEFAULT[so_module("net/curl.so", [file("curl.o")], ["-lcurl"])]
+DEFAULT[so_module("net/zeromq.so", [file("zeromq.o")], ["-lczmq"])]

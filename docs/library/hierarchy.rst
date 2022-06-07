@@ -34,6 +34,8 @@ hierarchy
       "any":e -> "cleri_parse":w;
       "function":e -> "cleri_grammar":w;
       "any":e -> "socket":w;
+      "any":e -> "frame":w;
+      "sequence":e -> "message":w;
       "any":e -> "curl":w;
       "function":e -> "logger":w;
       "any":e -> "category":w;
@@ -51,6 +53,13 @@ hierarchy
       "any":e -> "event_base":w;
       "any":e -> "event":w;
       "any":e -> "event_http":w;
+      "stream":e -> "md5":w;
+      "stream":e -> "ripemd160":w;
+      "stream":e -> "sha1":w;
+      "stream":e -> "sha224":w;
+      "stream":e -> "sha256":w;
+      "stream":e -> "sha384":w;
+      "stream":e -> "sha512":w;
       "any":e -> "sqlite":w;
       "sequence":e -> "sqlite::stmt":w;
       "any":e -> "version_store":w;

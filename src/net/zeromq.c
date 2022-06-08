@@ -269,15 +269,19 @@ static void frame_finalize(frame_t *Frame, void *Data) {
 ML_TYPE(FrameT, (), "zeromq::frame");
 // ZeroMQ frame.
 
+static ml_value_t *frame(zframe_t *Handle) {
+	frame_t *Frame = new(frame_t);
+	Frame->Type = FrameT;
+	Frame->Handle = Handle;
+	GC_register_finalizer(Frame, (GC_finalization_proc)frame_finalize, NULL, NULL, NULL);
+	return (ml_value_t *)Frame;
+}
+
 ML_METHOD(FrameT, MLAddressT) {
 //<Bytes
 //>frame
 // Returns a new frame with the contents of :mini:`Bytes`.
-	frame_t *Frame = new(frame_t);
-	Frame->Type = FrameT;
-	Frame->Handle = zframe_new(ml_address_value(Args[0]), ml_address_length(Args[0]));
-	GC_register_finalizer(Frame, (GC_finalization_proc)frame_finalize, NULL, NULL, NULL);
-	return (ml_value_t *)Frame;
+	return frame(zframe_new(ml_address_value(Args[0]), ml_address_length(Args[0])));
 }
 
 ML_METHOD("data", FrameT) {
@@ -314,14 +318,18 @@ static void message_finalize(message_t *Message, void *Data) {
 ML_TYPE(MessageT, (MLSequenceT), "zeromq::message");
 // ZeroMQ message.
 
+static ml_value_t *message(zmsg_t *Handle) {
+	message_t *Message = new(message_t);
+	Message->Type = MessageT;
+	Message->Handle = Handle;
+	GC_register_finalizer(Message, (GC_finalization_proc)message_finalize, NULL, NULL, NULL);
+	return (ml_value_t *)Message;
+}
+
 ML_METHOD(MessageT) {
 //>message
 // Returns a new empty message.
-	message_t *Message = new(message_t);
-	Message->Type = MessageT;
-	Message->Handle = zmsg_new();
-	GC_register_finalizer(Message, (GC_finalization_proc)message_finalize, NULL, NULL, NULL);
-	return (ml_value_t *)Message;
+	return message(zmsg_new());
 }
 
 static ml_value_t *message_add_value(zmsg_t *Handle, ml_value_t *Arg) {
@@ -348,23 +356,16 @@ ML_METHODV(MessageT) {
 //<Frame/1
 //>message
 // Returns a new message with the specified content. :mini:`Frame/i` can be bytes (address / string), a frame, another message or :mini:`nil` to add an empty frame.
-	message_t *Message = new(message_t);
-	Message->Type = MessageT;
-	zmsg_t *Handle = Message->Handle = zmsg_new();
-	GC_register_finalizer(Message, (GC_finalization_proc)message_finalize, NULL, NULL, NULL);
+	zmsg_t *Handle = zmsg_new();
 	for (int I = 0; I < Count; ++I) message_add_value(Handle, Args[I]);
-	return (ml_value_t *)Message;
+	return message(Handle);
 }
 
 ML_METHOD(MessageT, MLIntegerT) {
 //<Signal
 //>message
 // Returns a new signal message with specified value.
-	message_t *Message = new(message_t);
-	Message->Type = MessageT;
-	Message->Handle = zmsg_new_signal(ml_integer_value(Args[0]));
-	GC_register_finalizer(Message, (GC_finalization_proc)message_finalize, NULL, NULL, NULL);
-	return (ml_value_t *)Message;
+	return message(zmsg_new_signal(ml_integer_value(Args[0])));
 }
 
 ML_METHOD(MessageT, SocketT) {
@@ -374,11 +375,7 @@ ML_METHOD(MessageT, SocketT) {
 	socket_t *Socket = (socket_t *)Args[0];
 	zmsg_t *Handle = zmsg_recv(Socket->Handle);
 	if (!Handle) return MLNil;
-	message_t *Message = new(message_t);
-	Message->Type = MessageT;
-	Message->Handle = Handle;
-	GC_register_finalizer(Message, (GC_finalization_proc)message_finalize, NULL, NULL, NULL);
-	return (ml_value_t *)Message;
+	return message(Handle);
 }
 
 ML_METHOD(MessageT, SocketT, MLBooleanT) {
@@ -389,11 +386,7 @@ ML_METHOD(MessageT, SocketT, MLBooleanT) {
 	socket_t *Socket = (socket_t *)Args[0];
 	zmsg_t *Handle = ml_boolean_value(Args[1]) ? zmsg_recv(Socket->Handle) : zmsg_recv_nowait(Socket->Handle);
 	if (!Handle) return MLNil;
-	message_t *Message = new(message_t);
-	Message->Type = MessageT;
-	Message->Handle = Handle;
-	GC_register_finalizer(Message, (GC_finalization_proc)message_finalize, NULL, NULL, NULL);
-	return (ml_value_t *)Message;
+	return message(Handle);
 }
 
 ML_METHOD("put", MessageT, MLAddressT) {
@@ -464,11 +457,7 @@ ML_METHOD("pop", MessageT) {
 // Removes and returns the first frame in :mini:`Message` or :mini:`nil` if there are no frames.
 	message_t *Message = (message_t *)Args[0];
 	if (!zmsg_size(Message->Handle)) return MLNil;
-	frame_t *Frame = new(frame_t);
-	Frame->Type = FrameT;
-	Frame->Handle = zmsg_pop(Message->Handle);
-	GC_register_finalizer(Frame, (GC_finalization_proc)frame_finalize, NULL, NULL, NULL);
-	return (ml_value_t *)Frame;
+	return frame(zmsg_pop(Message->Handle));
 }
 
 ML_METHOD("popmsg", MessageT) {
@@ -476,11 +465,7 @@ ML_METHOD("popmsg", MessageT) {
 //>message|nil
 // Removes and returns the first sub message in :mini:`Message` or :mini:`nil` if there are no sub messages.
 	message_t *Message = (message_t *)Args[0];
-	message_t *SubMessage = new(message_t);
-	SubMessage->Type = MessageT;
-	SubMessage->Handle = zmsg_popmsg(Message->Handle);
-	GC_register_finalizer(SubMessage, (GC_finalization_proc)message_finalize, NULL, NULL, NULL);
-	return (ml_value_t *)SubMessage;
+	return message(zmsg_popmsg(Message->Handle));
 }
 
 ML_METHOD("append", MLStringBufferT, MessageT) {
@@ -500,7 +485,7 @@ ML_METHOD("append", MLStringBufferT, MessageT) {
 typedef struct {
 	ml_type_t *Type;
 	zmsg_t *Handle;
-	frame_t *Frame;
+	ml_value_t *Frame;
 	int Index;
 } message_iter_t;
 
@@ -513,10 +498,7 @@ static void ML_TYPED_FN(ml_iterate, MessageT, ml_state_t *Caller, message_t *Mes
 	message_iter_t *Iter = new(message_iter_t);
 	Iter->Type = MessageIterT;
 	Iter->Handle = Message->Handle;
-	frame_t *Frame = Iter->Frame = new(frame_t);
-	Frame->Type = FrameT;
-	Frame->Handle = Handle;
-	GC_register_finalizer(Frame, (GC_finalization_proc)frame_finalize, NULL, NULL, NULL);
+	Iter->Frame = frame(Handle);
 	Iter->Index = 1;
 	ML_RETURN(Iter);
 }
@@ -524,10 +506,7 @@ static void ML_TYPED_FN(ml_iterate, MessageT, ml_state_t *Caller, message_t *Mes
 static void ML_TYPED_FN(ml_iter_next, MessageIterT, ml_state_t *Caller, message_iter_t *Iter) {
 	zframe_t *Handle = zmsg_pop(Iter->Handle);
 	if (!Handle) ML_RETURN(MLNil);
-	frame_t *Frame = Iter->Frame = new(frame_t);
-	Frame->Type = FrameT;
-	Frame->Handle = Handle;
-	GC_register_finalizer(Frame, (GC_finalization_proc)frame_finalize, NULL, NULL, NULL);
+	Iter->Frame = frame(Handle);
 	++Iter->Index;
 	ML_RETURN(Iter);
 }

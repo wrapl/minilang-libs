@@ -6,21 +6,17 @@ import: hmac("digest/hmac")
 import: base16("enc/base16")
 import: time("std/time")
 
-let Log := file("/tmp/minilang-jupyter.log", "a")
-
 let Config := with Json := file(sys::Args[1], "r") do
 	must Json:close
 	json::decode(Json:rest)
 end
 
-Log:write('\n\nConfig = {Config}\n')
-Log:flush
+print('\n\nConfig = {Config}\n')
 
 let Key := Config["key"]
-var Session := string(std::uuid())
+let Session := string(std::uuid())
 
-Log:write('Starting session = {Session}\n')
-Log:flush
+print('Starting session = {Session}\n')
 
 let Heartbeat := zeromq::socket(zeromq::socket::type::Rep)
 Heartbeat:bind('{Config["transport"]}://{Config["ip"]}:{Config["hb_port"]}')
@@ -41,27 +37,33 @@ fun listen(Name, Socket, Callback) do
 	glib::unix_fd_add_full(0, Socket:fd, glib::IOCondition::in; Fd, Condition) do
 		if Socket:events /\ 1 = 1 then
 			let Message := list(zeromq::message(Socket), :data)
-			Log:write('{Name} = {Message}\n')
-			Log:flush
-			Callback(Message)
+			print('{Name} <- {Message}\n')
+			let Ids := with Index := Message:find("<IDS|MSG>") do
+				Message:splice(1, Index)
+			end
+			let Signature := Message:pop
+			let Header := json::decode(Message:pop)
+			let Parent := json::decode(Message:pop)
+			let Metadata := json::decode(Message:pop)
+			let Content := json::decode(Message:pop)
+			Callback(Ids, Signature, Header, Parent, Metadata, Content)
 		end
 		ret true
 	on Error do
-		Log:write('Error: {Error:type}: {Error:message}\n{Error:trace}\n')
-		Log:flush
+		print('Error: {Error:type}: {Error:message}\n{Error:trace}\n')
 		ret true
 	end
 end
 
-fun send(Socket, Ids, MsgType, Parent, Metadata, Content, [Extra]) do
+fun send(Name, Socket, Ids, MsgType, Parent, Metadata, Content, [Extra]) do
 	let MsgId := string(std::uuid())
 	let HeaderJson := json::encode({
 		"msg_id" is MsgId,
 		"username" is "kernel",
 		"session" is Session,
 		"msg_type" is MsgType,
-		"version" is "5.2",
-		"date" is string(time())
+		"version" is "5.3",
+		"date" is string(time(), nil)[1, 27] + "Z"
 	})
 	let ParentJson := json::encode(Parent)
 	let MetadataJson := json::encode(Metadata)
@@ -72,42 +74,21 @@ fun send(Socket, Ids, MsgType, Parent, Metadata, Content, [Extra]) do
 	HMAC:update(MetadataJson)
 	HMAC:update(ContentJson)
 	let Signature := base16::encode(HMAC:digest):lower
-	let Response := list(Ids):put(Signature, HeaderJson, ParentJson, MetadataJson, ContentJson):grow(Extra)
-	Log:write('Sending = {Response}\n')
-	Log:flush
-	let Message := zeromq::message(Response)
-	Log:write('Sending = {Message}\n')
-	Log:flush
-	Message:send(Socket)
+	let Message := list(Ids):put(Signature, HeaderJson, ParentJson, MetadataJson, ContentJson):grow(Extra)
+	print('{Name} -> {Message}\n')
+	zeromq::message(Message):send(Socket)
 	ret MsgId
-on Error do
-	Log:write('Error: {Error:type}: {Error:message}\n{Error:trace}\n')
-	Log:flush
 end
 
 listen("Heartbeat", Heartbeat; Message) do
 end
 
-listen("Shell", Shell; Message) do
-	let Ids := with Index := Message:find("<IDS|MSG>") do
-		Message:splice(1, Index)
-	end
-	let Signature := Message:pop
-	let Header := json::decode(Message:pop)
-	let Parent := json::decode(Message:pop)
-	let Metadata := json::decode(Message:pop)
-	let Content := json::decode(Message:pop)
-	Log:write('Ids = {Ids}\n')
-	Log:write('Signature = {Signature}\n')
-	Log:write('Header = {Header}\n')
-	Log:write('Parent = {Parent}\n')
-	Log:write('Metadata = {Metadata}\n')
-	Log:write('Content = {Content}\n')
+listen("Shell", Shell; Ids, Signature, Header, Parent, Metadata, Content) do
 	switch Header["msg_type"]: string
 	case "kernel_info_request" do
-		send(Shell, Ids, "kernel_info_reply", Header, {}, {
+		send("Shell", Shell, Ids, "kernel_info_reply", Header, {}, {
 			"status" is "ok",
-			"protocol_version" is "5.3",
+			"protocol_version" is "5.3.0",
 			"implementation" is "minilang",
 			"implementation_version" is "0.0.1",
 			"language_info" is {
@@ -119,30 +100,14 @@ listen("Shell", Shell; Message) do
 			"banner" is "Minilang in Jupyter :)"
 		});
 	else
-		Log:write('Unknown message type = {Header["msg_type"]}\n')
-		Log:flush
+		print('Unknown message type = {Header["msg_type"]}\n')
 	end
 end
 
-listen("Control", Control; Message) do
-	let Ids := with Index := Message:find("<IDS|MSG>") do
-		Message:splice(1, Index)
-	end
-	let Signature := Message:pop
-	let Header := json::decode(Message:pop)
-	let Parent := json::decode(Message:pop)
-	let Metadata := json::decode(Message:pop)
-	let Content := json::decode(Message:pop)
-	Log:write('Ids = {Ids}\n')
-	Log:write('Signature = {Signature}\n')
-	Log:write('Header = {Header}\n')
-	Log:write('Parent = {Parent}\n')
-	Log:write('Metadata = {Metadata}\n')
-	Log:write('Content = {Content}\n')
+listen("Control", Control; Ids, Signature, Header, Parent, Metadata, Content) do
 	switch Header["msg_type"]: string
 	case "kernel_info_request" do
-		Session := Header["session"]
-		send(Shell, Ids, "kernel_info_reply", Header, {}, {
+		send("Control", Control, Ids, "kernel_info_reply", Header, {}, {
 			"status" is "ok",
 			"protocol_version" is "5.3",
 			"implementation" is "minilang",
@@ -156,8 +121,7 @@ listen("Control", Control; Message) do
 			"banner" is "Minilang in Jupyter :)"
 		});
 	else
-		Log:write('Unknown message type = {Header["msg_type"]}\n')
-		Log:flush
+		print('Unknown message type = {Header["msg_type"]}\n')
 	end
 end
 

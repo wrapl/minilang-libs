@@ -345,7 +345,6 @@ static ml_value_t *message_add_value(zmsg_t *Handle, ml_value_t *Arg) {
 		ML_LIST_FOREACH(Arg, Iter) message_add_value(Handle, Iter->Value);
 	} else if (Arg == MLNil) {
 		zmsg_add(Handle, zframe_new_empty());
-
 	} else {
 		return ml_error("ZeroMQError", "Unable to use <%s> in message", ml_typeof(Arg)->Name);
 	}

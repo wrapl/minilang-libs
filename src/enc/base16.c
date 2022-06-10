@@ -7,14 +7,15 @@ ML_FUNCTION(Encode) {
 	size_t InSize = ml_address_length(Args[0]);
 	size_t OutSize = 2 * InSize;
 	const char *InChars = ml_address_value(Args[0]);
-	char *OutChars = snew(OutSize + 1), *HP = OutChars;
+	char *OutChars = snew(OutSize + 1);
+	ml_value_t *Result = ml_string(OutChars, OutSize);
 	for (int I = InSize; --I >= 0;) {
 		char C = *InChars++;
-		*HP++ = HexDigits[(C >> 4) & 15];
-		*HP++ = HexDigits[C & 15];
+		*OutChars++ = HexDigits[(C >> 4) & 15];
+		*OutChars++ = HexDigits[C & 15];
 	}
-	*HP++ = 0;
-	return ml_string(OutChars, OutSize);
+	*OutChars = 0;
+	return Result;
 }
 
 ML_FUNCTION(Decode) {
@@ -22,7 +23,8 @@ ML_FUNCTION(Decode) {
 	size_t InSize = ml_address_length(Args[0]);
 	size_t OutSize = (InSize + 1) / 2;
 	const char *InChars = ml_address_value(Args[0]);
-	char *OutChars = snew(OutSize + 1), *SP = OutChars;
+	char *OutChars = snew(OutSize + 1);
+	ml_value_t *Result = ml_string(OutChars, OutSize);
 	int Odd = 1;
 	for (int I = InSize; --I >= 0;) {
 		char C = *InChars++;
@@ -34,16 +36,16 @@ ML_FUNCTION(Decode) {
 			C -= '0';
 		}
 		if (Odd) {
-			*SP = C << 4;
+			*OutChars = C << 4;
 			Odd = 0;
 		} else {
-			*SP++ += C;
+			*OutChars++ += C;
 			Odd = 1;
 		}
 	}
-	if (!Odd) SP++;
-	*SP = 0;
-	return ml_string(OutChars, OutSize);
+	if (!Odd) OutChars++;
+	*OutChars = 0;
+	return Result;
 }
 
 void ml_library_entry0(ml_value_t **Slot) {
@@ -52,4 +54,4 @@ void ml_library_entry0(ml_value_t **Slot) {
 		"encode", Encode,
 		"decode", Decode,
 	NULL);
-};
+}

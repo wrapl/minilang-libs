@@ -94,4 +94,4 @@ void ml_library_entry0(ml_value_t **Slot) {
 		"encode", Encode,
 		"decode", Decode,
 	NULL);
-};
+}

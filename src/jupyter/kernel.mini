@@ -63,7 +63,7 @@ fun send(Name, Socket, Ids, MsgType, Parent, Metadata, Content, [Extra]) do
 		"session" is Session,
 		"msg_type" is MsgType,
 		"version" is "5.3",
-		"date" is string(time(), nil)[1, 27] + "Z"
+		"date" is string(time(), nil):limit(27) + "Z"
 	})
 	let ParentJson := json::encode(Parent)
 	let MetadataJson := json::encode(Metadata)
@@ -80,7 +80,7 @@ fun send(Name, Socket, Ids, MsgType, Parent, Metadata, Content, [Extra]) do
 	ret MsgId
 end
 
-listen("Heartbeat", Heartbeat; Message) do
+listen("Heartbeat", Heartbeat; Ids, Signature, Header, Parent, Metadata, Content) do
 end
 
 listen("Shell", Shell; Ids, Signature, Header, Parent, Metadata, Content) do
@@ -99,6 +99,9 @@ listen("Shell", Shell; Ids, Signature, Header, Parent, Metadata, Content) do
 			},
 			"banner" is "Minilang in Jupyter :)"
 		});
+		send("IOPub", IOPub, ["<IDS|MSG>"], "status", Header, {}, {"execution_state" is "idle"})
+	case "execute_request" do
+		
 	else
 		print('Unknown message type = {Header["msg_type"]}\n')
 	end
@@ -106,20 +109,6 @@ end
 
 listen("Control", Control; Ids, Signature, Header, Parent, Metadata, Content) do
 	switch Header["msg_type"]: string
-	case "kernel_info_request" do
-		send("Control", Control, Ids, "kernel_info_reply", Header, {}, {
-			"status" is "ok",
-			"protocol_version" is "5.3",
-			"implementation" is "minilang",
-			"implementation_version" is "0.0.1",
-			"language_info" is {
-				"name" is "minilang",
-				"version" is "0.0.1",
-				"mimetype" is "text/x-minilang",
-				"file_extension" is ".mini"
-			},
-			"banner" is "Minilang in Jupyter :)"
-		});
 	else
 		print('Unknown message type = {Header["msg_type"]}\n')
 	end

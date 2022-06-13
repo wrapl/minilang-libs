@@ -5,6 +5,7 @@
 #include <libpq-fe.h>
 #include <catalog/pg_type_d.h>
 #include <glib-object.h>
+#include <glib-unix.h>
 #include <ctype.h>
 
 #undef ML_CATEGORY
@@ -44,11 +45,6 @@ struct query_t {
 	int *Lengths, *Formats;
 	int NumParams, NumFields;
 };
-
-typedef struct {
-	GSource Base;
-	connection_t *Connection;
-} connection_source_t;
 
 static void query_send(PGconn *Conn, query_t *Query) {
 	if (Query->SQL) {
@@ -153,6 +149,7 @@ ML_METHODVX("query", ConnectionT, MLStringT) {
 // Executes :mini:`SQL` on :mini:`Connection`, with arguments :mini:`Arg/i` if supplied.
 // Returns a list of tuples (for ``SELECT``, etc) or :mini:`nil` for commands without results.
 	connection_t *Connection = (connection_t *)Args[0];
+	if (!Connection->Conn) ML_ERROR("DatabaseError", "Connection is closed");
 	query_t *Query = new(query_t);
 	Query->Caller = Caller;
 	Query->SQL = ml_string_value(Args[1]);
@@ -174,6 +171,7 @@ ML_METHODX("prepare", ConnectionT, MLStringT) {
 //>statement
 // Creates a prepared statement on :mini:`Connection`.
 	connection_t *Connection = (connection_t *)Args[0];
+	if (!Connection->Conn) ML_ERROR("DatabaseError", "Connection is closed");
 	query_t *Query = new(query_t);
 	Query->Caller = Caller;
 	Query->SQL = ml_string_value(Args[1]);
@@ -190,6 +188,7 @@ ML_METHODX("prepare", ConnectionT, MLStringT) {
 
 static void statement_call(ml_state_t *Caller, statement_t *Statement, int Count, ml_value_t **Args) {
 	connection_t *Connection = Statement->Connection;
+	if (!Connection->Conn) ML_ERROR("DatabaseError", "Connection is closed");
 	query_t *Query = new(query_t);
 	Query->Caller = Caller;
 	Query->Name = Statement->Name;
@@ -289,10 +288,20 @@ static recv_fn *query_recv_fns(PGresult *Result, int NumFields) {
 	return RecvFns;
 }
 
-static gboolean connection_source_dispatch(connection_source_t *Source, GSourceFunc Callback, gpointer Data) {
-	connection_t *Connection = Source->Connection;
+static gboolean connection_fn(connection_t *Connection) {
 	PGconn *Conn = Connection->Conn;
-	PQconsumeInput(Conn);
+	if (!PQconsumeInput(Conn)) {
+		if (PQstatus(Conn) != CONNECTION_OK) {
+			const char *Error = PQerrorMessage(Conn);
+			for (query_t *Query = Connection->Head; Query; Query = Query->Next) {
+				Query->Caller->run(Query->Caller, ml_error("DatabaseError", "%s", Error));
+			}
+			PQfinish(Conn);
+			Connection->Head = Connection->Tail = NULL;
+			Connection->Conn = NULL;
+			return G_SOURCE_REMOVE;
+		}
+	}
 	while (Connection->Head && !PQisBusy(Conn)) {
 		PGresult *Result = PQgetResult(Conn);
 		if (!Result) {
@@ -365,16 +374,9 @@ static ml_value_t *connection(const char **Keywords, const char **Values) {
 	connection_t *Connection = new(connection_t);
 	Connection->Type = ConnectionT;
 	Connection->Conn = Conn;
-	static GSourceFuncs ConnectionSourceFuncs = {
-		.prepare = NULL,
-		.check = NULL,
-		.dispatch = (void *)connection_source_dispatch,
-		.finalize = NULL
-	};
-	connection_source_t *Source = (connection_source_t *)g_source_new(&ConnectionSourceFuncs, sizeof(connection_source_t));
-	Source->Connection = Connection;
-	g_source_add_unix_fd((GSource *)Source, Socket, G_IO_IN | G_IO_ERR);
-	g_source_attach((GSource *)Source, NULL);
+	GSource *Source = g_unix_fd_source_new(Socket, G_IO_IN | G_IO_ERR);
+	g_source_set_callback(Source, (void *)connection_fn, Connection, NULL);
+	g_source_attach(Source, NULL);
 	return (ml_value_t *)Connection;
 }
 

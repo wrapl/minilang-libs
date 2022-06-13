@@ -7,7 +7,7 @@
 static const unsigned char Base64Chars[64] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 static uint8_t Base64Value[256];
 
-void _encode(char *OutChars, const char *InChars, size_t InLength) {
+void _encode(unsigned char *OutChars, const unsigned char *InChars, size_t InLength) {
 	int NumBlocks = InLength / 3;
 	int Remainder = InLength % 3;
 	while (--NumBlocks >= 0) {
@@ -42,12 +42,12 @@ ML_FUNCTION(Encode) {
 	size_t InSize = ml_address_length(Args[0]);
 	size_t OutSize = 4 * ((InSize + 2) / 3);
 	char *OutChars = snew(OutSize + 1);
-	_encode(OutChars, ml_address_value(Args[0]), InSize);
+	_encode((unsigned char *)OutChars, (const unsigned char *)ml_address_value(Args[0]), InSize);
 	OutChars[OutSize] = 0;
 	return ml_string(OutChars, OutSize);
 }
 
-size_t _decode(char *OutChars, const unsigned char *InChars, size_t InLength) {
+size_t _decode(unsigned char *OutChars, const unsigned char *InChars, size_t InLength) {
 	int NumBlocks = InLength / 4;
 	size_t OutLength = 0;
 	while (--NumBlocks >= 0) {
@@ -81,7 +81,7 @@ ML_FUNCTION(Decode) {
 	size_t InSize = ml_address_length(Args[0]);
 	size_t OutSize = (InSize / 4) * 3;
 	char *OutChars = snew(OutSize + 1);
-	OutSize = _decode(OutChars, (const unsigned char *)ml_address_value(Args[0]), InSize);
+	OutSize = _decode((unsigned char *)OutChars, (const unsigned char *)ml_address_value(Args[0]), InSize);
 	OutChars[OutSize] = 0;
 	return ml_address(OutChars, OutSize);
 }

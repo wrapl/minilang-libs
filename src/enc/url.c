@@ -6,33 +6,32 @@ ML_FUNCTION(Encode) {
 	ML_CHECK_ARG_TYPE(0, MLAddressT);
 	static const char HexDigits[] = "0123456789ABCDEF";
 	size_t InSize = ml_address_length(Args[0]);
-	const char *InChars = ml_address_value(Args[0]);
+	const unsigned char *InChars = (const unsigned char *)ml_address_value(Args[0]);
 	size_t OutSize = 0;
 	for (int I = InSize; --I >= 0;) {
-		char C = *InChars++;
+		unsigned char C = *InChars++;
 		if (isalnum(C) || C == '-' || C == '_' || C == '.' || C == '~' || C == ' ') {
 			OutSize += 1;
 		} else {
 			OutSize += 3;
 		}
 	}
-	char *OutChars = snew(OutSize + 1);
-	ml_value_t *Result = ml_string(OutChars, OutSize);
-	InChars = ml_address_value(Args[0]);
+	char *OutChars = snew(OutSize + 1), *Out = OutChars;
+	InChars = (const unsigned char *)ml_address_value(Args[0]);
 	for (int I = InSize; --I >= 0;) {
-		char C = *InChars++;
+		unsigned char C = *InChars++;
 		if (isalnum(C) || C == '-' || C == '_' || C == '.' || C == '~') {
-			*OutChars++ = C;
+			*Out++ = C;
 		} else if (C == ' ') {
-			*OutChars++ = '+';
+			*Out++ = '+';
 		} else {
-			*OutChars++ = '%';
-			*OutChars++ = HexDigits[(C >> 4) & 15];
-			*OutChars++ = HexDigits[C & 15];
+			*Out++ = '%';
+			*Out++ = HexDigits[(C >> 4) & 15];
+			*Out++ = HexDigits[C & 15];
 		}
 	}
-	*OutChars = 0;
-	return Result;
+	*Out = 0;
+	return ml_string(OutChars, OutSize);
 }
 
 ML_FUNCTION(Decode) {
@@ -49,14 +48,14 @@ ML_FUNCTION(Decode) {
 		OutSize += 1;
 	}
 	char *OutChars = snew(OutSize + 1);
-	ml_value_t *Result = ml_string(OutChars, OutSize);
+	unsigned char *Out = (unsigned char *)OutChars;
 	InChars = ml_address_value(Args[0]);
 	for (int I = InSize; --I >= 0;) {
 		char C = *InChars++;
 		if (isalnum(C) || C == '-' || C == '_' || C == '.' || C == '~') {
-			*OutChars++ = C;
+			*Out++ = C;
 		} else if (C == '+') {
-			*OutChars++ = ' ';
+			*Out++ = ' ';
 		} else if (C == '%') {
 			char D = 0;
 			char A = *InChars++;
@@ -73,13 +72,13 @@ ML_FUNCTION(Decode) {
 			case 'a' ... 'f': D += (B + 10 - 'a'); break;
 			default: return ml_error("UrlError", "Invalid character %c in url", B);
 			}
-			*OutChars++ = D;
+			*Out++ = D;
 			I -= 2;
 		} else {
 			return ml_error("UrlError", "Invalid character %c in url", C);
 		}
 	}
-	return Result;
+	return ml_string(OutChars, OutSize);
 }
 
 void ml_library_entry0(ml_value_t **Slot) {

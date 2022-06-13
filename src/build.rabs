@@ -51,7 +51,7 @@ so_module := fun(Name, Objects, Libraries) do
 	Library[Objects, Libraries] => fun(Library) do
 		Library:dir:mkdir
 		execute('cc', '-o', Library, '-shared', '-export-dynamic', Objects, Libraries, LDFLAGS)
-		DEBUG or execute("strip", Library)
+		:>DEBUG or execute("strip", Library)
 	end
 end
 
@@ -93,7 +93,8 @@ if DEBUG then
 	CFLAGS := old + ["-O2", "-g"]
 	LDFLAGS := old + ["-g"]
 else
-	CFLAGS := old + ["-O3"]
+	CFLAGS := old + ["-O3", "-g"]
+	LDFLAGS := old + ["-g"]
 end
 
 subdir("db")

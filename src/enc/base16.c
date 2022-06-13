@@ -3,19 +3,18 @@
 
 ML_FUNCTION(Encode) {
 	ML_CHECK_ARG_TYPE(0, MLAddressT);
-	static const char HexDigits[] = "0123456789ABCDEF";
+	static const unsigned char HexDigits[] = "0123456789ABCDEF";
 	size_t InSize = ml_address_length(Args[0]);
 	size_t OutSize = 2 * InSize;
-	const char *InChars = ml_address_value(Args[0]);
-	char *OutChars = snew(OutSize + 1);
-	ml_value_t *Result = ml_string(OutChars, OutSize);
+	const unsigned char *InChars = (const unsigned char *)ml_address_value(Args[0]);
+	char *OutChars = snew(OutSize + 1), *Out = OutChars;
 	for (int I = InSize; --I >= 0;) {
-		char C = *InChars++;
-		*OutChars++ = HexDigits[(C >> 4) & 15];
-		*OutChars++ = HexDigits[C & 15];
+		unsigned char C = *InChars++;
+		*Out++ = HexDigits[(C >> 4) & 15];
+		*Out++ = HexDigits[C & 15];
 	}
-	*OutChars = 0;
-	return Result;
+	*Out = 0;
+	return ml_string(OutChars, OutSize);
 }
 
 ML_FUNCTION(Decode) {
@@ -24,10 +23,10 @@ ML_FUNCTION(Decode) {
 	size_t OutSize = (InSize + 1) / 2;
 	const char *InChars = ml_address_value(Args[0]);
 	char *OutChars = snew(OutSize + 1);
-	ml_value_t *Result = ml_string(OutChars, OutSize);
+	unsigned char *Out = (unsigned char *)OutChars;
 	int Odd = 1;
 	for (int I = InSize; --I >= 0;) {
-		char C = *InChars++;
+		unsigned char C = *InChars++;
 		if (C >= 'a') {
 			C -= ('a' - 10);
 		} else if (C >= 'A') {
@@ -36,16 +35,16 @@ ML_FUNCTION(Decode) {
 			C -= '0';
 		}
 		if (Odd) {
-			*OutChars = C << 4;
+			*Out = C << 4;
 			Odd = 0;
 		} else {
-			*OutChars++ += C;
+			*Out++ += C;
 			Odd = 1;
 		}
 	}
-	if (!Odd) OutChars++;
-	*OutChars = 0;
-	return Result;
+	if (!Odd) Out++;
+	*Out = 0;
+	return ml_address(OutChars, OutSize);
 }
 
 void ml_library_entry0(ml_value_t **Slot) {

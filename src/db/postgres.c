@@ -152,7 +152,7 @@ ML_METHODVX("query", ConnectionT, MLStringT) {
 // Executes :mini:`SQL` on :mini:`Connection`, with arguments :mini:`Arg/i` if supplied.
 // Returns a list of tuples (for ``SELECT``, etc) or :mini:`nil` for commands without results.
 	connection_t *Connection = (connection_t *)Args[0];
-	if (!Connection->Conn) ML_ERROR("DatabaseError", "Connection is closed");
+	if (!Connection->Conn && !Connection->Reconnect) ML_ERROR("DatabaseError", "Connection is closed");
 	query_t *Query = new(query_t);
 	Query->Caller = Caller;
 	Query->SQL = ml_string_value(Args[1]);
@@ -164,7 +164,7 @@ ML_METHODVX("query", ConnectionT, MLStringT) {
 		Tail->Next = Query;
 	} else {
 		Connection->Head = Query;
-		query_send(Connection->Conn, Query);
+		if (Connection->Conn) query_send(Connection->Conn, Query);
 	}
 }
 
@@ -174,7 +174,7 @@ ML_METHODX("prepare", ConnectionT, MLStringT) {
 //>statement
 // Creates a prepared statement on :mini:`Connection`.
 	connection_t *Connection = (connection_t *)Args[0];
-	if (!Connection->Conn) ML_ERROR("DatabaseError", "Connection is closed");
+	if (!Connection->Conn && !Connection->Reconnect) ML_ERROR("DatabaseError", "Connection is closed");
 	query_t *Query = new(query_t);
 	Query->Caller = Caller;
 	Query->SQL = ml_string_value(Args[1]);
@@ -185,13 +185,13 @@ ML_METHODX("prepare", ConnectionT, MLStringT) {
 		Tail->Next = Query;
 	} else {
 		Connection->Head = Query;
-		query_send(Connection->Conn, Query);
+		if (Connection->Conn) query_send(Connection->Conn, Query);
 	}
 }
 
 static void statement_call(ml_state_t *Caller, statement_t *Statement, int Count, ml_value_t **Args) {
 	connection_t *Connection = Statement->Connection;
-	if (!Connection->Conn) ML_ERROR("DatabaseError", "Connection is closed");
+	if (!Connection->Conn && !Connection->Reconnect) ML_ERROR("DatabaseError", "Connection is closed");
 	query_t *Query = new(query_t);
 	Query->Caller = Caller;
 	Query->Name = Statement->Name;
@@ -205,7 +205,7 @@ static void statement_call(ml_state_t *Caller, statement_t *Statement, int Count
 		Tail->Next = Query;
 	} else {
 		Connection->Head = Query;
-		query_send(Connection->Conn, Query);
+		if (Connection->Conn) query_send(Connection->Conn, Query);
 	}
 }
 
@@ -457,6 +457,11 @@ ML_METHOD("reconnect", ConnectionT, MLNumberT) {
 
 ML_METHOD("connect", ConnectionT) {
 	return connection_connect((connection_t *)Args[0]);
+}
+
+ML_METHOD("connected", ConnectionT) {
+	connection_t *Connection = (connection_t *)Args[0];
+	return Connection->Conn ? (ml_value_t *)Connection : MLNil;
 }
 
 void ml_library_entry0(ml_value_t **Slot) {

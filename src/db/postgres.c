@@ -288,7 +288,7 @@ static recv_fn *query_recv_fns(PGresult *Result, int NumFields) {
 	return RecvFns;
 }
 
-static gboolean connection_fn(connection_t *Connection) {
+static gboolean connection_fn(gint Socket, GIOCondition Condition, connection_t *Connection) {
 	PGconn *Conn = Connection->Conn;
 	if (!PQconsumeInput(Conn)) {
 		if (PQstatus(Conn) != CONNECTION_OK) {

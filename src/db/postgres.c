@@ -20,7 +20,9 @@ struct connection_t {
 	PGconn *Conn;
 	query_t *Head, *Tail;
 	ml_value_t *Result;
-	int StatementId;
+	statement_t *Statements;
+	const char **Keywords, **Values;
+	int StatementId, Reconnect;
 };
 
 ML_TYPE(ConnectionT, (), "postgres::connection");
@@ -30,8 +32,9 @@ typedef ml_value_t *(*recv_fn)(const char *Value, int Length);
 
 struct statement_t {
 	ml_type_t *Type;
+	statement_t *Next;
 	connection_t *Connection;
-	const char *Name;
+	const char *Name, *SQL;
 	recv_fn *RecvFns;
 	int NumFields;
 };
@@ -288,17 +291,30 @@ static recv_fn *query_recv_fns(PGresult *Result, int NumFields) {
 	return RecvFns;
 }
 
+static ml_value_t *connection_connect(connection_t *Connection);
+
+static gboolean connection_reconnect(connection_t *Connection) {
+	ml_value_t *Error = connection_connect(Connection);
+	if (ml_is_error(Error)) return G_SOURCE_CONTINUE;
+	return G_SOURCE_REMOVE;
+}
+
 static gboolean connection_fn(gint Socket, GIOCondition Condition, connection_t *Connection) {
 	PGconn *Conn = Connection->Conn;
 	if (!PQconsumeInput(Conn)) {
 		if (PQstatus(Conn) != CONNECTION_OK) {
-			const char *Error = PQerrorMessage(Conn);
-			for (query_t *Query = Connection->Head; Query; Query = Query->Next) {
-				Query->Caller->run(Query->Caller, ml_error("DatabaseError", "%s", Error));
-			}
+			ml_value_t *Error = ml_error("DatabaseError", "%s", PQerrorMessage(Conn));
 			PQfinish(Conn);
-			Connection->Head = Connection->Tail = NULL;
 			Connection->Conn = NULL;
+			if (Connection->Reconnect) {
+				g_timeout_add(Connection->Reconnect, (GSourceFunc)connection_reconnect, Connection);
+			} else {
+				query_t *Query = Connection->Head;
+				if (Query) {
+					if (!(Connection->Head = Query->Next)) Connection->Tail = NULL;
+					Query->Caller->run(Query->Caller, Error);
+				}
+			}
 			return G_SOURCE_REMOVE;
 		}
 	}
@@ -322,7 +338,10 @@ static gboolean connection_fn(gint Socket, GIOCondition Condition, connection_t 
 				} else {
 					statement_t *Statement = new(statement_t);
 					Statement->Type = StatementT;
+					Statement->Next = Connection->Statements;
+					Connection->Statements = Statement;
 					Statement->Name = Query->Name;
+					Statement->SQL = Query->SQL;
 					Statement->Connection = Connection;
 					Statement->NumFields = PQnfields(Result);
 					Statement->RecvFns = query_recv_fns(Result, Statement->NumFields);
@@ -362,19 +381,26 @@ static gboolean connection_fn(gint Socket, GIOCondition Condition, connection_t 
 	return G_SOURCE_CONTINUE;
 }
 
-static ml_value_t *connection(const char **Keywords, const char **Values) {
-	PGconn *Conn = PQconnectdbParams(Keywords, Values, 0);
+static ml_value_t *connection_connect(connection_t *Connection) {
+	PGconn *Conn = PQconnectdbParams(Connection->Keywords, Connection->Values, 0);
 	if (PQstatus(Conn) != CONNECTION_OK) {
-		const char *Message = GC_strdup(PQerrorMessage(Conn));
+		ml_value_t *Error = ml_error("DatabaseError", "%s", PQerrorMessage(Conn));
 		PQfinish(Conn);
-		return ml_error("ConnectError", Message);
+		return Error;
 	}
-	int Socket = PQsocket(Conn);
-	PQsetnonblocking(Conn, 1);
-	connection_t *Connection = new(connection_t);
-	Connection->Type = ConnectionT;
 	Connection->Conn = Conn;
-	GSource *Source = g_unix_fd_source_new(Socket, G_IO_IN | G_IO_ERR);
+	for (statement_t *Statement = Connection->Statements; Statement; Statement = Statement->Next) {
+		PGresult *Result = PQprepare(Conn, Statement->Name, Statement->SQL, 0, NULL);
+		if (PQresultStatus(Result) != PGRES_COMMAND_OK) {
+			PQclear(Result);
+			ml_value_t *Error = ml_error("DatabaseError", "%s", PQerrorMessage(Conn));
+			PQfinish(Conn);
+			return Error;
+		}
+	}
+	PQsetnonblocking(Conn, 1);
+	if (Connection->Head) query_send(Conn, Connection->Head);
+	GSource *Source = g_unix_fd_source_new(PQsocket(Conn), G_IO_IN | G_IO_ERR);
 	g_source_set_callback(Source, (void *)connection_fn, Connection, NULL);
 	g_source_attach(Source, NULL);
 	return (ml_value_t *)Connection;
@@ -395,7 +421,11 @@ ML_METHOD(ConnectionT, MLMapT) {
 		Values[I] = ml_string_value(Iter->Value);
 		++I;
 	}
-	return connection(Keywords, Values);
+	connection_t *Connection = new(connection_t);
+	Connection->Type = ConnectionT;
+	Connection->Keywords = Keywords;
+	Connection->Values = Values;
+	return connection_connect(Connection);
 }
 
 ML_METHODV(ConnectionT, MLNamesT) {
@@ -412,7 +442,21 @@ ML_METHODV(ConnectionT, MLNamesT) {
 		Values[I] = ml_string_value(Args[I + 1]);
 		++I;
 	}
-	return connection(Keywords, Values);
+	connection_t *Connection = new(connection_t);
+	Connection->Type = ConnectionT;
+	Connection->Keywords = Keywords;
+	Connection->Values = Values;
+	return connection_connect(Connection);
+}
+
+ML_METHOD("reconnect", ConnectionT, MLNumberT) {
+	connection_t *Connection = (connection_t *)Args[0];
+	Connection->Reconnect = 1000 * ml_real_value(Args[1]);
+	return (ml_value_t *)Connection;
+}
+
+ML_METHOD("connect", ConnectionT) {
+	return connection_connect((connection_t *)Args[0]);
 }
 
 void ml_library_entry0(ml_value_t **Slot) {

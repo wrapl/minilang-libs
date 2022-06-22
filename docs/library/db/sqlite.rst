@@ -13,6 +13,12 @@ db/sqlite
    *TBD*
 
 
+.. _fun-sqlite:
+
+:mini:`fun sqlite(Arg₁: string, Arg₂: sqlite::open): sqlite`
+   *TBD*
+
+
 :mini:`meth (Arg₁: sqlite):close`
    *TBD*
 
@@ -25,15 +31,15 @@ db/sqlite
    *TBD*
 
 
-.. _type-sqlite-stmt:
+.. _type-sqlite-open:
 
-:mini:`type sqlite::stmt < sequence`
+:mini:`type sqlite::open < flags`
    *TBD*
 
 
-.. _fun-sqlite:
+.. _type-sqlite-stmt:
 
-:mini:`fun sqlite(Arg₁: string, Arg₂: MLSqliteOpenFlags)`
+:mini:`type sqlite::stmt < sequence`
    *TBD*
 
 

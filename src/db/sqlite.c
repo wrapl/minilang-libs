@@ -15,7 +15,8 @@ typedef struct {
 	sqlite3 *Handle;
 } ml_sqlite_t;
 
-static ML_FLAGS2(MLSqliteOpenFlags, "sqlite-open-flags",
+ML_FLAGS2(MLSqliteOpenT, "sqlite-open-flags",
+//@sqlite::open
 	"READONLY", 0x00000001,
 	"READWRITE", 0x00000002,
 	"CREATE", 0x00000004,
@@ -51,9 +52,10 @@ static void ml_sqlite_finalize(ml_sqlite_t *Sqlite, void *Data) {
 
 ML_FUNCTION(MLSqlite) {
 //@sqlite
+//>sqlite
 	ML_CHECK_ARG_COUNT(2);
 	ML_CHECK_ARG_TYPE(0, MLStringT);
-	ML_CHECK_ARG_TYPE(1, MLSqliteOpenFlags);
+	ML_CHECK_ARG_TYPE(1, MLSqliteOpenT);
 	const char *FileName = ml_string_value(Args[0]);
 	int Flags = ml_flags_value_value(Args[1]);
 	const char *VFS = NULL;
@@ -242,6 +244,6 @@ ML_METHODV("execute", MLSqliteT, MLStringT) {
 
 void ml_library_entry0(ml_value_t **Slot) {
 #include "sqlite_init.c"
-	stringmap_insert(MLSqliteT->Exports, "open", MLSqliteOpenFlags);
+	stringmap_insert(MLSqliteT->Exports, "open", MLSqliteOpenT);
 	Slot[0] = (ml_value_t *)MLSqliteT;
 }

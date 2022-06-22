@@ -9,13 +9,13 @@ enc/base64
 
 .. _fun-decode:
 
-:mini:`fun decode(Arg₁: address)`
+:mini:`fun decode(String: address): address`
    *TBD*
 
 
 .. _fun-encode:
 
-:mini:`fun encode(Arg₁: address)`
+:mini:`fun encode(Address: address): string`
    *TBD*
 
 

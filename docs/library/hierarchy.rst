@@ -63,6 +63,7 @@ hierarchy
       "stream":e -> "sha256":w;
       "stream":e -> "sha384":w;
       "stream":e -> "sha512":w;
+      "flags":e -> "sqlite::open":w;
       "any":e -> "sqlite":w;
       "sequence":e -> "sqlite::stmt":w;
       "any":e -> "version_store":w;

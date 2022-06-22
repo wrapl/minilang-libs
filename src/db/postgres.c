@@ -25,7 +25,7 @@ struct connection_t {
 	int StatementId, Reconnect;
 };
 
-ML_TYPE(ConnectionT, (), "postgres::connection");
+ML_TYPE(MLConnectionT, (), "postgres::connection");
 // A connection to a Postgresql database.
 
 typedef ml_value_t *(*recv_fn)(const char *Value, int Length);
@@ -144,7 +144,7 @@ static ml_value_t *query_params(query_t *Query, int Count, ml_value_t **Args) {
 	return NULL;
 }
 
-ML_METHODVX("query", ConnectionT, MLStringT) {
+ML_METHODVX("query", MLConnectionT, MLStringT) {
 //<Connection
 //<SQL
 //<Arg
@@ -168,7 +168,7 @@ ML_METHODVX("query", ConnectionT, MLStringT) {
 	}
 }
 
-ML_METHODX("prepare", ConnectionT, MLStringT) {
+ML_METHODX("prepare", MLConnectionT, MLStringT) {
 //<Connection
 //<SQL
 //>statement
@@ -406,7 +406,7 @@ static ml_value_t *connection_connect(connection_t *Connection) {
 	return (ml_value_t *)Connection;
 }
 
-ML_METHOD(ConnectionT, MLMapT) {
+ML_METHOD(MLConnectionT, MLMapT) {
 //<Settings
 //>connection
 // Connects to a Postgresql database with the supplied settings.
@@ -422,13 +422,13 @@ ML_METHOD(ConnectionT, MLMapT) {
 		++I;
 	}
 	connection_t *Connection = new(connection_t);
-	Connection->Type = ConnectionT;
+	Connection->Type = MLConnectionT;
 	Connection->Keywords = Keywords;
 	Connection->Values = Values;
 	return connection_connect(Connection);
 }
 
-ML_METHODV(ConnectionT, MLNamesT) {
+ML_METHODV(MLConnectionT, MLNamesT) {
 //<Name,Value
 //>connection
 // Connects to a Postgresql database with the supplied settings.
@@ -443,28 +443,28 @@ ML_METHODV(ConnectionT, MLNamesT) {
 		++I;
 	}
 	connection_t *Connection = new(connection_t);
-	Connection->Type = ConnectionT;
+	Connection->Type = MLConnectionT;
 	Connection->Keywords = Keywords;
 	Connection->Values = Values;
 	return connection_connect(Connection);
 }
 
-ML_METHOD("reconnect", ConnectionT, MLNumberT) {
+ML_METHOD("reconnect", MLConnectionT, MLNumberT) {
 	connection_t *Connection = (connection_t *)Args[0];
 	Connection->Reconnect = 1000 * ml_real_value(Args[1]);
 	return (ml_value_t *)Connection;
 }
 
-ML_METHOD("connect", ConnectionT) {
+ML_METHOD("connect", MLConnectionT) {
 	return connection_connect((connection_t *)Args[0]);
 }
 
-ML_METHOD("connected", ConnectionT) {
+ML_METHOD("connected", MLConnectionT) {
 	connection_t *Connection = (connection_t *)Args[0];
 	return Connection->Conn ? (ml_value_t *)Connection : MLNil;
 }
 
 void ml_library_entry0(ml_value_t **Slot) {
 #include "postgres_init.c"
-	Slot[0] = (ml_value_t *)ConnectionT;
+	Slot[0] = (ml_value_t *)MLConnectionT;
 }

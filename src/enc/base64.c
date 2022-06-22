@@ -37,6 +37,8 @@ void _encode(unsigned char *OutChars, const unsigned char *InChars, size_t InLen
 }
 
 ML_FUNCTION(Encode) {
+//<Address
+//>string
 	ML_CHECK_ARG_COUNT(1);
 	ML_CHECK_ARG_TYPE(0, MLAddressT);
 	size_t InSize = ml_address_length(Args[0]);
@@ -76,6 +78,8 @@ size_t _decode(unsigned char *OutChars, const unsigned char *InChars, size_t InL
 }
 
 ML_FUNCTION(Decode) {
+//<String
+//>address
 	ML_CHECK_ARG_COUNT(1);
 	ML_CHECK_ARG_TYPE(0, MLAddressT);
 	size_t InSize = ml_address_length(Args[0]);

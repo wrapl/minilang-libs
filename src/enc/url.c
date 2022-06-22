@@ -2,7 +2,12 @@
 #include <minilang/ml_macros.h>
 #include <ctype.h>
 
+#undef ML_CATEGORY
+#define ML_CATEGORY "enc/url"
+
 ML_FUNCTION(Encode) {
+//<Address
+//>string
 	ML_CHECK_ARG_COUNT(1);
 	ML_CHECK_ARG_TYPE(0, MLAddressT);
 	static const char HexDigits[] = "0123456789ABCDEF";
@@ -36,6 +41,8 @@ ML_FUNCTION(Encode) {
 }
 
 ML_FUNCTION(Decode) {
+//<String
+//>address
 	ML_CHECK_ARG_COUNT(1);
 	ML_CHECK_ARG_TYPE(0, MLAddressT);
 	size_t InSize = ml_address_length(Args[0]);

@@ -7,13 +7,13 @@
 util/bitset
 ===========
 
-:mini:`meth :BitsetT()`
-   *TBD*
-
-
 .. _type-bitset:
 
 :mini:`type bitset < sequence`
+   *TBD*
+
+
+:mini:`meth bitset(): bitset`
    *TBD*
 
 

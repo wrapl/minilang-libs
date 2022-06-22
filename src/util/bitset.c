@@ -10,47 +10,48 @@ typedef struct {
 	roaring_bitmap_t Value[1];
 } bitset_t;
 
-ML_TYPE(BitsetT, (MLSequenceT), "bitset");
+ML_TYPE(MLBitsetT, (MLSequenceT), "bitset");
 
 static void bitset_finalize(void *Bitset, void *Data) {
 	roaring_bitmap_clear(((bitset_t *)Bitset)->Value);
 }
 
-ML_METHOD(BitsetT) {
+ML_METHOD(MLBitsetT) {
+//>bitset
 	bitset_t *Bitset = new(bitset_t);
-	Bitset->Type = BitsetT;
+	Bitset->Type = MLBitsetT;
 	roaring_bitmap_init_cleared(Bitset->Value);
 	GC_register_finalizer(Bitset, bitset_finalize, NULL, NULL, NULL);
 	return (ml_value_t *)Bitset;
 }
 
-ML_METHOD("set", BitsetT, MLIntegerT) {
+ML_METHOD("set", MLBitsetT, MLIntegerT) {
 	bitset_t *Bitset = (bitset_t *)Args[0];
 	roaring_bitmap_add(Bitset->Value, ml_integer_value(Args[1]));
 	return (ml_value_t *)Bitset;
 }
 
-ML_METHOD("set", BitsetT, MLIntegerRangeT) {
+ML_METHOD("set", MLBitsetT, MLIntegerRangeT) {
 	bitset_t *Bitset = (bitset_t *)Args[0];
 	ml_integer_range_t *Range = (ml_integer_range_t *)Args[1];
 	roaring_bitmap_add_range_closed(Bitset->Value, Range->Start, Range->Limit);
 	return (ml_value_t *)Bitset;
 }
 
-ML_METHOD("unset", BitsetT, MLIntegerT) {
+ML_METHOD("unset", MLBitsetT, MLIntegerT) {
 	bitset_t *Bitset = (bitset_t *)Args[0];
 	roaring_bitmap_remove(Bitset->Value, ml_integer_value(Args[1]));
 	return (ml_value_t *)Bitset;
 }
 
-ML_METHOD("unset", BitsetT, MLIntegerRangeT) {
+ML_METHOD("unset", MLBitsetT, MLIntegerRangeT) {
 	bitset_t *Bitset = (bitset_t *)Args[0];
 	ml_integer_range_t *Range = (ml_integer_range_t *)Args[1];
 	roaring_bitmap_remove_range_closed(Bitset->Value, Range->Start, Range->Limit);
 	return (ml_value_t *)Bitset;
 }
 
-ML_METHOD("append", MLStringBufferT, BitsetT) {
+ML_METHOD("append", MLStringBufferT, MLBitsetT) {
 	ml_stringbuffer_t *Buffer = (ml_stringbuffer_t *)Args[0];
 	bitset_t *Bitset = (bitset_t *)Args[1];
 	roaring_uint32_iterator_t Iter[1];
@@ -92,7 +93,7 @@ typedef struct {
 
 ML_TYPE(BitsetIterT, (), "bitset::iter");
 
-static void ML_TYPED_FN(ml_iterate, BitsetT, ml_state_t *Caller, bitset_t *Bitset) {
+static void ML_TYPED_FN(ml_iterate, MLBitsetT, ml_state_t *Caller, bitset_t *Bitset) {
 	if (!roaring_bitmap_get_cardinality(Bitset->Value)) ML_RETURN(MLNil);
 	bitset_iter_t *Iter = new(bitset_iter_t);
 	Iter->Type = BitsetIterT;
@@ -118,5 +119,5 @@ static void ML_TYPED_FN(ml_iter_value, BitsetIterT, ml_state_t *Caller, bitset_i
 
 void ml_library_entry0(ml_value_t **Slot) {
 #include "bitset_init.c"
-	Slot[0] = (ml_value_t *)BitsetT;
+	Slot[0] = (ml_value_t *)MLBitsetT;
 }

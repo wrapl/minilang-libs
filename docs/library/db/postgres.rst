@@ -13,6 +13,14 @@ db/postgres
    A connection to a Postgresql database.
 
 
+:mini:`meth connection(Settings: map): connection`
+   Connects to a Postgresql database with the supplied settings.
+
+
+:mini:`meth connection(Name₁ is Value₁, ...): connection`
+   Connects to a Postgresql database with the supplied settings.
+
+
 :mini:`meth (Arg₁: connection):connect`
    *TBD*
 
@@ -32,14 +40,6 @@ db/postgres
 
 :mini:`meth (Arg₁: connection):reconnect(Arg₂: number)`
    *TBD*
-
-
-:mini:`meth (Settings: map):ConnectionT: connection`
-   Connects to a Postgresql database with the supplied settings.
-
-
-:mini:`meth :ConnectionT(Name₁ is Value₁, ...): connection`
-   Connects to a Postgresql database with the supplied settings.
 
 
 .. _type-statement:

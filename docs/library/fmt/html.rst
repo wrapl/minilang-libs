@@ -109,11 +109,11 @@ fmt/html
    *TBD*
 
 
-:mini:`meth c_s_s_selectors(Arg₁: string)`
+:mini:`meth (Arg₁: string):CSSSelectorsT`
    *TBD*
 
 
-:mini:`meth document(Arg₁: string)`
+:mini:`meth (Arg₁: string):DocumentT`
    *TBD*
 
 

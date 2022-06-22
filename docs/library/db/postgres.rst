@@ -13,12 +13,12 @@ db/postgres
    A connection to a Postgresql database.
 
 
-:mini:`meth connection(Settings: map): connection`
-   Connects to a Postgresql database with the supplied settings.
+:mini:`meth (Arg₁: connection):connect`
+   *TBD*
 
 
-:mini:`meth connection(Name₁ is Value₁, ...): connection`
-   Connects to a Postgresql database with the supplied settings.
+:mini:`meth (Arg₁: connection):connected`
+   *TBD*
 
 
 :mini:`meth (Connection: connection):prepare(SQL: string): statement`
@@ -28,6 +28,18 @@ db/postgres
 :mini:`meth (Connection: connection):query(SQL: string, Arg: any, ...): list[tuple] | nil`
    Executes :mini:`SQL` on :mini:`Connection`,  with arguments :mini:`Argᵢ` if supplied.
    Returns a list of tuples (for ``SELECT``,  etc) or :mini:`nil` for commands without results.
+
+
+:mini:`meth (Arg₁: connection):reconnect(Arg₂: number)`
+   *TBD*
+
+
+:mini:`meth (Settings: map):ConnectionT: connection`
+   Connects to a Postgresql database with the supplied settings.
+
+
+:mini:`meth :ConnectionT(Name₁ is Value₁, ...): connection`
+   Connects to a Postgresql database with the supplied settings.
 
 
 .. _type-statement:

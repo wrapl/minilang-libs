@@ -42,7 +42,7 @@ end
 let Categories := {}
 
 fun emit(Category, Key, Docs) do
-	Categories[Category, fun pqueue(<)]:insert(Docs, Key)
+	Categories[Category, fun util::pqueue(<)]:insert(Docs, Key)
 end
 
 fun write_overview(Category, Description) do
@@ -148,13 +148,10 @@ end
 fun write_method(Category, Kind, Method0, Params, Return, Description, Examples, Location) do
 	let Buffer := string::buffer()
 	let Variadic := Kind = "ML_METHODV" or Kind = "ML_METHODVX"
-	var Terminator := ""
 	var Skip := 1
 	Buffer:write(':mini:`meth ')
 	let Method := if let Match := Method0 % r"ML(\w+)T" then
 		Match[2]:lower
-	elseif let Match := Method0 % r"(\w+)T" then
-		Match[2]:replace(r"[A-Z]", fun(X) '_{X:lower}'):trim("_")
 	elseif Method0[1] = "\"" then
 		if is_symbol(Method0) or Method0:find("::") then
 			Method0[2, -1]:replace("\\\\",  "\\")
@@ -168,6 +165,8 @@ fun write_method(Category, Kind, Method0, Params, Return, Description, Examples,
 			':{Method0}'
 		end
 	end
+	var Terminator := ""
+	var Seperator := ""
 	if Method = "[]" then
 		Buffer:write("(", Params[1][1], ": ", type_name(Params[1][2]), ")[")
 		Terminator := "]"
@@ -187,10 +186,16 @@ fun write_method(Category, Kind, Method0, Params, Return, Description, Examples,
 			Buffer:write('{Method}({Params[1][1]}: {type_name(Params[1][2])})')
 		elseif Params[1][2] = "MLNamesT" then
 			let (Name, Value) := Params[1][1] / ","
-			Buffer:write('{Method}({Name}₁ is {(Value or "Value"):trim}₁, ')
+			Buffer:write('{Method}({Name}₁ is {(Value or "Value"):trim}₁')
+			Seperator := ", "
+			Terminator := ")"
+		elseif let Match := Params[1][1] % r"(.*)\.\.\." then
+			Buffer:write('{Method}({Match[2]}: {type_name(Params[1][2])}, ...')
+			Seperator := ", "
 			Terminator := ")"
 		else
-			Buffer:write('{Method}({Params[1][1]}: {type_name(Params[1][2])}, ')
+			Buffer:write('{Method}({Params[1][1]}: {type_name(Params[1][2])}')
+			Seperator := ", "
 			Terminator := ")"
 		end
 	else
@@ -200,20 +205,22 @@ fun write_method(Category, Kind, Method0, Params, Return, Description, Examples,
 			Buffer:write('({Params[1][1]}: {type_name(Params[1][2])}){Method}')
 		elseif Params[1][2] = "MLNamesT" then
 			let (Name, Value) := Params[1][1] / ","
-			Buffer:write('{Method}({Name}₁ is {(Value or "Value"):trim}₁,')
+			Buffer:write('{Method}({Name}₁ is {(Value or "Value"):trim}₁')
+			Seperator := ", "
 			Terminator := ")"
 		else
 			Buffer:write('({Params[1][1]}: {type_name(Params[1][2])}){Method}(')
 			Terminator := ")"
 		end
 	end
-	var Seperator := ""
 	for Param in Params skip Skip do
 		if Param[2] = "MLNamesT" then
 			let (Name, Value) := Param[1] / ","
 			Buffer:write(Seperator, '{Name}₁ is {(Value or "Value"):trim}₁')
+		elseif let Match := Param[1] % r"(.*)\.\.\." then
+			Buffer:write(Seperator, Match[2], ": ", type_name(Param[2]), ", ...")
 		else
-			Buffer:write(Seperator, '{Param[1]}: {type_name(Param[2])}')
+			Buffer:write(Seperator, Param[1], ": ", type_name(Param[2]))
 		end
 		Seperator := ", "
 	end
@@ -325,7 +332,7 @@ end
 
 let TypesGraph := string::buffer()
 
-fun write_type(Category, Name, Parents, Description, Location) do
+fun write_type(Category, Name, Parents, Description, Examples, Location) do
 	let TypeName := type_name(Name)
 	let Buffer := string::buffer()
 	Buffer:write('.. _type-{TypeName:replace("::", "-")}:\n\n')
@@ -350,6 +357,7 @@ fun write_type(Category, Name, Parents, Description, Location) do
 		Buffer:write("   ", Line)
 	end
 	Description[1] or Buffer:write("   *TBD*\n")
+	Examples[1] and write_examples(Buffer, Examples)
 	Buffer:write("\n")
 	emit(Category, (TypeName, item::Type), Buffer:rest)
 end
@@ -672,6 +680,8 @@ fun process(FileName) do
 				let Parents := Line[J + 1, K] / ", "
 				let Title := Line[K + 1, 0]:trim(", ){")
 				let Description := []
+				let Examples := []
+				let Example := string::buffer()
 				loop
 					let Line := while File:read
 					LineNo := old + 1
@@ -683,14 +693,59 @@ fun process(FileName) do
 						Description:put(Line[4, 0]:replace(Subscripts))
 					elseif Line % r"^/[/*]\n" then
 						Description:put("\n")
+					elseif Line % r"^/[/*]\$- " then
+						Example:write("      ", Line[6, 0])
+					elseif Line % r"^/[/*]\$-" then
+						Example:write("      \n")
+					elseif Line % r"^/[/*]\$= " then
+						Example:write("      ", Line[6, -1])
+						Examples:put(Example:rest)
 					else
 						exit
 					end
 				end
 				if CurrentDefine then
-					CurrentDefine:put(write_type, [Category, Name, Parents, Description, Location])
+					CurrentDefine:put(write_type, [Category, Name, Parents, Description, Examples, Location])
 				else
-					write_type(Category, Name, Parents, Description, Location)
+					write_type(Category, Name, Parents, Description, Examples, Location)
+				end
+			elseif Line % r"^(ML_ENUM|ML_FLAGS)" then
+				let Location := (FileName, LineNo)
+				let I := Line:find("("), J := Line:find(",", I + 1) + 1
+				let K := Line:find(",", J + 1)
+				var Name := Line[I + 1, J]:trim(", ")
+				var Category := DefaultCategory
+				let Parent := if Line % r"^ML_ENUM" then "MLEnumT" else "MLFlagsT" end
+				let Title := Line[J + 1, K]:trim(", ){")
+				let Description := []
+				let Examples := []
+				let Example := string::buffer()
+				loop
+					let Line := while File:read
+					LineNo := old + 1
+					if Line % r"^/[/*]@" then
+						Name := Line[4, 0]:trim
+					elseif Line % r"^/[/*]!" then
+						Category := Line[4, 0]:trim
+					elseif Line % r"^/[/*] " then
+						Description:put(Line[4, 0]:replace(Subscripts))
+					elseif Line % r"^/[/*]\n" then
+						Description:put("\n")
+					elseif Line % r"^/[/*]\$- " then
+						Example:write("      ", Line[6, 0])
+					elseif Line % r"^/[/*]\$-" then
+						Example:write("      \n")
+					elseif Line % r"^/[/*]\$= " then
+						Example:write("      ", Line[6, -1])
+						Examples:put(Example:rest)
+					else
+						exit
+					end
+				end
+				if CurrentDefine then
+					CurrentDefine:put(write_type, [Category, Name, [Parent], Description, Examples, Location])
+				else
+					write_type(Category, Name, [Parent], Description, Examples, Location)
 				end
 			elseif Line % r"^ML_DEF" then
 				let Location := (FileName, LineNo)

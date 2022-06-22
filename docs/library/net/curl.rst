@@ -51,3 +51,9 @@ net/curl
    *TBD*
 
 
+.. _type-curl_option:
+
+:mini:`type curl_option < enum`
+   *TBD*
+
+

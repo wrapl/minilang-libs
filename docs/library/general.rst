@@ -25,6 +25,30 @@ general
    *TBD*
 
 
+.. _fun-decode:
+
+:mini:`fun decode(Arg₁: address)`
+   *TBD*
+
+
+.. _fun-decode:
+
+:mini:`fun decode(Arg₁: address)`
+   *TBD*
+
+
+.. _fun-encode:
+
+:mini:`fun encode(Arg₁: address)`
+   *TBD*
+
+
+.. _fun-encode:
+
+:mini:`fun encode(Arg₁: address)`
+   *TBD*
+
+
 .. _type-event:
 
 :mini:`type event`

@@ -34,9 +34,12 @@ hierarchy
       "any":e -> "cleri_parse":w;
       "function":e -> "cleri_grammar":w;
       "any":e -> "socket":w;
+      "enum":e -> "socket_type":w;
+      "enum":e -> "socket_event":w;
       "any":e -> "frame":w;
       "sequence":e -> "message":w;
       "any":e -> "curl":w;
+      "enum":e -> "curl_option":w;
       "function":e -> "logger":w;
       "any":e -> "category":w;
       "any":e -> "node":w;

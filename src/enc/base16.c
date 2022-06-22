@@ -2,6 +2,7 @@
 #include <minilang/ml_macros.h>
 
 ML_FUNCTION(Encode) {
+	ML_CHECK_ARG_COUNT(1);
 	ML_CHECK_ARG_TYPE(0, MLAddressT);
 	static const unsigned char HexDigits[] = "0123456789ABCDEF";
 	size_t InSize = ml_address_length(Args[0]);
@@ -18,6 +19,7 @@ ML_FUNCTION(Encode) {
 }
 
 ML_FUNCTION(Decode) {
+	ML_CHECK_ARG_COUNT(1);
 	ML_CHECK_ARG_TYPE(0, MLAddressT);
 	size_t InSize = ml_address_length(Args[0]);
 	size_t OutSize = (InSize + 1) / 2;

@@ -4,7 +4,7 @@
 #include <gumbo.h>
 
 #undef ML_CATEGORY
-#define ML_CATEGORY "fmt/gumbo"
+#define ML_CATEGORY "fmt/html"
 
 static void convert_to_xml(ml_xml_element_t *Parent, GumboNode *Node) {
 	switch (Node->type) {
@@ -51,6 +51,9 @@ static void convert_to_xml(ml_xml_element_t *Parent, GumboNode *Node) {
 }
 
 ML_FUNCTION(Parse) {
+//<Html
+//>xml
+// Parses :mini:`Html` as a html string and returns an :mini:`xml` version of the same content.
 	ML_CHECK_ARG_COUNT(1);
 	ML_CHECK_ARG_TYPE(0, MLStringT);
 	GumboOutput *Output = gumbo_parse(ml_string_value(Args[0]));

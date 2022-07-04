@@ -37,9 +37,3 @@ util/bitset
    *TBD*
 
 
-.. _type-bitset_iter:
-
-:mini:`type bitset_iter`
-   *TBD*
-
-

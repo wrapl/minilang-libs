@@ -273,11 +273,5 @@ void ml_library_entry0(ml_value_t **Slot) {
 	CairoFontSlantT = (ml_type_t *)ml_gir_import(Typelib, "FontSlant");
 	CairoFontWeightT = (ml_type_t *)ml_gir_import(Typelib, "FontWeight");
 #include "cairo_init.c"
-	/*stringmap_insert(OnionT->Exports, "mode", OnionModeT);
-	stringmap_insert(OnionT->Exports, "url", OnionUrlT);
-	stringmap_insert(OnionT->Exports, "handler", OnionHandlerT);
-	stringmap_insert(OnionT->Exports, "websocket", OnionWebsocketT);
-	stringmap_insert(OnionT->Exports, "connection_status", OnionConnectionStatusT);
-	stringmap_insert(OnionT->Exports, "websocket_opcode", OnionWebsocketOpcodeT);*/
 	Slot[0] = Typelib;
 }

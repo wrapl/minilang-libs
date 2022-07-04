@@ -20,7 +20,6 @@ hierarchy
       "any":e -> "onion_url":w;
       "any":e -> "onion_websocket":w;
       "sequence":e -> "bitset":w;
-      "any":e -> "bitset_iter":w;
       "any":e -> "plugin_class":w;
       "any":e -> "plugin":w;
       "any":e -> "port":w;

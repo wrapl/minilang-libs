@@ -185,7 +185,7 @@ ML_METHOD("get", CborStoreT, MLIntegerT) {
 	size_t Index = ml_integer_value_fast(Args[1]);
 	size_t Length = string_store_size(Store->Handle, Index);
 	if (Length == INVALID_INDEX) return ml_error("IndexError", "Invalid index");
-	ml_cbor_reader_t *Cbor = ml_cbor_reader(NULL, NULL);
+	ml_cbor_reader_t *Cbor = ml_cbor_reader(NULL, NULL, NULL);
 	string_store_reader_t Reader[1];
 	string_store_reader_open(Reader, Store->Handle, Index);
 	unsigned char Buffer[16];

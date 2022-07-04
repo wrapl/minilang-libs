@@ -92,6 +92,7 @@ typedef struct {
 } bitset_iter_t;
 
 ML_TYPE(BitsetIterT, (), "bitset::iter");
+//!internal
 
 static void ML_TYPED_FN(ml_iterate, MLBitsetT, ml_state_t *Caller, bitset_t *Bitset) {
 	if (!roaring_bitmap_get_cardinality(Bitset->Value)) ML_RETURN(MLNil);

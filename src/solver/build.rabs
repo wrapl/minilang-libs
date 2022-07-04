@@ -1,0 +1,17 @@
+scope("kiwi";) do
+	let Dir := file("kiwi") => fun(Dir) do
+		Dir:rmdir
+		execute("git clone https://github.com/nucleic/kiwi", Dir)
+	end
+	PREBUILDS := old + [Dir]
+	CFLAGS := old + ["-I", file("kiwi")]
+	DEFAULT[so_module("solver/kiwi.so", [file("kiwi.o")])]
+end
+
+:<scope("z3";) do
+	file("z3.c")[file("xepp.mini"), file("z3.c.xe")] => fun(Target) do
+		execute("minilang", file("xepp.mini"), file("z3.c.xe"), Target)
+	end
+	LDFLAGS := old + ["-lz3"]
+	DEFAULT[so_module("solver/z3.so", [file("z3.o")])]
+end>:

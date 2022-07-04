@@ -1,0 +1,315 @@
+import: xe("fmt/xe")
+import: terminal("io/terminal")
+
+class: env(:parent, :symbols, init is; Env, Parent, Symbols) do
+	Env:parent := Parent
+	Env:symbols := Symbols or {}
+end
+
+meth :"[]"(Env: env, Key: any) do
+	var Next := Env
+	var Value := loop
+		until Next:symbols[Key]
+		Next := while Next:parent
+	end
+	ret property(Value; Value) Env:symbols[Key] := Value
+end
+
+method: process()
+
+class: define(:params, :body, call is; Define, Node, Env, Out) do
+	let Env2 := env(Env, {nil is Node:content}:grow(Node:attributes))
+	for I, Param in Define:params do
+		switch Param: type
+		case xe::var do
+			Env2[Param:name] := Node[I]
+		case list do
+			Env2[Param[1]:name] := list(Node:attributes skip (I - 1))
+		end
+	end
+	list(Define:body; Child) process(Child, Env2, Out)
+end
+
+meth process(Nil: nil, Env: env, Out: any) nil
+
+meth process(Number: number, Env: env, Out: any) do
+	Out and Out:write(string(Number))
+	ret Number
+end
+
+meth process(String: string, Env: env, Out: any) do
+	Out and Out:write(String)
+	ret String
+end
+
+meth process(List: list, Env: env, Out: any) do
+	list(List, process(_, Env, Out))
+end
+
+meth process(Map: map, Env: env, Out: any) do
+	map(Map, process(_, Env, Out))
+end
+
+meth process(Node: xe::node, Env: env, Out: any) do
+	let Fn := Env[Node:tag] or error("TagError", 'Tag {Node:tag} not defined')
+	ret Fn(Node, Env, Out)
+end
+
+meth process(Var: xe::var, Env: env, Out: any) do
+	var Val := Env[Var:name]
+	for Index in Var:indices do
+		Val := Val[process(Index, Env, nil)]
+	end
+	ret process(Val, Env, Out)
+end
+
+let Root := env()
+
+Root["define"] := fun(Node, Env, Out) do
+	Env[Node[1]] := define(list(Node:attributes skip 1), Node:content)
+end
+
+Root["let"] := fun(Node, Env, Out) do
+	Env[Node[1]] := Node[2]
+end
+
+Root["if"] := fun(Node, Env, Out) do
+	let Case := if process(Node[1], Env, nil) then
+		"then"
+	else
+		"else"
+	end
+	for Child in Node:content do
+		if Child:tag = Case then
+			process(Child:content, Env, Out)
+		end
+	end
+end
+
+Root["switch"] := fun(Node, Env, Out) do
+	let Value := process(Node[1], Env, nil)
+	var Else := []
+	for Child in Node:content do
+		if Child:tag = "case" and Child[1] = Value then
+			Else := nil
+			process(Child:content, Env, Out)
+		elseif Else and Child:tag = "else" then
+			Else:grow(Child:content)
+		end
+	end
+	if Else then
+		process(Else, Env, Out)
+	end
+end
+
+Root["for"] := fun(Node, Env, Out) do
+	if Node[3] then
+		let Index := Node[1]:name
+		let Name := Node[2]:name
+		list(process(Node[3], Env, nil), =>, 1; I, Value) do
+			process(Node:content, env(Env, {Index is I, Name is Value}), Out)
+		end
+	else
+		let Name := Node[1]:name
+		list(process(Node[2], Env, nil); Value) do
+			process(Node:content, env(Env, {Name is Value}), Out)
+		end
+	end
+end
+
+class: bind(:env, :value)
+
+meth process(Bind: bind, Env: env, Out: any) do
+	process(Bind:value, env(Env, Bind:env), Out)
+end
+
+Root["map"] := fun(Node, Env, Out) do
+	if Node[3] then
+		let Index := Node[1]:name
+		let Name := Node[2]:name
+		list(process(Node[3], Env, nil), =>, 1; I, Value) do
+			bind({Index is I, Name is Value}, Node[3])
+		end
+	else
+		let Name := Node[1]:name
+		list(process(Node[2], Env, nil); Value) do
+			bind({Name is Value}, Node[3])
+		end
+	end
+end
+
+Root["range"] := fun(Node, Env, Out) Node[1] .. Node[2]
+
+Root["list"] := fun(Node, Env, Out) list(Node:attributes)
+
+Root["put"] := fun(Node, Env, Out) Env[Node[1]:name]:put(process(Node[2], Env, nil))
+Root["push"] := fun(Node, Env, Out) Env[Node[1]:name]:push(process(Node[2], Env, nil))
+Root["pop"] := fun(Node, Env, Out) Env[Node[1]:name]:pop
+Root["pull"] := fun(Node, Env, Out) Env[Node[1]:name]:pull
+
+Root["insert"] := fun(Node, Env, Out) Env[Node[1]:name][process(Node[2], Env, nil)] := process(Node[3], Env, nil)
+Root["delete"] := fun(Node, Env, Out) Env[Node[1]:name]:delete(process(Node[2], Env, nil))
+
+Root["count"] := fun(Node, Env, Out) do
+	let Count := count(process(Node[1], Env, nil))
+	Out and Out:write(Count)
+	ret Count
+end
+
+Root["upper"] := fun(Node, Env, Out) do
+	let Buffer := string::buffer()
+	process(Node:content, Env, Buffer)
+	let String := Buffer:rest:upper
+	Out and Out:write(String)
+	ret String
+end
+
+Root["lower"] := fun(Node, Env, Out) do
+	let Buffer := string::buffer()
+	process(Node:content, Env, Buffer)
+	let String := Buffer:rest:lower
+	Out and Out:write(String)
+	ret String
+end
+
+Root["title"] := fun(Node, Env, Out) do
+	let Buffer := string::buffer()
+	process(Node:content, Env, Buffer)
+	let String := Buffer:read(1):upper + Buffer:rest
+	Out and Out:write(String)
+	ret String
+end
+
+Root[""] := fun(Node, Env, Out) do
+	let Buffer := string::buffer()
+	process(Node:content, Env, Buffer)
+	let String := Buffer:rest
+	Out and Out:write(String)
+	ret String
+end
+
+Root["stringify"] := fun(Node, Env, Out) do
+	let Buffer := string::buffer()
+	process(Node:content, Env, Buffer)
+	let String := '\"{Buffer:rest:escape}\"'
+	Out and Out:write(String)
+	ret String
+end
+
+Root["eq"] := fun(Node, Env, Out) do
+	let A := process(Node[1], Env, nil)
+	let B := process(Node[2], Env, nil)
+	A = B and process(Node:content, Env, Out)
+end
+
+Root["ne"] := fun(Node, Env, Out) do
+	let A := process(Node[1], Env, nil)
+	let B := process(Node[2], Env, nil)
+	A != B and process(Node:content, Env, Out)
+end
+
+Root["lt"] := fun(Node, Env, Out) do
+	let A := process(Node[1], Env, nil)
+	let B := process(Node[2], Env, nil)
+	A < B and process(Node:content, Env, Out)
+end
+
+Root["gt"] := fun(Node, Env, Out) do
+	let A := process(Node[1], Env, nil)
+	let B := process(Node[2], Env, nil)
+	A > B and process(Node:content, Env, Out)
+end
+
+Root["le"] := fun(Node, Env, Out) do
+	let A := process(Node[1], Env, nil)
+	let B := process(Node[2], Env, nil)
+	A <= B and process(Node:content, Env, Out)
+end
+
+Root["ge"] := fun(Node, Env, Out) do
+	let A := process(Node[1], Env, nil)
+	let B := process(Node[2], Env, nil)
+	A >= B and process(Node:content, Env, Out)
+end
+
+def sourcify := method()
+
+meth sourcify(Value: nil, Buffer: string::buffer) do
+	Buffer:write("nil")
+end
+
+meth sourcify(Value: number, Buffer: string::buffer) do
+	Buffer:write(Value)
+end
+
+meth sourcify(Value: string, Buffer: string::buffer) do
+	Buffer:write('\"{Value:escape}\"')
+end
+
+meth sourcify(Node: xe::node, Buffer: string::buffer) do
+	Buffer:write('xe::node(\"{Node:tag:escape}\", \{')
+	var Sep := ""
+	for Key, Value in Node:attributes do
+		Buffer:write(Sep)
+		switch Value: type
+		case integer do
+			Buffer:write('{Key} is ')
+		case string do
+			Buffer:write('\"{Key:escape}\" is ')
+		end
+		sourcify(Value, Buffer)
+		Sep := ", "
+	end
+	Buffer:write('}, [')
+	for Child in Node:content do
+		sourcify(Child, Buffer)
+	end
+	Buffer:write('])')
+end
+
+meth sourcify(Var: xe::var, Buffer: string::buffer) do
+	Buffer:write('xe::var(\"{Var:name:escape}\")')
+end
+
+Root["do"] := fun(Node, Env, Out) do
+	let Parser := parser()
+	let Buffer := string::buffer()
+	for Child in Node:content do
+		switch Child: type
+		case string, number do
+			Buffer:write(Child)
+		case xe::var do
+			Buffer:write('Env[\"{Child:name:escape}\"]')
+		case xe::node do
+			sourcify(Child, Buffer)
+		end
+	end
+	let Source := Buffer:get
+	print('\n\nSource = <{Source}>\n\n')
+	Parser:input(Source)
+	let Compiler := compiler(global)
+	let Fn := Parser:compile(Compiler, ["Env", "Out"])
+	ret Fn(Env, Out)
+end
+
+Root["print"] := fun(Node, Env, Out) do
+	print(Node)
+	ret nil
+end
+
+let Content := with File := file(Args[1], "r") do
+	1(xe::parse(File:rest), File:close)
+end
+
+let Output := if Args[2] then
+	file(Args[2], "w")
+else
+	terminal::Stdout
+end
+
+for Node in Content do
+	process(Node, Root, Output)
+end
+
+
+Args[2] and Output:close

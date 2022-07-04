@@ -50,3 +50,11 @@ modules.order
 Module.symvers
 Mkfile.old
 dkms.conf
+/obj/
+/lib/
+/build.rabs.db/
+/test/
+/.settings/
+/.cproject
+/.project
+/html/

@@ -1,0 +1,9 @@
+:< ROOT >:
+
+%include common.rabs
+
+BIN_DIR := old or file("bin"):mkdir
+LIB_DIR := old or file("lib"):mkdir
+
+vmount("obj", "src")
+subdir("obj")

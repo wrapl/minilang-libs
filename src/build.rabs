@@ -1,0 +1,114 @@
+if PLATFORM = "Darwin" then
+	setenv("LDFLAGS", '-L/usr/local/opt/libffi/lib')
+	setenv("PKG_CONFIG_PATH", '/usr/local/opt/libffi/lib/pkgconfig')
+end
+
+MODULE_DIR := old or (LIB_DIR/"minilang"):mkdir
+
+let InstallModules := PREFIX / "lib/minilang"
+
+let SourceTypes := {
+	"c" is [c_includes, c_compile],
+	"cpp" is [c_includes, c_compile]
+}
+
+fun generate_init_file(Source) do
+	let InitFile := Source:basename:replace(".c", "_init.c")
+	let Target := file(InitFile)[Source, PREBUILDS, INIT_HEADERS] => fun() do
+		Target:open("w"):close
+		let Init := shell(CC, CFLAGS, "-E -P -DGENERATE_INIT", Source)
+		let Out := Target:open("w")
+		for Line in Init / "\n" do
+			loop
+				let I := while Line:find("INIT_CODE ")
+				Line := Line[I + 10, 0]
+				let J := while Line:find(");")
+				Out:write(Line[1, J + 2])
+				Out:write("\n")
+				Line := Line[J + 2, 0]
+			end
+		end
+		Out:close
+	end
+end
+
+so_module := fun(Name, Objects, Libraries) do
+	let Library := MODULE_DIR / Name
+	let Sources := []
+	for Object in Objects or [] do
+		for Extension, Functions in SourceTypes do
+			let Source := Object % Extension
+			if Source:exists then
+				Sources:put(Source)
+				generate_init_file(Source)
+				let Scan := Source:scan("INCLUDES")[PREBUILDS] => Functions[1]
+				Object[Source, Scan] => (Functions[2] !! [Source])
+				exit
+			end
+		end
+	end
+	install(Library, InstallModules / Name)
+	Library[Objects, Libraries] => fun(Library) do
+		Library:dir:mkdir
+		execute('cc', '-o', Library, '-shared', '-export-dynamic', Objects, Libraries, LDFLAGS)
+		:>DEBUG or execute("strip", Library)
+	end
+end
+
+mini_module := fun(Name) do
+	let Library := MODULE_DIR / Name
+	let Source := file((Name / "/")[-1])
+	install(Library, InstallModules / Name)
+	Library[Source] => fun(Target) do
+		print(Source, " -> ", Target, "\n")
+		Target:dir:mkdir
+		Source:copy(Target)
+	end
+end
+
+CFLAGS := old + [
+	"-march=native",
+	"-std=gnu11", :>'--save-temps',
+	"-fstrict-aliasing",
+	"-foptimize-sibling-calls",
+	"-Wall", "-Wstrict-aliasing",
+	"-Wno-deprecated-declarations",
+	"-Wno-unused-function",
+	"-Werror=cast-function-type",
+	:>"-Wsuggest-attribute=pure",
+	:>"-Wsuggest-attribute=const",
+	:>"-Wsuggest-attribute=noreturn",
+	:>"-Wsuggest-attribute=malloc",
+	'-I.', "-pthread",
+	"-DGC_THREADS",
+	"-D_GNU_SOURCE",
+	'-D{PLATFORM}',
+	"-fpic", "-I.."
+]
+LDFLAGS := old + ["-lm", "-ldl", '-Wl,--dynamic-list={file("exports.lst")}']
+
+DEBUG := defined("DEBUG")
+
+if DEBUG then
+	CFLAGS := old + ["-O2", "-g"]
+	LDFLAGS := old + ["-g"]
+else
+	CFLAGS := old + ["-O3", "-g"]
+	LDFLAGS := old + ["-g"]
+end
+
+subdir("db")
+subdir("digest")
+subdir("enc")
+subdir("event")
+subdir("fmt")
+subdir("img")
+subdir("jupyter")
+subdir("log")
+subdir("net")
+subdir("parse")
+:>subdir("phys")
+subdir("snd")
+subdir("solver")
+subdir("util")
+subdir("web")

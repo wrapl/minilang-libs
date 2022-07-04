@@ -1,0 +1,206 @@
+import: zeromq("net/zeromq")
+import: json("fmt/json")
+import: glib("gir/GLib")
+import: gtk("gir/Gtk@3.0")
+import: hmac("digest/hmac")
+import: base16("enc/base16")
+import: time("std/time")
+
+let Config := with Json := file(sys::Args[1], "r") do
+	must Json:close
+	json::decode(Json:rest)
+end
+
+print('\n\nConfig = {Config}\n')
+
+let Key := Config["key"]
+let Session := string(std::uuid())
+let Compiler := compiler(global)
+let Parser := parser()
+var Counter := 0
+
+print('Starting session = {Session}\n')
+
+let Heartbeat := zeromq::socket(zeromq::socket::type::Rep)
+Heartbeat:bind('{Config["transport"]}://{Config["ip"]}:{Config["hb_port"]}')
+
+let Shell := zeromq::socket(zeromq::socket::type::Router)
+Shell:bind('{Config["transport"]}://{Config["ip"]}:{Config["shell_port"]}')
+
+let Control := zeromq::socket(zeromq::socket::type::Router)
+Control:bind('{Config["transport"]}://{Config["ip"]}:{Config["control_port"]}')
+
+let Stdin := zeromq::socket(zeromq::socket::type::Router)
+Stdin:bind('{Config["transport"]}://{Config["ip"]}:{Config["stdin_port"]}')
+
+let IOPub := zeromq::socket(zeromq::socket::type::Pub)
+IOPub:bind('{Config["transport"]}://{Config["ip"]}:{Config["iopub_port"]}')
+
+def Sockets := {}
+
+fun check_socket(Name, Socket, Callback) do
+	if Socket:events /\ 1 = 1 then
+		let Message := list(zeromq::message(Socket), :data)
+		print('{Name} <- {Message}\n')
+		let Ids := if let Index := Message:find("<IDS|MSG>") then
+			Message:splice(1, Index)
+		else
+			[]
+		end
+		let Signature := Message:pop
+		let Header := json::decode(Message:pop or "null")
+		let Parent := json::decode(Message:pop or "null")
+		let Metadata := json::decode(Message:pop or "null")
+		let Content := json::decode(Message:pop or "null")
+		Callback(Ids, Signature, Header, Parent, Metadata, Content)
+	end
+end
+
+fun check_sockets() do
+	for Name, (Socket, Callback) in Sockets do
+		check_socket(Name, Socket, Callback)
+	end
+end
+
+fun listen(Name, Socket, Callback) do
+	Sockets[Name] := (Socket, Callback)
+	glib::unix_fd_add_full(0, Socket:fd, glib::IOCondition::in; Fd, Condition) do
+		check_socket(Name, Socket, Callback)
+		ret true
+	on Error do
+		print('Error: {Error:type}: {Error:message}\n{Error:trace}\n')
+		ret true
+	end
+end
+
+fun send(Name, Socket, Ids, MsgType, Parent, Metadata, Content, [Extra]) do
+	let MsgId := string(std::uuid())
+	let HeaderJson := json::encode({
+		"msg_id" is MsgId,
+		"username" is "kernel",
+		"session" is Session,
+		"msg_type" is MsgType,
+		"version" is "5.3",
+		"date" is string(time(), nil):limit(27) + "Z"
+	})
+	let ParentJson := json::encode(Parent)
+	let MetadataJson := json::encode(Metadata)
+	let ContentJson := json::encode(Content)
+	let HMAC := hmac::sha256(Key)
+	HMAC:update(HeaderJson)
+	HMAC:update(ParentJson)
+	HMAC:update(MetadataJson)
+	HMAC:update(ContentJson)
+	let Signature := base16::encode(HMAC:digest):lower
+	let Message := list(Ids):put(Signature, HeaderJson, ParentJson, MetadataJson, ContentJson):grow(Extra)
+	print('{Name} -> {Message}\n')
+	zeromq::message(Message):send(Socket)
+	check_sockets()
+	ret MsgId
+end
+
+class: iopub_stream(io::stream, :socket, :name, :parent)
+
+meth :write(Stream: iopub_stream, Bytes: address) do
+	send("IOPub", Stream:socket, ["<IDS|MSG>"], "stream", Stream:parent, {}, {
+		"name" is Stream:name,
+		"text" is string(Bytes)
+	})
+	ret Bytes:size
+end
+
+let Stdout := iopub_stream(IOPub, "stdout")
+let Stderr := iopub_stream(IOPub, "stderr")
+
+Compiler:def("print", Stdout:write(_))
+
+listen("Heartbeat", Heartbeat; Ids, Signature, Header, Parent, Metadata, Content) do
+end
+
+listen("Shell", Shell; Ids, Signature, Header, Parent, Metadata, Content) do
+	switch Header["msg_type"]: string
+	case "kernel_info_request" do
+		send("Shell", Shell, Ids, "kernel_info_reply", Header, {}, {
+			"status" is "ok",
+			"protocol_version" is "5.3.0",
+			"implementation" is "minilang",
+			"implementation_version" is "0.0.1",
+			"language_info" is {
+				"name" is "minilang",
+				"version" is "0.0.1",
+				"mimetype" is "text/x-minilang",
+				"file_extension" is ".mini"
+			},
+			"banner" is "Minilang in Jupyter :)"
+		});
+		send("IOPub", IOPub, ["<IDS|MSG>"], "status", Header, {}, {"execution_state" is "idle"})
+	case "execute_request" do
+		Content["store_history"] = true and Counter:inc
+		Compiler:def("print"; [Args]) do
+			send("IOPub", IOPub, ["<IDS|MSG>"], "stream", Header, {}, {
+				"name" is "stdout",
+				"text" is Args -> string join ""
+			})
+			ret nil
+		end
+		Parser:source('Cell<{Counter}>', 0)
+		Parser:reset:input(Content["code"])
+		Stdout:parent := Header
+		Stderr:parent := Header
+		send("IOPub", IOPub, ["<IDS|MSG>"], "status", Header, {}, {"execution_state" is "busy"})
+		let Result := {"execution_count" is Counter}
+		do
+			loop
+				let Result := Parser:evaluate(Compiler)
+				until Result = compiler::EOI
+				send("IOPub", IOPub, ["<IDS|MSG>"], "execute_result", Header, {}, {
+					"execution_count" is Counter,
+					"data" is {"text/plain" is string(Result)},
+					"metadata" is {}
+				})
+			end
+			Result["status"] := "ok"
+			Result["payload"] := []
+			Result["user_expressions"] := {}
+			Result["user_variables"] := {}
+		on Error do
+			Stderr:write('{Error:type}: {Error:message}\n\t{Error:trace -> _:join(":") join("\n\t")}\n')
+			Result["status"] := "error"
+			Result["ename"] := Error:type
+			Result["evalue"] := Error:message
+			Result["traceback"] := list(Error:trace, _:join(":"))
+		end
+		send("Shell", Shell, Ids, "execute_reply", Header, {}, Result)
+		send("IOPub", IOPub, ["<IDS|MSG>"], "status", Header, {}, {"execution_state" is "idle"})
+	else
+		print('Unknown message type = {Header["msg_type"]}\n')
+	end
+end
+
+listen("Control", Control; Ids, Signature, Header, Parent, Metadata, Content) do
+	switch Header["msg_type"]: string
+	case "kernel_info_request" do
+		send("Control", Control, Ids, "kernel_info_reply", Header, {}, {
+			"status" is "ok",
+			"protocol_version" is "5.3.0",
+			"implementation" is "minilang",
+			"implementation_version" is "0.0.1",
+			"language_info" is {
+				"name" is "minilang",
+				"version" is "0.0.1",
+				"mimetype" is "text/x-minilang",
+				"file_extension" is ".mini"
+			},
+			"banner" is "Minilang in Jupyter :)"
+		});
+		send("IOPub", IOPub, ["<IDS|MSG>"], "status", Header, {}, {"execution_state" is "idle"})
+	case "shutdown_request" do
+		halt()
+	else
+		print('Unknown message type = {Header["msg_type"]}\n')
+	end
+end
+
+listen("Stdin", Stdin; Message) do
+end
+

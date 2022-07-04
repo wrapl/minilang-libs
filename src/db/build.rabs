@@ -1,0 +1,53 @@
+DEFAULT[so_module("db/sqlite.so", [file("sqlite.o")])]
+
+:<scope("sqlite";) do
+	file("sqlite/sqlite3.c") => fun() do
+		file("sqlite"):rmdir:mkdir:chdir
+		execute("wget https://www.sqlite.org/2021/sqlite-autoconf-3360000.tar.gz -O- | tar xvzP --strip-components=1")
+	end
+	PREBUILDS := old + [file("sqlite/sqlite3.c")]
+	CFLAGS := old + ["-I", file("sqlite")]
+	generate_init_file(file("ml_sqlite.c"))
+	DEFAULT[so_module("sqlite.so", [file("ml_sqlite.o"), file("sqlite/sqlite3.o")])]
+end>:
+
+scope("radb";) do
+	let Dir := file("radb")
+	let Lib := Dir / "libradb.a" => fun() do
+		Dir:rmdir
+		execute("git clone -b dev https://github.com/rajamukherji/radb.git", Dir)
+		:>execute("cp -rv ~/Work/Radb", Dir)
+		Dir:chdir
+		execute("make clean")
+		execute("make libradb.a RADB_MEM=GC CFLAGS=-fpic")
+	end
+	PREBUILDS := old + [Lib]
+	DEFAULT[so_module("db/radb.so", [file("radb.o")], [Lib])]
+end
+
+scope("ravs";) do
+	let Dir := file("ravs")
+	let Lib := Dir / "libravs.a" => fun() do
+		Dir:rmdir
+		execute("git clone --recursive -b dev https://github.com/rajamukherji/ravs.git", Dir)
+		Dir:chdir
+		execute("make clean")
+		execute("make libravs.a RADB_MEM=GC CFLAGS=-fpic")
+	end
+	PREBUILDS := old + [Lib]
+	DEFAULT[so_module("db/ravs.so", [file("ravs.o")], [Lib])]
+end
+
+scope("postgres";) do
+	CFLAGS := old + [
+		pkgconfig("--cflags gio-2.0"),
+		pkgconfig("--cflags libpq"),
+		expr('pg_config --includedir-server') => fun() "-I" + shell('pg_config --includedir-server'):trim
+	]
+	LDFLAGS := old + [
+		pkgconfig("--libs gio-2.0"),
+		pkgconfig("--libs libpq"),
+		expr('pg_config --libdir') => fun() "-L" + shell('pg_config --libdir'):trim
+	]
+	DEFAULT[so_module("db/postgres.so", [file("postgres.o")])]
+end

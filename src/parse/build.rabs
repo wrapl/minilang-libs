@@ -1,0 +1,22 @@
+DEFAULT[mini_module("parse/rapc.mini")]
+
+scope("mpc";) do
+	let MPC := file("mpc/mpc.c") => fun() do
+		file("mpc"):rmdir
+		execute("git clone https://github.com/orangeduck/mpc.git")
+		execute("cat", file("mpc_extra.c"), " >> ", "mpc/mpc.c")
+	end
+	PREBUILDS := old + [MPC]
+	DEFAULT[so_module("parse/mpc.so", [file("mpc.o"), file("mpc/mpc.o")])]
+end
+
+scope("cleri";) do
+	let Obj := file("libcleri/src"):mkdir
+	CFLAGS := old + ['-I{file("libcleri/inc")}']
+	let Objects := [file("ml_cleri.o")]
+	for Source in Obj:ls(r".*\.c") do
+		Objects:put(Obj / (Source % "o" basename ()))
+	end
+	LDFLAGS := old + ["-lpcre2-8"]
+	DEFAULT[so_module("parse/cleri.so", Objects)]
+end

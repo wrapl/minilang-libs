@@ -1,0 +1,135 @@
+<define "include":#include \<<$1>\>>
+<include "minilang/minilang.h">
+<include "minilang/ml_macros.h">
+<include "string.h">
+<include "z3.h">
+
+<let "exports" {}>
+
+<define "z3-type" $name:
+<let "Name" <title:<$name>>>
+<insert $exports $name <:Z3<$Name>T>>
+typedef struct {
+	ml_type_t *Type;
+	Z3_context Context;
+	Z3_<$name> Handle;
+} z3_<$name>_t;
+
+ML_TYPE(Z3<$Name>T, (), "<$1>");
+
+static ml_value_t *z3_<$name>(Z3_context Context, Z3_<$name> Handle) {
+	z3_<$name>_t *<$Name> = new(z3_<$name>_t);
+	<$Name>-\>Type = Z3<$Name>T;
+	<$Name>-\>Context = Context;
+	<$Name>-\>Handle = Handle;
+	return (ml_value_t *)<$Name>;
+}>
+
+<define "ctype"|<switch $1|
+	<case "integer":long >
+	<case "string":const char *>
+	<else:Z3_<$1> >
+>>
+
+<define "mtype"|<switch $1|
+	<case "integer":MLIntegerT>
+	<case "string":MLStringT>
+	<else:Z3<title:<$1>>T>
+>>
+
+<define "ret"|<switch $1|
+	<case "integer":return ml_integer(<$>);>
+	<case "string":return ml_cstring(<$>);>
+	<else:return z3_<$1>(Context, <$>);>
+>> 
+
+<define "z3-method" $function $method $return [$params]:
+ML_METHOD(<stringify:<$method>><for $param $params:, <mtype $param>>) {
+	<for $i $param $params:<ctype $param>V<$i> = ml_<$param>_value(Args[<$i>]);>
+	<ctype $return>R = Z3_<$function>(Context<for $i $param $params:, V<$i>>);
+	<ret $return:R>
+}>
+
+<define "z3-methodv" $function $method $return [$params]:
+ML_METHODV(<stringify:<$method>><for $param $params:, <mtype $param>>) {
+	<let "n" <count $params>>
+	<for $i $param $params:<lt $i $n:<ctype $param>V<$i> = ml_<$param>_value(Args[<$i>]);>>
+	int N = Count + 1 - <$n>;
+	Z3_<$params -1> V<$n>[N];
+	for (int I = <$n> - 1; I \< Count; ++I) {
+		ML_CHECK_ARG_TYPE(I, Z3<title:<$params -1>>T);
+		V<$n>[I + 1 - <$n>] = ml_<$params -1>_value(Args[I]);
+	}
+	<ctype $return>R = Z3_<$function>(Context<for $i $param $params:<lt $i $n:, V<$i>>>, N, V<$n>);
+	<ret $return:R>
+}>
+
+<define "z3-function" $function $name $return [$params]:
+<insert $exports $name <:Z3<title:<$name>>>>
+ML_FUNCTION(Z3<title:<$name>>) {
+	<gt <count $params> 0:ML_CHECK_ARG_COUNT(<count $params>);>
+	<for $i $param $params:ML_CHECK_ARG_TYPE(<$i> - 1, <mtype $param>);>
+	<for $i $param $params:<ctype $param>V<$i> = ml_<$param>_value(Args[<$i>]);>
+	<ctype $return>R = Z3_<$function>(Context<for $i $param $params:, V<$i>>);
+	<ret $return:R>
+}>
+
+static Z3_context Context;
+<z3-type "ast">
+
+static Z3_ast ml_ast_value(ml_value_t *Value) {
+	return ((z3_ast_t *)Value)->Handle;
+}
+
+<z3-type "symbol">
+
+static Z3_symbol ml_symbol_value(ml_value_t *Value) {
+	return ((z3_symbol_t *)Value)->Handle;
+}
+
+<z3-type "sort">
+
+static Z3_sort ml_sort_value(ml_value_t *Value) {
+	return ((z3_sort_t *)Value)->Handle;
+}
+
+<z3-function "mk_const" "const" "ast" "symbol" "sort">
+<z3-function "mk_true" "true" "ast">
+<z3-function "mk_false" "false" "ast">
+<z3-method "mk_eq" "=" "ast" "ast" "ast">
+<z3-methodv "mk_distinct" "!=" "ast" "ast">
+<z3-method "mk_not" "~" "ast" "ast">
+<z3-method "mk_ite" "ite" "ast" "ast" "ast" "ast">
+<z3-method "mk_iff" "<=>" "ast" "ast" "ast">
+<z3-method "mk_implies" "=>" "ast" "ast" "ast">
+<z3-method "mk_xor" "><" "ast" "ast" "ast">
+<z3-methodv "mk_and" "/\\" "ast" "ast">
+<z3-methodv "mk_or" "\\/" "ast" "ast">
+<z3-methodv "mk_add" "+" "ast" "ast">
+<z3-methodv "mk_mul" "*" "ast" "ast">
+<z3-methodv "mk_sub" "-" "ast" "ast">
+<z3-method "mk_unary_minus" "-" "ast" "ast">
+<z3-method "mk_div" "/" "ast" "ast" "ast">
+<z3-method "mk_mod" "%" "ast" "ast" "ast">
+<z3-method "mk_rem" "rem" "ast" "ast" "ast">
+<z3-method "mk_power" "^" "ast" "ast" "ast">
+<z3-method "mk_lt" "<" "ast" "ast" "ast">
+<z3-method "mk_le" "<=" "ast" "ast" "ast">
+<z3-method "mk_gt" ">" "ast" "ast" "ast">
+<z3-method "mk_ge" ">=" "ast" "ast" "ast">
+<z3-method "mk_divides" "|" "ast" "ast" "ast">
+
+ML_METHOD("append", MLStringBufferT, Z3AstT) {
+	ml_stringbuffer_t *Buffer = (ml_stringbuffer_t *)Args[0];
+	Z3_string String = Z3_ast_to_string(Context, ((z3_ast_t *)Args[1])->Handle);
+	ml_stringbuffer_write(Buffer, String, strlen(String));
+	return (ml_value_t *)Buffer;
+}
+
+void ml_library_entry0(ml_value_t **Slot) {
+#include "z3_init.c"
+	Context = Z3_mk_context(NULL);
+	Slot[0] = ml_module("z3",
+		<for $name $value $exports:<stringify:<$name>>, <$value>,>
+	NULL);
+}

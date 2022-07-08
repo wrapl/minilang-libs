@@ -11,6 +11,10 @@
 #undef ML_CATEGORY
 #define ML_CATEGORY "db/postgres"
 
+#if PG_VERSION >= 14
+#define PIPELINE
+#endif
+
 typedef struct connection_t connection_t;
 typedef struct statement_t statement_t;
 typedef struct query_t query_t;
@@ -19,10 +23,16 @@ struct connection_t {
 	ml_type_t *Type;
 	PGconn *Conn;
 	query_t *Head, *Tail;
+#ifdef PIPELINE
+	query_t *Waiting;
+#endif
 	ml_value_t *Result;
 	statement_t *Statements;
 	const char **Keywords, **Values;
 	int StatementId, Reconnect;
+#ifdef PIPELINE
+	int NeedsFlush;
+#endif
 };
 
 ML_TYPE(MLConnectionT, (), "postgres::connection");
@@ -49,16 +59,30 @@ struct query_t {
 	int NumParams, NumFields;
 };
 
-static void query_send(PGconn *Conn, query_t *Query) {
+static int query_send(connection_t *Connection, query_t *Query) {
+#ifdef PIPELINE
+	if (Connection->NeedsFlush) {
+		if (!Connection->Waiting) Connection->Waiting = Query;
+		return 0;
+	}
+#endif
 	if (Query->SQL) {
 		if (Query->Name) {
-			PQsendPrepare(Conn, Query->Name, Query->SQL, 0, NULL);
+			PQsendPrepare(Connection->Conn, Query->Name, Query->SQL, 0, NULL);
 		} else {
-			PQsendQueryParams(Conn, Query->SQL, Query->NumParams, NULL, Query->Values, Query->Lengths, Query->Formats, 0);
+			PQsendQueryParams(Connection->Conn, Query->SQL, Query->NumParams, NULL, Query->Values, Query->Lengths, Query->Formats, 0);
 		}
 	} else {
-		PQsendQueryPrepared(Conn, Query->Name, Query->NumParams, Query->Values, Query->Lengths, Query->Formats, 0);
+		PQsendQueryPrepared(Connection->Conn, Query->Name, Query->NumParams, Query->Values, Query->Lengths, Query->Formats, 0);
 	}
+#ifdef PIPELINE
+	PQsendFlushRequest(Connection->Conn);
+	Connection->Waiting = Query->Next;
+	Connection->NeedsFlush = PQflush(Connection->Conn);
+#else
+	PQflush(Connection->Conn);
+#endif
+	return 1;
 }
 
 static ml_value_t *query_param(ml_value_t *Param, const char **Value, int *Length, int *Format) {
@@ -144,6 +168,22 @@ static ml_value_t *query_params(query_t *Query, int Count, ml_value_t **Args) {
 	return NULL;
 }
 
+static void query_queue(connection_t *Connection, query_t *Query) {
+	query_t *Tail = Connection->Tail;
+	Connection->Tail = Query;
+	if (Tail) {
+		Tail->Next = Query;
+	} else {
+		Connection->Head = Query;
+#ifndef PIPELINE
+		if (Connection->Conn) query_send(Connection, Query);
+#endif
+	}
+#ifdef PIPELINE
+	query_send(Connection, Query);
+#endif
+}
+
 ML_METHODVX("query", MLConnectionT, MLStringT) {
 //<Connection
 //<SQL
@@ -158,14 +198,7 @@ ML_METHODVX("query", MLConnectionT, MLStringT) {
 	Query->SQL = ml_string_value(Args[1]);
 	ml_value_t *Error = query_params(Query, Count - 2, Args + 2);
 	if (Error) ML_RETURN(Error);
-	query_t *Tail = Connection->Tail;
-	Connection->Tail = Query;
-	if (Tail) {
-		Tail->Next = Query;
-	} else {
-		Connection->Head = Query;
-		if (Connection->Conn) query_send(Connection->Conn, Query);
-	}
+	query_queue(Connection, Query);
 }
 
 ML_METHODX("prepare", MLConnectionT, MLStringT) {
@@ -179,14 +212,7 @@ ML_METHODX("prepare", MLConnectionT, MLStringT) {
 	Query->Caller = Caller;
 	Query->SQL = ml_string_value(Args[1]);
 	asprintf((char **)&Query->Name, "S%d", ++Connection->StatementId);
-	query_t *Tail = Connection->Tail;
-	Connection->Tail = Query;
-	if (Tail) {
-		Tail->Next = Query;
-	} else {
-		Connection->Head = Query;
-		if (Connection->Conn) query_send(Connection->Conn, Query);
-	}
+	query_queue(Connection, Query);
 }
 
 static void statement_call(ml_state_t *Caller, statement_t *Statement, int Count, ml_value_t **Args) {
@@ -199,14 +225,7 @@ static void statement_call(ml_state_t *Caller, statement_t *Statement, int Count
 	Query->NumFields = Statement->NumFields;
 	ml_value_t *Error = query_params(Query, Count, Args);
 	if (Error) ML_RETURN(Error);
-	query_t *Tail = Connection->Tail;
-	Connection->Tail = Query;
-	if (Tail) {
-		Tail->Next = Query;
-	} else {
-		Connection->Head = Query;
-		if (Connection->Conn) query_send(Connection->Conn, Query);
-	}
+	query_queue(Connection, Query);
 }
 
 ML_TYPE(StatementT, (MLFunctionT), "postgres::statement",
@@ -325,7 +344,9 @@ static gboolean connection_fn(gint Socket, GIOCondition Condition, connection_t 
 			query_t *Next = Query->Next;
 			Connection->Head = Next;
 			if (Next) {
-				query_send(Connection->Conn, Next);
+#ifndef PIPELINE
+				query_send(Connection, Next);
+#endif
 			} else {
 				Connection->Tail = NULL;
 			}
@@ -378,6 +399,14 @@ static gboolean connection_fn(gint Socket, GIOCondition Condition, connection_t 
 			}
 		}
 	}
+	if (Connection->NeedsFlush) {
+		Connection->NeedsFlush = PQflush(Connection->Conn);
+#ifdef PIPELINE
+		query_t *Waiting = Connection->Waiting;
+		Connection->Waiting = NULL;
+		while (Waiting && query_send(Connection, Waiting)) Waiting = Waiting->Next;
+#endif
+	}
 	return G_SOURCE_CONTINUE;
 }
 
@@ -399,7 +428,13 @@ static ml_value_t *connection_connect(connection_t *Connection) {
 		}
 	}
 	PQsetnonblocking(Conn, 1);
-	if (Connection->Head) query_send(Conn, Connection->Head);
+#ifdef PIPELINE
+	PQenterPipelineMode(Conn);
+	query_t *Waiting = Connection->Head;
+	while (Waiting && query_send(Connection, Waiting)) Waiting = Waiting->Next;
+#else
+	if (Connection->Head) query_send(Connection, Connection->Head);
+#endif
 	GSource *Source = g_unix_fd_source_new(PQsocket(Conn), G_IO_IN | G_IO_ERR);
 	g_source_set_callback(Source, (void *)connection_fn, Connection, NULL);
 	g_source_attach(Source, NULL);

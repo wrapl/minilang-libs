@@ -1,5 +1,30 @@
 DEFAULT[so_module("db/sqlite.so", [file("sqlite.o")])]
 
+scope("dqlite";) do
+	let RaftDir := file("raft")
+	let RaftLib := RaftDir / ".libs/libraft.a" => fun() do
+		RaftDir:rmdir:mkdir:chdir
+		execute("wget https://github.com/canonical/raft/archive/refs/tags/v0.14.0.tar.gz -O- | tar xvzP --strip-components=1")
+		execute("autoreconf -vfi")
+		execute("./configure")
+		execute("make -j8")
+	end
+	let Dir := file("dqlite")
+	let Lib := Dir / ".libs/libdqlite.a" => fun() do
+		Dir:rmdir:mkdir:chdir
+		execute("wget https://github.com/canonical/dqlite/archive/refs/tags/v1.11.0.tar.gz -O- | tar xvzP --strip-components=1")
+		execute("autoreconf -vfi")
+		setenv("RAFT_CFLAGS", '-I{RaftDir/"include"}')
+		setenv("RAFT_LIBS", '-L{RaftDir/".libs"}')
+		execute("./configure")
+		execute("make -j8 CFLAGS=-fpic")
+	end
+	Lib[RaftLib]
+	PREBUILDS := old + [Lib]
+	CFLAGS := old + ['-I{Dir/"include"}']
+	DEFAULT[so_module("db/dqlite.so", [file("dqlite.o")], [Lib])]
+end
+
 :<scope("sqlite";) do
 	file("sqlite/sqlite3.c") => fun() do
 		file("sqlite"):rmdir:mkdir:chdir
@@ -39,15 +64,21 @@ scope("ravs";) do
 end
 
 scope("postgres";) do
+	PGVERSION := expr('pg_config --version') => fun() do
+		let Match := shell('pg_config --version') % r"PostgreSQL ([0-9]+)\.[0-9]+"
+		ret '-DPG_VERSION={Match[2]}'
+	end
 	CFLAGS := old + [
 		pkgconfig("--cflags gio-2.0"),
-		pkgconfig("--cflags libpq"),
-		expr('pg_config --includedir-server') => fun() "-I" + shell('pg_config --includedir-server'):trim
+		expr('pg_config --includedir') => fun() "-I" + shell('pg_config --includedir'):trim,
+		expr('pg_config --includedir-server') => fun() "-I" + shell('pg_config --includedir-server'):trim,
+		PGVERSION
 	]
 	LDFLAGS := old + [
 		pkgconfig("--libs gio-2.0"),
-		pkgconfig("--libs libpq"),
-		expr('pg_config --libdir') => fun() "-L" + shell('pg_config --libdir'):trim
+		expr('pg_config --libdir') => fun() "-L" + shell('pg_config --libdir'):trim,
+		"-lpq"
 	]
+	file("postgres.o")[PGVERSION]
 	DEFAULT[so_module("db/postgres.so", [file("postgres.o")])]
 end

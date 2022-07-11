@@ -11,7 +11,7 @@
 #undef ML_CATEGORY
 #define ML_CATEGORY "db/postgres"
 
-#if PG_VERSION >= 14
+#if defined(PG_PIPELINE) && (PG_VERSION >= 14)
 #define PIPELINE
 #endif
 
@@ -399,14 +399,14 @@ static gboolean connection_fn(gint Socket, GIOCondition Condition, connection_t 
 			}
 		}
 	}
+#ifdef PIPELINE
 	if (Connection->NeedsFlush) {
 		Connection->NeedsFlush = PQflush(Connection->Conn);
-#ifdef PIPELINE
 		query_t *Waiting = Connection->Waiting;
 		Connection->Waiting = NULL;
 		while (Waiting && query_send(Connection, Waiting)) Waiting = Waiting->Next;
-#endif
 	}
+#endif
 	return G_SOURCE_CONTINUE;
 }
 

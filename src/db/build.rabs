@@ -74,6 +74,9 @@ scope("postgres";) do
 		expr('pg_config --includedir-server') => fun() "-I" + shell('pg_config --includedir-server'):trim,
 		PGVERSION
 	]
+	if defined("PG_PIPELINE") then
+		CFLAGS:put("-DPG_PIPELINE")
+	end
 	LDFLAGS := old + [
 		pkgconfig("--libs gio-2.0"),
 		expr('pg_config --libdir') => fun() "-L" + shell('pg_config --libdir'):trim,

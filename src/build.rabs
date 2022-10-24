@@ -32,6 +32,8 @@ fun generate_init_file(Source) do
 	end
 end
 
+let Exports := file("exports.lst")
+
 so_module := fun(Name, Objects, Libraries) do
 	let Library := MODULE_DIR / Name
 	let Sources := []
@@ -50,7 +52,7 @@ so_module := fun(Name, Objects, Libraries) do
 	install(Library, InstallModules / Name)
 	Library[Objects, Libraries] => fun(Library) do
 		Library:dir:mkdir
-		execute('cc', '-o', Library, '-shared', '-export-dynamic', Objects, Libraries, LDFLAGS)
+		execute('cc', '-o', Library, '-shared', '-export-dynamic', Objects, Libraries, LDFLAGS, '-Wl,--dynamic-list={Exports}')
 		:>DEBUG or execute("strip", Library)
 	end
 end
@@ -85,7 +87,7 @@ CFLAGS := old + [
 	'-D{PLATFORM}',
 	"-fpic", "-I.."
 ]
-LDFLAGS := old + ["-lm", "-ldl", '-Wl,--dynamic-list={file("exports.lst")}']
+LDFLAGS := old + ["-lm", "-ldl"]
 
 DEBUG := defined("DEBUG")
 
@@ -102,6 +104,7 @@ subdir("digest")
 subdir("enc")
 subdir("event")
 subdir("fmt")
+subdir("geom")
 subdir("img")
 subdir("jupyter")
 subdir("log")

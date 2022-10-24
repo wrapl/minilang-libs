@@ -11,3 +11,5 @@ scope("libevent";) do
 	LDFLAGS := old + ["-levent"]
 	DEFAULT[so_module("event/libevent.so", [file("libevent.o")])]
 end
+
+DEFAULT[so_module("event.so", [file("event.o")])]

@@ -35,6 +35,7 @@ static ml_value_t *ml_mpc_value_parser(ml_mpc_parser_t *StringParser) {
 }
 
 static ml_value_t *ml_mpc_string_parser(mpc_parser_t *Handle) {
+	mpc_optimise(Handle);
 	ml_mpc_parser_t *Parser = new(ml_mpc_parser_t);
 	Parser->Type = MLParserStringT;
 	Parser->Handle = Handle;
@@ -89,10 +90,10 @@ static ml_value_t *ml_mpc_pass(void *Data, int Count, ml_value_t **Args) {
 static ml_value_t *ml_mpc_fail(void *Data, int Count, ml_value_t **Args) {
 	ML_CHECK_ARG_COUNT(1);
 	ML_CHECK_ARG_TYPE(0, MLStringT);
-	const char *Chars = ml_string_value(Args[0]);
+	const char *Message = ml_string_value(Args[0]);
 	ml_mpc_parser_t *Parser = new(ml_mpc_parser_t);
 	Parser->Type = MLParserT;
-	Parser->Handle = mpc_fail(Chars);
+	Parser->Handle = mpc_fail(Message);
 	return (ml_value_t *)Parser;
 }
 
@@ -581,9 +582,9 @@ static ml_value_t *ml_mpc_string(void *Data, int Count, ml_value_t **Args) {
 	return (ml_value_t *)Parser;
 }
 
-void ml_library_entry0(ml_value_t **Slot) {
+void ml_mpc_init(ml_value_t **Slot) {
 #include "mpc_init.c"
-	Slot[0] = ml_module(
+	Slot[0] = ml_module("mpc",
 		"seq", MLParserSeq,
 		"map", MLParserMap,
 		"any", MLParserAny,
@@ -626,4 +627,8 @@ void ml_library_entry0(ml_value_t **Slot) {
 		"RegexLit", ml_mpc_string_parser(mpc_regex_lit()),
 		"Ident", ml_mpc_string_parser(mpc_ident()),
 	NULL);
+}
+
+void ml_library_entry0(ml_value_t **Slot) {
+	ml_mpc_init(Slot);
 }

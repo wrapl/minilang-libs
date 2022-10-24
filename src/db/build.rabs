@@ -85,3 +85,9 @@ scope("postgres";) do
 	file("postgres.o")[PGVERSION]
 	DEFAULT[so_module("db/postgres.so", [file("postgres.o")])]
 end
+
+
+scope("fdb";) do
+	LDFLAGS := old + [pkgconfig("--libs foundationdb-client")]
+	DEFAULT[so_module("db/fdb.so", [file("fdb.o")])]
+end

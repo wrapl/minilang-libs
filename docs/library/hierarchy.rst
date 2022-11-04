@@ -41,6 +41,9 @@ hierarchy
       "enum":e -> "curl_option":w;
       "function":e -> "logger":w;
       "any":e -> "category":w;
+      "any":e -> "context":w;
+      "any":e -> "geometry":w;
+      "any":e -> "tree":w;
       "any":e -> "node":w;
       "sequence":e -> "node_list":w;
       "any":e -> "node_iter":w;
@@ -55,6 +58,9 @@ hierarchy
       "any":e -> "event_base":w;
       "any":e -> "event":w;
       "any":e -> "event_http":w;
+      "any":e -> "connections":w;
+      "any":e -> "connection":w;
+      "any":e -> "source_field":w;
       "stream":e -> "md5":w;
       "stream":e -> "ripemd160":w;
       "stream":e -> "sha1":w;
@@ -74,5 +80,8 @@ hierarchy
       "any":e -> "cbor_index":w;
       "any":e -> "connection":w;
       "function":e -> "statement":w;
+      "any":e -> "f_d_b_database":w;
+      "any":e -> "f_d_b_transaction":w;
+      "any":e -> "dqlite":w;
    }
 

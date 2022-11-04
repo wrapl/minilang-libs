@@ -4,7 +4,6 @@ import: glib("gir/GLib")
 import: gtk("gir/Gtk@3.0")
 import: hmac("digest/hmac")
 import: base16("enc/base16")
-import: time("std/time")
 
 let Config := with Json := file(sys::Args[1], "r") do
 	must Json:close
@@ -14,7 +13,7 @@ end
 print('\n\nConfig = {Config}\n')
 
 let Key := Config["key"]
-let Session := string(std::uuid())
+let Session := string(util::uuid())
 let Compiler := compiler(global)
 let Parser := parser()
 var Counter := 0
@@ -74,7 +73,7 @@ fun listen(Name, Socket, Callback) do
 end
 
 fun send(Name, Socket, Ids, MsgType, Parent, Metadata, Content, [Extra]) do
-	let MsgId := string(std::uuid())
+	let MsgId := string(util::uuid())
 	let HeaderJson := json::encode({
 		"msg_id" is MsgId,
 		"username" is "kernel",

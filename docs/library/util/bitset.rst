@@ -7,6 +7,12 @@
 util/bitset
 ===========
 
+.. _fun-decodebitset:
+
+:mini:`fun decodebitset(Arg₁: address)`
+   *TBD*
+
+
 .. _type-bitset:
 
 :mini:`type bitset < sequence`

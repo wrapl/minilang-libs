@@ -12,6 +12,18 @@ let SourceTypes := {
 	"cpp" is [c_includes, c_compile]
 }
 
+INIT_HEADERS := meta("MINILANG"):scan("INCLUDES") => fun() do
+	var Lines := shell(CC, '-c', CFLAGS, '-M -MG', file("ml_test.c"))
+	Lines := Lines:replace("\\\n ", "")
+	Lines := Lines[Lines:find(": ") + 2, 0]:trim
+	var Files := Lines / r"[^\\]( +)"
+	for File in Files do
+		File := file(File:replace("\\ ", " "))
+	end
+	check(Files)
+	ret Files
+end
+
 fun generate_init_file(Source) do
 	let InitFile := Source:basename:replace(".c", "_init.c")
 	let Target := file(InitFile)[Source, PREBUILDS, INIT_HEADERS] => fun() do

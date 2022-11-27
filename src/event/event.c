@@ -175,8 +175,8 @@ ML_TYPE(SourceFieldT, (), "source::field",
 );
 
 void ml_library_entry(ml_state_t *Caller, ml_value_t **Slot) {
-#include "source_init.c"
-	ml_value_t *SourceT = ml_class("event::source");
+#include "event_init.c"
+	ml_type_t *SourceT = ml_class("event::source");
 	ml_class_add_field(Caller->Context, SourceT, SourceEvents);
 	Slot[0] = ml_module("event/event",
 		"source", SourceT,

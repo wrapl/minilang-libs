@@ -18,7 +18,7 @@ static int progress_callback(curl_t *Curl, curl_off_t DLTotal, curl_off_t DLNow,
 	for (;;) {
 		ml_queued_state_t Queued = ml_scheduler_queue_next();
 		if (!Queued.State) break;
-		Queued.State->run(Queued.State, Queued.Value);
+		ml_state_schedule(Queued.State, Queued.Value);
 	}
 	return CURL_PROGRESSFUNC_CONTINUE;
 }

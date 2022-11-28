@@ -331,7 +331,7 @@ static gboolean connection_fn(gint Socket, GIOCondition Condition, connection_t 
 				query_t *Query = Connection->Head;
 				if (Query) {
 					if (!(Connection->Head = Query->Next)) Connection->Tail = NULL;
-					Query->Caller->run(Query->Caller, Error);
+					ml_state_schedule(Query->Caller, Error);
 				}
 			}
 			return G_SOURCE_REMOVE;
@@ -350,7 +350,7 @@ static gboolean connection_fn(gint Socket, GIOCondition Condition, connection_t 
 			} else {
 				Connection->Tail = NULL;
 			}
-			Query->Caller->run(Query->Caller, Connection->Result);
+			ml_state_schedule(Query->Caller, Connection->Result);
 		} else {
 			query_t *Query = Connection->Head;
 			if (Query->SQL && Query->Name) {

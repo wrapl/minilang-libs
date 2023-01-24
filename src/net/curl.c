@@ -16,7 +16,7 @@ extern ml_type_t CurlT[];
 
 static int progress_callback(curl_t *Curl, curl_off_t DLTotal, curl_off_t DLNow, curl_off_t ULTotal, curl_off_t ULNow) {
 	for (;;) {
-		ml_queued_state_t Queued = ml_scheduler_queue_next();
+		ml_queued_state_t Queued = ml_default_queue_next();
 		if (!Queued.State) break;
 		ml_state_schedule(Queued.State, Queued.Value);
 	}

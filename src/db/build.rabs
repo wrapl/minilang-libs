@@ -44,7 +44,7 @@ scope("radb";) do
 		:>execute("cp -rv ~/Work/Radb", Dir)
 		Dir:chdir
 		execute("make clean")
-		execute("make libradb.a RADB_MEM=GC CFLAGS=-fpic")
+		execute('make libradb.a RADB_MEM=GC CFLAGS=-fpic', DEBUG and "DEBUG=1")
 	end
 	PREBUILDS := old + [Lib]
 	DEFAULT[so_module("db/radb.so", [file("radb.o")], [Lib])]
@@ -87,7 +87,7 @@ scope("postgres";) do
 end
 
 
-scope("fdb";) do
+:<scope("fdb";) do
 	LDFLAGS := old + [pkgconfig("--libs foundationdb-client")]
 	DEFAULT[so_module("db/fdb.so", [file("fdb.o")])]
-end
+end>:

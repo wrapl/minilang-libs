@@ -2,6 +2,7 @@
 #include <minilang/ml_macros.h>
 #include <minilang/ml_cbor.h>
 #include <minilang/ml_stream.h>
+#include <minilang/ml_uuid.h>
 #include "radb/radb.h"
 #include <libgen.h>
 #include <stdio.h>
@@ -203,18 +204,34 @@ ML_METHOD("set", CborStoreT, MLIntegerT, MLAnyT) {
 	size_t Index = ml_integer_value_fast(Args[1]);
 	string_store_writer_t Writer[1];
 	string_store_writer_open(Writer, Store->Handle, Index);
-	ml_cbor_writer_t *CborWriter = ml_cbor_writer(Writer, (void *)string_store_writer_write, NULL);
-	ml_value_t *Error = ml_cbor_write(CborWriter, Args[2]);
+	ml_value_t *Error = ml_cbor_encode_to(Writer, (void *)string_store_writer_write, NULL, Args[2]);
 	if (Error) return Error;
 	return Args[2];
 }
 
-typedef struct ml_string_index_t {
+typedef struct {
 	const ml_type_t *Type;
-	string_index_t *Handle;
+	linear_index_t *Handle;
+	string_store_t *Values;
 } ml_string_index_t;
 
 ML_TYPE(StringIndexT, (), "string-index");
+
+typedef struct {
+	const char *String;
+	size_t Length;
+} ml_string_key_t;
+
+static int linear_compare_string(string_store_t *Store, ml_string_key_t *Full, uint32_t Index) {
+	if (Full->Length < 16) return 0;
+	return string_store_compare(Store, Full->String, Full->Length, Index);
+}
+
+static size_t linear_insert_string(string_store_t *Store, ml_string_key_t *Full) {
+	size_t Index = string_store_alloc(Store);
+	string_store_set(Store, Index, Full->String, Full->Length);
+	return Index;
+}
 
 ML_FUNCTION(StringIndexCreate) {
 	ML_CHECK_ARG_COUNT(1);
@@ -224,151 +241,222 @@ ML_FUNCTION(StringIndexCreate) {
 		ML_CHECK_ARG_TYPE(2, MLIntegerT);
 		ChunkSize = ml_integer_value_fast(Args[1]);
 	}
+	const char *Prefix = ml_string_value(Args[0]);
+	string_store_t *Values = string_store_create(Prefix, 16, ChunkSize);
 	ml_string_index_t *Store = new(ml_string_index_t);
 	Store->Type = StringIndexT;
-	Store->Handle = string_index_create(ml_string_value(Args[0]), 16, ChunkSize);
+	Store->Handle = linear_index_create(Prefix, Values);
+	linear_index_set_compare(Store->Handle, (linear_compare_t)linear_compare_string);
+	linear_index_set_insert(Store->Handle, (linear_insert_t)linear_insert_string);
 	CHECK_HANDLE(Store);
+	Store->Values = Values;
 	return (ml_value_t *)Store;
 }
 
 ML_FUNCTION(StringIndexOpen) {
 	ML_CHECK_ARG_COUNT(1);
 	ML_CHECK_ARG_TYPE(0, MLStringT);
+	const char *Prefix = ml_string_value(Args[0]);
+	string_store_t *Values = string_store_open(Prefix);
 	ml_string_index_t *Store = new(ml_string_index_t);
 	Store->Type = StringIndexT;
-	Store->Handle = string_index_open(ml_string_value(Args[0]));
-	if (!Store->Handle) return ml_error("StoreError", "Error opening string store");
+	Store->Handle = linear_index_open(Prefix, Values);
+	linear_index_set_compare(Store->Handle, (linear_compare_t)linear_compare_string);
+	linear_index_set_insert(Store->Handle, (linear_insert_t)linear_insert_string);
+	CHECK_HANDLE(Store);
+	Store->Values = Values;
 	return (ml_value_t *)Store;
 }
 
 ML_METHOD("close", StringIndexT) {
 	ml_string_index_t *Store = (ml_string_index_t *)Args[0];
 	CHECK_HANDLE(Store);
-	string_index_close(Store->Handle);
+	linear_index_close(Store->Handle);
 	Store->Handle = NULL;
+	string_store_close(Store->Values);
 	return MLNil;
+}
+
+static uint32_t string_hash(const char *String, size_t Length) {
+	uint32_t Hash = 5381;
+	for (int I = 0; I < Length; ++I) Hash = ((Hash << 5) + Hash) + String[I];
+	return Hash;
+}
+
+ML_METHOD("search", StringIndexT, MLStringT) {
+	ml_string_index_t *Store = (ml_string_index_t *)Args[0];
+	CHECK_HANDLE(Store);
+	ml_string_key_t Full = {ml_string_value(Args[1]), ml_string_length(Args[1])};
+	linear_key_t Key = {0,};
+	if (Full.Length < 16) {
+		memcpy(Key, Full.String, Full.Length);
+	} else {
+		memcpy(Key, Full.String, 15);
+		Key[15] = 1;
+	}
+	uint32_t Hash = string_hash(Full.String, Full.Length);
+	size_t Index = linear_index_search(Store->Handle, Hash, Key, &Full);
+	if (Index == INVALID_INDEX) return MLNil;
+	return ml_integer(Index);
 }
 
 ML_METHOD("insert", StringIndexT, MLStringT) {
 	ml_string_index_t *Store = (ml_string_index_t *)Args[0];
 	CHECK_HANDLE(Store);
-	size_t Index = string_index_insert(Store->Handle, ml_string_value(Args[1]), ml_string_length(Args[1]));
+	ml_string_key_t Full = {ml_string_value(Args[1]), ml_string_length(Args[1])};
+	linear_key_t Key = {0,};
+	if (Full.Length < 16) {
+		memcpy(Key, Full.String, Full.Length);
+	} else {
+		memcpy(Key, Full.String, 15);
+		Key[15] = 1;
+	}
+	uint32_t Hash = string_hash(Full.String, Full.Length);
+	size_t Index = linear_index_insert(Store->Handle, Hash, Key, &Full);
 	return ml_integer(Index);
 }
 
 ML_METHOD("delete", StringIndexT, MLStringT) {
 	ml_string_index_t *Store = (ml_string_index_t *)Args[0];
 	CHECK_HANDLE(Store);
-	size_t Index = string_index_delete(Store->Handle, ml_string_value(Args[1]), ml_string_length(Args[1]));
-	return Index == INVALID_INDEX ? MLNil : ml_integer(Index);
-}
-
-ML_METHOD("search", StringIndexT, MLStringT) {
-	ml_string_index_t *Store = (ml_string_index_t *)Args[0];
-	CHECK_HANDLE(Store);
-	size_t Index = string_index_search(Store->Handle, ml_string_value(Args[1]), ml_string_length(Args[1]));
-	if (Index == INVALID_INDEX) return MLNil;
-	return ml_integer(Index);
+	ml_string_key_t Full = {ml_string_value(Args[1]), ml_string_length(Args[1])};
+	linear_key_t Key = {0,};
+	if (Full.Length < 16) {
+		memcpy(Key, Full.String, Full.Length);
+	} else {
+		memcpy(Key, Full.String, 15);
+		Key[15] = 1;
+	}
+	uint32_t Hash = string_hash(Full.String, Full.Length);
+	size_t Index = linear_index_delete(Store->Handle, Hash, Key, &Full);
+	if (Index != INVALID_INDEX) {
+		string_store_free(Store->Values, Index);
+		return ml_integer(Index);
+	} else {
+		return MLNil;
+	}
 }
 
 ML_METHOD("get", StringIndexT, MLIntegerT) {
 	ml_string_index_t *Store = (ml_string_index_t *)Args[0];
 	CHECK_HANDLE(Store);
 	size_t Index = ml_integer_value_fast(Args[1]);
-	size_t Size = string_index_size(Store->Handle, Index);
+	size_t Size = string_store_size(Store->Values, Index);
 	char *Value = snew(Size + 1);
-	string_index_get(Store->Handle, Index, Value, Size);
+	string_store_get(Store->Values, Index, Value, Size);
 	return ml_string(Value, Size);
 }
 
 ML_METHOD("count", StringIndexT) {
 	ml_string_index_t *Store = (ml_string_index_t *)Args[0];
 	CHECK_HANDLE(Store);
-	return ml_integer(string_index_num_entries(Store->Handle));
+	return ml_integer(linear_index_count(Store->Handle));
 }
 
-ML_TYPE(CborIndexT, (), "cbor-index");
+typedef struct {
+	const ml_type_t *Type;
+	linear_index_t *Handle;
+	fixed_store_t *Values;
+} ml_uuid_index_t;
 
-ML_FUNCTION(CborIndexCreate) {
+ML_TYPE(UUIDIndexT, (), "uuid-index");
+
+static int linear_compare_uuid(fixed_store_t *Store, void *Full, uint32_t Index) {
+	return 0;
+}
+
+static size_t linear_insert_uuid(fixed_store_t *Store, void *Full) {
+	size_t Index = fixed_store_alloc(Store);
+	memcpy(fixed_store_get(Store, Index), Full, 16);
+	return Index;
+}
+
+ML_FUNCTION(UUIDIndexCreate) {
 	ML_CHECK_ARG_COUNT(1);
 	ML_CHECK_ARG_TYPE(0, MLStringT);
-	size_t ChunkSize = 0;
-	if (Count > 1) {
-		ML_CHECK_ARG_TYPE(2, MLIntegerT);
-		ChunkSize = ml_integer_value_fast(Args[1]);
-	}
-	ml_string_index_t *Store = new(ml_string_index_t);
-	Store->Type = CborIndexT;
-	Store->Handle = string_index_create(ml_string_value(Args[0]), 16, ChunkSize);
+	const char *Prefix = ml_string_value(Args[0]);
+	fixed_store_t *Values = fixed_store_create(Prefix, 16, 512);
+	ml_uuid_index_t *Store = new(ml_uuid_index_t);
+	Store->Type = UUIDIndexT;
+	Store->Handle = linear_index_create(Prefix, Values);
+	linear_index_set_compare(Store->Handle, (linear_compare_t)linear_compare_uuid);
+	linear_index_set_insert(Store->Handle, (linear_insert_t)linear_insert_uuid);
 	CHECK_HANDLE(Store);
+	Store->Values = Values;
 	return (ml_value_t *)Store;
 }
 
-ML_FUNCTION(CborIndexOpen) {
+ML_FUNCTION(UUIDIndexOpen) {
 	ML_CHECK_ARG_COUNT(1);
 	ML_CHECK_ARG_TYPE(0, MLStringT);
-	ml_string_index_t *Store = new(ml_string_index_t);
-	Store->Type = CborIndexT;
-	Store->Handle = string_index_open(ml_string_value(Args[0]));
-	if (!Store->Handle) return ml_error("StoreError", "Error opening string store");
+	const char *Prefix = ml_string_value(Args[0]);
+	fixed_store_t *Values = fixed_store_open(Prefix);
+	ml_uuid_index_t *Store = new(ml_uuid_index_t);
+	Store->Type = UUIDIndexT;
+	Store->Handle = linear_index_open(Prefix, Values);
+	linear_index_set_compare(Store->Handle, (linear_compare_t)linear_compare_uuid);
+	linear_index_set_insert(Store->Handle, (linear_insert_t)linear_insert_uuid);
+	CHECK_HANDLE(Store);
+	Store->Values = Values;
 	return (ml_value_t *)Store;
 }
 
-ML_METHOD("close", CborIndexT) {
-	ml_string_index_t *Store = (ml_string_index_t *)Args[0];
+ML_METHOD("search", UUIDIndexT, MLUUIDT) {
+	ml_uuid_index_t *Store = (ml_uuid_index_t *)Args[0];
 	CHECK_HANDLE(Store);
-	string_index_close(Store->Handle);
-	Store->Handle = NULL;
-	return MLNil;
-}
-
-ML_METHOD("insert", CborIndexT, MLAnyT) {
-	ml_string_index_t *Store = (ml_string_index_t *)Args[0];
-	CHECK_HANDLE(Store);
-	ml_cbor_t Cbor = ml_to_cbor(Args[1]);
-	if (!Cbor.Length) return Cbor.Error;
-	size_t Index = string_index_insert(Store->Handle, Cbor.Data, Cbor.Length);
-	return ml_integer(Index);
-}
-
-ML_METHOD("delete", CborIndexT, MLAnyT) {
-	ml_string_index_t *Store = (ml_string_index_t *)Args[0];
-	CHECK_HANDLE(Store);
-	ml_cbor_t Cbor = ml_to_cbor(Args[1]);
-	if (!Cbor.Length) return Cbor.Error;
-	size_t Index = string_index_delete(Store->Handle, Cbor.Data, Cbor.Length);
+	size_t Index = linear_index_search(Store->Handle, *(uint32_t *)ml_uuid_value(Args[1]), ml_uuid_value(Args[1]), ml_uuid_value(Args[1]));
 	return Index == INVALID_INDEX ? MLNil : ml_integer(Index);
 }
 
-ML_METHOD("search", CborIndexT, MLAnyT) {
-	ml_string_index_t *Store = (ml_string_index_t *)Args[0];
+ML_METHOD("insert", UUIDIndexT, MLUUIDT) {
+	ml_uuid_index_t *Store = (ml_uuid_index_t *)Args[0];
 	CHECK_HANDLE(Store);
-	ml_cbor_t Cbor = ml_to_cbor(Args[1]);
-	if (!Cbor.Length) return Cbor.Error;
-	size_t Index = string_index_search(Store->Handle, Cbor.Data, Cbor.Length);
-	if (Index == INVALID_INDEX) return MLNil;
+	size_t Index = linear_index_insert(Store->Handle, *(uint32_t *)ml_uuid_value(Args[1]), ml_uuid_value(Args[1]), ml_uuid_value(Args[1]));
 	return ml_integer(Index);
 }
 
-ML_METHOD("get", CborIndexT, MLIntegerT) {
-	ml_string_index_t *Store = (ml_string_index_t *)Args[0];
+ML_METHOD("delete", UUIDIndexT, MLUUIDT) {
+	ml_uuid_index_t *Store = (ml_uuid_index_t *)Args[0];
 	CHECK_HANDLE(Store);
-	int Index = ml_integer_value_fast(Args[1]);
-	int Size = string_index_size(Store->Handle, Index);
-	char *Bytes = snew(Size + 1);
-	string_index_get(Store->Handle, Index, Bytes, Size);
-	ml_cbor_t Cbor = {{Bytes}, Size};
-	return ml_from_cbor(Cbor, NULL);
+	size_t Index = linear_index_delete(Store->Handle, *(uint32_t *)ml_uuid_value(Args[1]), ml_uuid_value(Args[1]), ml_uuid_value(Args[1]));
+	if (Index != INVALID_INDEX) {
+		fixed_store_free(Store->Values, Index);
+		return ml_integer(Index);
+	} else {
+		return MLNil;
+	}
+}
+
+ML_METHOD("get", UUIDIndexT, MLIntegerT) {
+	ml_uuid_index_t *Store = (ml_uuid_index_t *)Args[0];
+	CHECK_HANDLE(Store);
+	return ml_uuid(fixed_store_get(Store->Values, ml_integer_value(Args[1])));
+}
+
+ML_METHOD("count", UUIDIndexT) {
+	ml_uuid_index_t *Store = (ml_uuid_index_t *)Args[0];
+	CHECK_HANDLE(Store);
+	return ml_integer(linear_index_count(Store->Handle));
+}
+
+ML_METHOD("close", UUIDIndexT) {
+	ml_uuid_index_t *Store = (ml_uuid_index_t *)Args[0];
+	CHECK_HANDLE(Store);
+	linear_index_close(Store->Handle);
+	fixed_store_close(Store->Values);
+	Store->Handle = NULL;
+	return MLNil;
 }
 
 void ml_library_entry0(ml_value_t **Slot) {
 #include "radb_init.c"
 	Slot[0] = ml_module("radb",
 		"string_store", StringStoreT,
-		"cbor_store", CborStoreT,
 		"string_index_create", StringIndexCreate,
 		"string_index_open", StringIndexOpen,
-		"cbor_index_create", CborIndexCreate,
-		"cbor_index_open", CborIndexOpen,
+		"cbor_store", CborStoreT,
+		"uuid_index", UUIDIndexT,
+		"uuid_index_create", UUIDIndexCreate,
+		"uuid_index_open", UUIDIndexOpen,
 	NULL);
 }

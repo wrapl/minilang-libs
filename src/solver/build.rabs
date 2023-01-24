@@ -15,3 +15,9 @@ end
 	LDFLAGS := old + ["-lz3"]
 	DEFAULT[so_module("solver/z3.so", [file("z3.o")])]
 end>:
+
+scope("swi-prolog";) do
+	CFLAGS := old + [pkgconfig("--cflags swipl")]
+	LDFLAGS := old + [pkgconfig("--libs swipl")]
+	DEFAULT[so_module("solver/swi-prolog.so", [file("swi-prolog.o")])]
+end

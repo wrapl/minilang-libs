@@ -84,7 +84,7 @@ ML_METHOD("tree", ContextT) {
 ML_METHOD("insert", TreeT, GeometryT, MLAnyT) {
 	tree_t *Tree = (tree_t *)Args[0];
 	geometry_t *Geometry = (geometry_t *)Args[1];
-	GEOSSTRtree_insert_r(Tree->Context, Tree->Context, Geometry->Handle, Args[2]);
+	GEOSSTRtree_insert_r(Tree->Context, Tree->Handle, Geometry->Handle, Args[2]);
 	return MLNil;
 }
 

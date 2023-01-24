@@ -119,7 +119,7 @@ static void ML_TYPED_FN(ml_iter_value, BitsetIterT, ml_state_t *Caller, bitset_i
 	ML_RETURN(ml_integer(Iter->Iter->current_value));
 }
 
-static ml_value_t *ML_TYPED_FN(ml_cbor_write, MLBitsetT, ml_cbor_writer_t *Writer, bitset_t *Bitset) {
+static void ML_TYPED_FN(ml_cbor_write, MLBitsetT, ml_cbor_writer_t *Writer, bitset_t *Bitset) {
 	ml_cbor_write_tag(Writer, ML_CBOR_TAG_OBJECT);
 	ml_cbor_write_array(Writer, 2);
 	ml_cbor_write_string(Writer, strlen("bitset"));
@@ -129,7 +129,6 @@ static ml_value_t *ML_TYPED_FN(ml_cbor_write, MLBitsetT, ml_cbor_writer_t *Write
 	char *Bytes = snew(Size);
 	roaring_bitmap_portable_serialize(Bitset->Value, Bytes);
 	ml_cbor_write_raw(Writer, Bytes, Size);
-	return NULL;
 }
 
 ML_FUNCTION(DecodeBitset) {

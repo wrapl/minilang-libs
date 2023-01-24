@@ -10,7 +10,7 @@ scope("mpc";) do
 	DEFAULT[so_module("parse/mpc.so", [file("mpc.o"), file("mpc/mpc.o")])]
 end
 
-scope("cleri";) do
+:<scope("cleri";) do
 	let Obj := file("libcleri/src"):mkdir
 	CFLAGS := old + ['-I{file("libcleri/inc")}']
 	let Objects := [file("ml_cleri.o")]
@@ -19,4 +19,4 @@ scope("cleri";) do
 	end
 	LDFLAGS := old + ["-lpcre2-8"]
 	DEFAULT[so_module("parse/cleri.so", Objects)]
-end
+end>:

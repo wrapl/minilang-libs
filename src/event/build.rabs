@@ -16,6 +16,7 @@ scope("libuev";) do
 		execute("make install")
 	end
 	CFLAGS := old + ['-I{file("include")}']
+	PREBUILDS := old + [LIBUEV]
 	DEFAULT[so_module("event/uev.so", [file("uev.o"), LIBUEV])]
 end
 

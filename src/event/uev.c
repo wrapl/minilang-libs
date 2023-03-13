@@ -23,11 +23,12 @@ ML_METHOD("run", UevT) {
 	ml_uev_t *Context = (ml_uev_t *)Args[0];
 	Context->Running = 1;
 	do {
-		uev_run(Context->Handle, UEV_ONCE);
 		ml_queued_state_t Queued = ml_default_queue_next();
-		while (Queued.State) {
+		if (Queued.State) {
+			uev_run(Context->Handle, UEV_ONCE | UEV_NONBLOCK);
 			Queued.State->run(Queued.State, Queued.Value);
-			Queued = ml_default_queue_next();
+		} else {
+			uev_run(Context->Handle, UEV_ONCE);
 		}
 	} while (Context->Running);
 	return MLNil;

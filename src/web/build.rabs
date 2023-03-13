@@ -1,4 +1,4 @@
 CFLAGS := old + ["-DGC_PTHREADS"]
 LDFLAGS := old + ["-lonion"]
 
-DEFAULT[so_module("web/onion.so", [file("onion.o")])]
+so_module("web/onion.so", [file("onion.o")])

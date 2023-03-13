@@ -1,4 +1,4 @@
-DEFAULT[so_module("fmt/csv.so", [file("csv.o"), file("libcsv.o")])]
+so_module("fmt/csv.so", [file("csv.o"), file("libcsv.o")])
 
 :<scope("html";) do
 	let LEXBOR := file("lib/liblexbor_static.a") => fun() do
@@ -9,7 +9,7 @@ DEFAULT[so_module("fmt/csv.so", [file("csv.o"), file("libcsv.o")])]
 	end
 	PREBUILDS := old + [LEXBOR]
 	CFLAGS := old + ['-I', PATH / "include"]
-	DEFAULT[so_module("fmt/html.so", [file("html.o")], [LEXBOR])]
+	so_module("fmt/html.so", [file("html.o")], [LEXBOR])
 end>:
 
-DEFAULT[so_module("fmt/html.so", [file("html.o")], ["-lgumbo"])]
+so_module("fmt/html.so", [file("html.o")], ["-lgumbo"])

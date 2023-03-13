@@ -17,12 +17,12 @@ scope("libuev";) do
 	end
 	CFLAGS := old + ['-I{file("include")}']
 	PREBUILDS := old + [LIBUEV]
-	DEFAULT[so_module("event/uev.so", [file("uev.o"), LIBUEV])]
+	so_module("event/uev.so", [file("uev.o"), LIBUEV])
 end
 
 scope("libevent";) do
 	LDFLAGS := old + ["-levent"]
-	DEFAULT[so_module("event/libevent.so", [file("libevent.o")])]
+	so_module("event/libevent.so", [file("libevent.o")])
 end
 
-DEFAULT[so_module("event.so", [file("event.o")])]
+so_module("event.so", [file("event.o")])

@@ -45,6 +45,19 @@ fun generate_init_file(Source) do
 end
 
 let Exports := file("exports.lst")
+let Modules := []
+
+fun module(Name, File, Tags) do
+	Modules:put((Name:before("."), File, []))
+	if defined("INSTALL") then
+		let Installed := (InstallModules / Name)[File] => fun(Target) do
+			print(File, " -> ", Target, "\n")
+			Target:dir:mkdir
+			File:copy(Target)
+		end
+		Modules:put((Name:before("."), Installed, []))
+	end
+end
 
 so_module := fun(Name, Objects, Libraries) do
 	let Library := MODULE_DIR / Name
@@ -61,23 +74,22 @@ so_module := fun(Name, Objects, Libraries) do
 			end
 		end
 	end
-	install(Library, InstallModules / Name)
 	Library[Objects, Libraries] => fun(Library) do
 		Library:dir:mkdir
 		execute('cc', '-o', Library, '-shared', '-export-dynamic', Objects, Libraries, LDFLAGS, '-Wl,--dynamic-list={Exports}')
 		:>DEBUG or execute("strip", Library)
 	end
+	module(Name, Library, [])
 end
 
 mini_module := fun(Name) do
 	let Library := MODULE_DIR / Name
 	let Source := file((Name / "/")[-1])
-	install(Library, InstallModules / Name)
 	Library[Source] => fun(Target) do
-		print(Source, " -> ", Target, "\n")
 		Target:dir:mkdir
 		Source:copy(Target)
 	end
+	module(Name, Library, [])
 end
 
 CFLAGS := old + [
@@ -127,3 +139,17 @@ subdir("snd")
 subdir("solver")
 subdir("util")
 subdir("web")
+
+context():parent:in(;) do
+	let All := meta("all")
+	let ByTag := {}
+	for (Name, File, Tags) in Modules do
+		:>print('Found module: {Module} -> {Target}\n')
+		let Meta := meta(Name)[File]
+		All[Meta]
+		:>print('\tMeta = {Meta:id}\n')
+		for Tag in Tags do
+			ByTag[Tag, meta][File]
+		end
+	end
+end

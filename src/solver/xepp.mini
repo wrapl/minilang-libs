@@ -17,7 +17,7 @@ end
 
 method: process()
 
-class: define(:params, :body, call is; Define, Node, Env, Out) do
+class: define(:params, :body, "()" is; Define, Node, Env, Out) do
 	let Env2 := env(Env, {nil is Node:content}:grow(Node:attributes))
 	for I, Param in Define:params do
 		switch Param: type

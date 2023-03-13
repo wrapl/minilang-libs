@@ -5,19 +5,19 @@ scope("kiwi";) do
 	end
 	PREBUILDS := old + [Dir]
 	CFLAGS := old + ["-I", file("kiwi")]
-	DEFAULT[so_module("solver/kiwi.so", [file("kiwi.o")])]
+	so_module("solver/kiwi.so", [file("kiwi.o")])
 end
 
-:<scope("z3";) do
+scope("z3";) do
 	file("z3.c")[file("xepp.mini"), file("z3.c.xe")] => fun(Target) do
 		execute("minilang", file("xepp.mini"), file("z3.c.xe"), Target)
 	end
 	LDFLAGS := old + ["-lz3"]
-	DEFAULT[so_module("solver/z3.so", [file("z3.o")])]
-end>:
+	so_module("solver/z3.so", [file("z3.o")])
+end
 
 scope("swi-prolog";) do
 	CFLAGS := old + [pkgconfig("--cflags swipl")]
 	LDFLAGS := old + [pkgconfig("--libs swipl")]
-	DEFAULT[so_module("solver/swi-prolog.so", [file("swi-prolog.o")])]
+	so_module("solver/swi-prolog.so", [file("swi-prolog.o")])
 end

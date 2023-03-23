@@ -388,7 +388,7 @@ static void *GC_calloc(size_t N, size_t S) {
 	return GC_malloc(N * S);
 }
 
-ML_LIBRARY_ENTRY0 {
+ML_LIBRARY_ENTRY0(net_curl) {
 	curl_global_init_mem(CURL_GLOBAL_DEFAULT,
 		GC_malloc, nop_free, GC_realloc,
 		GC_strdup, GC_calloc

@@ -242,7 +242,7 @@ ML_METHODV("execute", MLSqliteT, MLStringT) {
 	return (ml_value_t *)Stmt;
 }
 
-ML_LIBRARY_ENTRY0 {
+ML_LIBRARY_ENTRY0(db_sqlite) {
 #include "sqlite_init.c"
 	stringmap_insert(MLSqliteT->Exports, "open", MLSqliteOpenT);
 	Slot[0] = (ml_value_t *)MLSqliteT;

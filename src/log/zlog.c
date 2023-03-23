@@ -87,7 +87,7 @@ ML_METHOD("::", CategoryT, MLStringT) {
 	return (ml_value_t *)Logger;
 }
 
-ML_LIBRARY_ENTRY0 {
+ML_LIBRARY_ENTRY0(log_zlog) {
 #include "zlog_init.c"
 	if (zlog_init("zlog.conf")) {
 		printf("Failed to load zlog config\n");

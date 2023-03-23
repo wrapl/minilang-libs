@@ -143,7 +143,7 @@ ML_FUNCTION(DecodeBitset) {
 	return (ml_value_t *)Bitset;
 }
 
-ML_LIBRARY_ENTRY0 {
+ML_LIBRARY_ENTRY0(util_bitset) {
 #include "bitset_init.c"
 	ml_cbor_default_object("bitset", (ml_value_t *)DecodeBitset);
 	Slot[0] = (ml_value_t *)MLBitsetT;

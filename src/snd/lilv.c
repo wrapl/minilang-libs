@@ -45,7 +45,7 @@ ML_FUNCTION(GetAllPlugins) {
 	return List;
 };
 
-ML_LIBRARY_ENTRY0 {
+ML_LIBRARY_ENTRY0(snd_lilv) {
 	World = lilv_world_new();
 	lilv_world_load_all(World);
 #include "lilv_init.c"

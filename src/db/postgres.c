@@ -499,7 +499,7 @@ ML_METHOD("connected", MLConnectionT) {
 	return Connection->Conn ? (ml_value_t *)Connection : MLNil;
 }
 
-ML_LIBRARY_ENTRY0 {
+ML_LIBRARY_ENTRY0(db_postgres) {
 #include "postgres_init.c"
 	Slot[0] = (ml_value_t *)MLConnectionT;
 }

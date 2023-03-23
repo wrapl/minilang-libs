@@ -175,7 +175,7 @@ ML_TYPE(SourceFieldT, (), "source::field",
 	.call = (void *)source_field_call
 );
 
-ML_LIBRARY_ENTRY {
+ML_LIBRARY_ENTRY(event) {
 #include "event_init.c"
 	ml_type_t *SourceT = ml_class("event::source");
 	ml_class_add_field(Caller->Context, SourceT, SourceEvents);

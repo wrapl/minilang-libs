@@ -518,7 +518,7 @@ static void ML_TYPED_FN(ml_iter_value, MessageIterT, ml_state_t *Caller, message
 	ML_RETURN(Iter->Frame);
 }
 
-ML_LIBRARY_ENTRY0 {
+ML_LIBRARY_ENTRY0(net_zeromq) {
 #include "zeromq_init.c"
 	stringmap_insert(SocketT->Exports, "type", SocketTypeT);
 	stringmap_insert(SocketT->Exports, "event", SocketEventT);

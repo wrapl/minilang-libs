@@ -44,7 +44,7 @@ ML_METHOD("stop", MLDqliteT) {
 	return (ml_value_t *)Dqlite;
 }
 
-ML_LIBRARY_ENTRY0 {
+ML_LIBRARY_ENTRY0(db_dqlite) {
 #include "dqlite_init.c"
 	Slot[0] = (ml_value_t *)MLDqliteT;
 }

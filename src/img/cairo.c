@@ -265,7 +265,7 @@ ML_METHOD("show_text", CairoContextT, MLStringT) {
 	return MLNil;
 }
 
-ML_LIBRARY_ENTRY0 {
+ML_LIBRARY_ENTRY0(img_cairo) {
 	ml_value_t *Typelib = ml_gir_typelib("cairo", "1.0");
 	CairoContextT = (ml_type_t *)ml_gir_import(Typelib, "Context");
 	CairoContextT->Constructor = (ml_value_t *)CairoContext;

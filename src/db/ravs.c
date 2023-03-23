@@ -130,7 +130,7 @@ ML_METHOD("get", VersionStoreT, MLIntegerT, MLIntegerT) {
 	return ml_cbor_reader_get(Cbor);
 }
 
-ML_LIBRARY_ENTRY0 {
+ML_LIBRARY_ENTRY0(db_ravs) {
 #include "ravs_init.c"
 	Slot[0] = ml_module("ravs",
 		"create", VersionStoreCreate,

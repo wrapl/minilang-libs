@@ -60,7 +60,7 @@ ML_METHOD("http", EventBaseT) {
 	return (ml_value_t *)Http;
 }
 
-ML_LIBRARY_ENTRY0 {
+ML_LIBRARY_ENTRY0(event_libevent) {
 #include "libevent_init.c"
 	Slot[0] = ml_module("libevent",
 		"new", EventBaseNew,

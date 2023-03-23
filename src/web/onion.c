@@ -500,7 +500,7 @@ void *GC_calloc(size_t N, size_t Size) {
 	return GC_malloc(N * Size);
 }
 
-ML_LIBRARY_ENTRY0 {
+ML_LIBRARY_ENTRY0(web_onion) {
 	onion_low_initialize_memory_allocation(
 		GC_malloc, GC_malloc_atomic, GC_calloc,
 		GC_realloc, GC_strdup, GC_free,

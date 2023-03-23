@@ -56,7 +56,7 @@ ML_FUNCTION(Decode) {
 	return ml_address(OutChars, OutSize);
 }
 
-ML_LIBRARY_ENTRY0 {
+ML_LIBRARY_ENTRY0(enc_base16) {
 #include "base16_init.c"
 	Slot[0] = ml_module("base16",
 		"encode", Encode,

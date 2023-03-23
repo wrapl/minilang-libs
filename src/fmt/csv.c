@@ -125,7 +125,7 @@ ML_METHOD(MLCsvT, MLStringT, MLStringT) {
 	return (ml_value_t *)Csv;
 }
 
-ML_LIBRARY_ENTRY0 {
+ML_LIBRARY_ENTRY0(fmt_csv) {
 #include "csv_init.c"
 	Slot[0] = (ml_value_t *)MLCsvT;
 }

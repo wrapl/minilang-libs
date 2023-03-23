@@ -20,10 +20,19 @@ hierarchy
       "any":e -> "onion_url":w;
       "any":e -> "onion_websocket":w;
       "sequence":e -> "bitset":w;
+      "any":e -> "prolog":w;
+      "sequence":e -> "term":w;
+      "any":e -> "atom":w;
+      "any":e -> "variable":w;
+      "any":e -> "query":w;
       "any":e -> "plugin_class":w;
       "any":e -> "plugin":w;
       "any":e -> "port":w;
       "any":e -> "instance":w;
+      "any":e -> "ra_schema_index":w;
+      "any":e -> "ra_instance":w;
+      "any":e -> "ra_schema":w;
+      "any":e -> "ra_listener":w;
       "any":e -> "space":w;
       "any":e -> "parser":w;
       "parser":e -> "parser::string":w;
@@ -41,6 +50,8 @@ hierarchy
       "enum":e -> "curl_option":w;
       "function":e -> "logger":w;
       "any":e -> "category":w;
+      "stream::fd":e -> "terminal":w;
+      "any":e -> "graph":w;
       "any":e -> "context":w;
       "any":e -> "geometry":w;
       "any":e -> "tree":w;
@@ -54,6 +65,9 @@ hierarchy
       "any":e -> "attr_iter":w;
       "node":e -> "document":w;
       "any":e -> "csv":w;
+      "any":e -> "uev":w;
+      "flags":e -> "uev_flags":w;
+      "any":e -> "uev_event":w;
       "any":e -> "uvfile":w;
       "any":e -> "event_base":w;
       "any":e -> "event":w;
@@ -77,7 +91,7 @@ hierarchy
       "stream":e -> "string_store_reader":w;
       "any":e -> "cbor_store":w;
       "any":e -> "string_index":w;
-      "any":e -> "cbor_index":w;
+      "any":e -> "u_u_i_d_index":w;
       "any":e -> "connection":w;
       "function":e -> "statement":w;
       "any":e -> "f_d_b_database":w;

@@ -7,32 +7,6 @@
 db/radb
 =======
 
-.. _type-cbor_index:
-
-:mini:`type cbor_index`
-   *TBD*
-
-
-:mini:`meth (Arg₁: cbor_index):close`
-   *TBD*
-
-
-:mini:`meth (Arg₁: cbor_index):delete(Arg₂: any)`
-   *TBD*
-
-
-:mini:`meth (Arg₁: cbor_index):get(Arg₂: integer)`
-   *TBD*
-
-
-:mini:`meth (Arg₁: cbor_index):insert(Arg₂: any)`
-   *TBD*
-
-
-:mini:`meth (Arg₁: cbor_index):search(Arg₂: any)`
-   *TBD*
-
-
 .. _type-cbor_store:
 
 :mini:`type cbor_store`
@@ -51,18 +25,6 @@ db/radb
    *TBD*
 
 
-.. _fun-cborindexcreate:
-
-:mini:`fun cborindexcreate(Arg₁: string)`
-   *TBD*
-
-
-.. _fun-cborindexopen:
-
-:mini:`fun cborindexopen(Arg₁: string)`
-   *TBD*
-
-
 .. _fun-stringindexcreate:
 
 :mini:`fun stringindexcreate(Arg₁: string)`
@@ -72,6 +34,18 @@ db/radb
 .. _fun-stringindexopen:
 
 :mini:`fun stringindexopen(Arg₁: string)`
+   *TBD*
+
+
+.. _fun-uuidindexcreate:
+
+:mini:`fun uuidindexcreate(Arg₁: string)`
+   *TBD*
+
+
+.. _fun-uuidindexopen:
+
+:mini:`fun uuidindexopen(Arg₁: string)`
    *TBD*
 
 
@@ -165,5 +139,35 @@ db/radb
 
 :mini:`type string_store_writer < stream`
    A stream for writing to a string store entry.
+
+
+.. _type-u_u_i_d_index:
+
+:mini:`type u_u_i_d_index`
+   *TBD*
+
+
+:mini:`meth (Arg₁: u_u_i_d_index):close`
+   *TBD*
+
+
+:mini:`meth (Arg₁: u_u_i_d_index):count`
+   *TBD*
+
+
+:mini:`meth (Arg₁: u_u_i_d_index):delete(Arg₂: uuid)`
+   *TBD*
+
+
+:mini:`meth (Arg₁: u_u_i_d_index):get(Arg₂: integer)`
+   *TBD*
+
+
+:mini:`meth (Arg₁: u_u_i_d_index):insert(Arg₂: uuid)`
+   *TBD*
+
+
+:mini:`meth (Arg₁: u_u_i_d_index):search(Arg₂: uuid)`
+   *TBD*
 
 

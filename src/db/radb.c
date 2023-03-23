@@ -448,7 +448,7 @@ ML_METHOD("close", UUIDIndexT) {
 	return MLNil;
 }
 
-void ml_library_entry0(ml_value_t **Slot) {
+ML_LIBRARY_ENTRY0 {
 #include "radb_init.c"
 	Slot[0] = ml_module("radb",
 		"string_store", StringStoreT,

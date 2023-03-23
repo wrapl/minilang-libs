@@ -1,4 +1,5 @@
 #include <minilang/ml_gir.h>
+#include <minilang/ml_library.h>
 #include <cairo.h>
 
 #undef ML_CATEGORY
@@ -264,7 +265,7 @@ ML_METHOD("show_text", CairoContextT, MLStringT) {
 	return MLNil;
 }
 
-void ml_library_entry0(ml_value_t **Slot) {
+ML_LIBRARY_ENTRY0 {
 	ml_value_t *Typelib = ml_gir_typelib("cairo", "1.0");
 	CairoContextT = (ml_type_t *)ml_gir_import(Typelib, "Context");
 	CairoContextT->Constructor = (ml_value_t *)CairoContext;

@@ -140,7 +140,7 @@ ML_METHODX("event", UevT, MLFunctionT) {
 	ML_RETURN(Event);
 }
 
-void ml_library_entry0(ml_value_t **Slot) {
+ML_LIBRARY_ENTRY0 {
 #include "uev_init.c"
 	stringmap_insert(UevT->Exports, "flags", UevFlagsT);
 	stringmap_insert(UevT->Exports, "event", UevEventT);

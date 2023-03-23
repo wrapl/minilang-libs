@@ -74,7 +74,7 @@ HMAC(SHA256, sha256, 32);
 HMAC(SHA384, sha384, 48);
 HMAC(SHA512, sha512, 64);
 
-void ml_library_entry0(ml_value_t **Slot) {
+ML_LIBRARY_ENTRY0 {
 #include "hmac_init.c"
 	Slot[0] = ml_module("hmac",
 		"md5", MD5T,

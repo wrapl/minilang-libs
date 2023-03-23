@@ -69,7 +69,7 @@ ml_value_t *html_entity(const char *Value, int Length) {
 
 }
 
-void ml_library_entry0(ml_value_t **Slot) {
+ML_LIBRARY_ENTRY0 {
 #include "html_init.c"
 	Slot[0] = ml_module("html",
 		"parse", Parse,

@@ -582,7 +582,7 @@ static ml_value_t *ml_mpc_string(void *Data, int Count, ml_value_t **Args) {
 	return (ml_value_t *)Parser;
 }
 
-void ml_mpc_init(ml_value_t **Slot) {
+ML_LIBRARY_ENTRY0 {
 #include "mpc_init.c"
 	Slot[0] = ml_module("mpc",
 		"seq", MLParserSeq,
@@ -627,8 +627,4 @@ void ml_mpc_init(ml_value_t **Slot) {
 		"RegexLit", ml_mpc_string_parser(mpc_regex_lit()),
 		"Ident", ml_mpc_string_parser(mpc_ident()),
 	NULL);
-}
-
-void ml_library_entry0(ml_value_t **Slot) {
-	ml_mpc_init(Slot);
 }

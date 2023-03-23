@@ -170,7 +170,7 @@ void *ml_calloc(size_t Count, size_t Size) {
 void ml_free(void *Ptr) {
 }
 
-void ml_library_entry0(ml_value_t **Slot) {
+ML_LIBRARY_ENTRY0 {
 	uv_replace_allocator(GC_malloc, GC_realloc, ml_calloc, ml_free);
 	Loop = uv_default_loop();
 	uv_idle_init(Loop, Idle);

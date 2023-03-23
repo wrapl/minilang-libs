@@ -92,7 +92,7 @@ static void query_callback(ml_value_t *Item, ml_value_t *List) {
 	ml_list_put(List, Item);
 }
 
-void ml_library_entry0(ml_value_t **Slot) {
+ML_LIBRARY_ENTRY0 {
 #include "geos_init.c"
 	Slot[0] = (ml_value_t *)ContextT;
 }

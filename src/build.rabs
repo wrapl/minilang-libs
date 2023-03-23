@@ -62,15 +62,19 @@ end
 so_module := fun(Name, Objects, Libraries) do
 	let Library := MODULE_DIR / Name
 	let Sources := []
-	for Object in Objects or [] do
-		for Extension, Functions in SourceTypes do
-			let Source := Object % Extension
-			if Source:exists then
-				Sources:put(Source)
-				generate_init_file(Source)
-				let Scan := Source:scan("INCLUDES")[PREBUILDS] => Functions[1]
-				Object[Source, Scan] => (Functions[2] !! [Source])
-				exit
+	let LibraryName := Name:before("."):replace({"/" is "_", "-" is "_"})
+	scope(Name;) do
+		CFLAGS := old + ['-DLIBRARY_NAME={LibraryName}']
+		for Object in Objects or [] do
+			for Extension, Functions in SourceTypes do
+				let Source := Object % Extension
+				if Source:exists then
+					Sources:put(Source)
+					generate_init_file(Source)
+					let Scan := Source:scan("INCLUDES")[PREBUILDS] => Functions[1]
+					Object[Source, Scan] => (Functions[2] !! [Source])
+					exit
+				end
 			end
 		end
 	end
@@ -123,28 +127,17 @@ else
 	LDFLAGS := old + ["-g"]
 end
 
-subdir("db")
-subdir("digest")
-subdir("enc")
-subdir("event")
-subdir("fmt")
-subdir("geom")
-subdir("img")
-subdir("jupyter")
-subdir("log")
-subdir("net")
-subdir("parse")
-:>subdir("phys")
-subdir("snd")
-subdir("solver")
-subdir("util")
-subdir("web")
+for Path in file(""):ls do
+	if Path / "build.rabs" exists () then
+		subdir(Path:basename)
+	end
+end
 
 context():parent:in(;) do
 	let All := meta("all")
 	let ByTag := {}
 	for (Name, File, Tags) in Modules do
-		:>print('Found module: {Module} -> {Target}\n')
+		print('Found module: {Name} -> {File}\n')
 		let Meta := meta(Name)[File]
 		All[Meta]
 		:>print('\tMeta = {Meta:id}\n')

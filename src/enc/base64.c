@@ -90,7 +90,7 @@ ML_FUNCTION(Decode) {
 	return ml_address(OutChars, OutSize);
 }
 
-void ml_library_entry0(ml_value_t **Slot) {
+ML_LIBRARY_ENTRY0 {
 #include "base64_init.c"
 	for (int I = 0; I < 256; ++I) Base64Value[I] = 255;
 	for (int I = 0; I < 64; ++I) Base64Value[Base64Chars[I]] = I;

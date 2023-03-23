@@ -1,6 +1,7 @@
 #include <minilang/minilang.h>
 #include <minilang/ml_macros.h>
 #include <minilang/ml_object.h>
+#include <minilang/ml_library.h>
 
 typedef struct connections_t connections_t;
 typedef struct signal_t signal_t;
@@ -174,7 +175,7 @@ ML_TYPE(SourceFieldT, (), "source::field",
 	.call = (void *)source_field_call
 );
 
-void ml_library_entry(ml_state_t *Caller, ml_value_t **Slot) {
+ML_LIBRARY_ENTRY {
 #include "event_init.c"
 	ml_type_t *SourceT = ml_class("event::source");
 	ml_class_add_field(Caller->Context, SourceT, SourceEvents);

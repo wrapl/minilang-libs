@@ -25,6 +25,10 @@ db/radb
    *TBD*
 
 
+:mini:`meth (Arg₁: string_store):append(Arg₂: integer)`
+   *TBD*
+
+
 .. _fun-stringindexcreate:
 
 :mini:`fun stringindexcreate(Arg₁: string)`

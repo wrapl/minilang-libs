@@ -133,7 +133,7 @@ context():parent:in(;) do
 	let All := meta("all")
 	let ByTag := {}
 	for (Name, File, Tags) in Modules do
-		print('Found module: {Name} -> {File}\n')
+		:>print('Found module: {Name} -> {File}\n')
 		let Meta := meta(Name)[File]
 		All[Meta]
 		:>print('\tMeta = {Meta:id}\n')

@@ -127,6 +127,15 @@ ML_METHOD("write", StringStoreT, MLIntegerT) {
 	return (ml_value_t *)Writer;
 }
 
+ML_METHOD("append", StringStoreT, MLIntegerT) {
+	ml_string_store_t *Store = (ml_string_store_t *)Args[0];
+	CHECK_HANDLE(Store);
+	ml_string_store_writer_t *Writer = new(ml_string_store_writer_t);
+	Writer->Type = StringStoreWriterT;
+	string_store_writer_append(Writer->Handle, Store->Handle, ml_integer_value_fast(Args[1]));
+	return (ml_value_t *)Writer;
+}
+
 ML_TYPE(StringStoreReaderT, (MLStreamT), "string-store-reader");
 // A stream for reading from a string store entry.
 

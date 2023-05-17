@@ -45,7 +45,8 @@ static ml_value_t *z3_<$name>(Z3_context Context, Z3_<$name> Handle) {
 
 <define "z3-method" $function $method $return [$params]:
 ML_METHOD(<stringify:<$method>><for $param $params:, <mtype $param>>) {
-	<for $i $param $params:<ctype $param>V<$i> = ml_<$param>_value(Args[<$i>]);>
+	<for $i $param $params:<ctype $param>V<$i> = ml_<$param>_value(Args[<$i>]);
+	>
 	<ctype $return>R = Z3_<$function>(Context<for $i $param $params:, V<$i>>);
 	<ret $return:R>
 }>
@@ -53,7 +54,8 @@ ML_METHOD(<stringify:<$method>><for $param $params:, <mtype $param>>) {
 <define "z3-methodv" $function $method $return [$params]:
 ML_METHODV(<stringify:<$method>><for $param $params:, <mtype $param>>) {
 	<let "n" <count $params>>
-	<for $i $param $params:<lt $i $n:<ctype $param>V<$i> = ml_<$param>_value(Args[<$i>]);>>
+	<for $i $param $params:<lt $i $n:<ctype $param>V<$i> = ml_<$param>_value(Args[<$i>]);>
+	>
 	int N = Count + 1 - <$n>;
 	Z3_<$params -1> V<$n>[N];
 	for (int I = <$n> - 1; I \< Count; ++I) {
@@ -68,8 +70,10 @@ ML_METHODV(<stringify:<$method>><for $param $params:, <mtype $param>>) {
 <insert $exports $name <:Z3<title:<$name>>>>
 ML_FUNCTION(Z3<title:<$name>>) {
 	<gt <count $params> 0:ML_CHECK_ARG_COUNT(<count $params>);>
-	<for $i $param $params:ML_CHECK_ARG_TYPE(<$i> - 1, <mtype $param>);>
-	<for $i $param $params:<ctype $param>V<$i> = ml_<$param>_value(Args[<$i>]);>
+	<for $i $param $params:ML_CHECK_ARG_TYPE(<$i> - 1, <mtype $param>);
+	>
+	<for $i $param $params:<ctype $param>V<$i> = ml_<$param>_value(Args[<$i>]);
+	>
 	<ctype $return>R = Z3_<$function>(Context<for $i $param $params:, V<$i>>);
 	<ret $return:R>
 }>
@@ -92,6 +96,18 @@ static Z3_symbol ml_symbol_value(ml_value_t *Value) {
 static Z3_sort ml_sort_value(ml_value_t *Value) {
 	return ((z3_sort_t *)Value)->Handle;
 }
+
+Z3_sort ml_z3_sort_of(ml_value_t *Value) {
+	typeof(ml_z3_sort_of) *function = ml_typed_fn_get(ml_typeof(Value), ml_z3_sort_of);
+	if (function) return function(Value);
+	return Z3_mk_uninterpreted_sort(Context, Z3_mk_string_symbol(Context, ml_typeof(Value)->Name));
+}
+
+<define "z3-sort" $ztype $mtype:
+static Z3_sort ML_TYPED_FN(ml_z3_sort_of, <$mtype>, ml_value_t *Value) {
+	return Z3_mk_<$ztype>_sort(Context);
+}
+>
 
 <z3-function "mk_const" "const" "ast" "symbol" "sort">
 <z3-function "mk_true" "true" "ast">

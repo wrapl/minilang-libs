@@ -318,7 +318,7 @@ static gboolean connection_reconnect(connection_t *Connection) {
 	return G_SOURCE_REMOVE;
 }
 
-static gboolean connection_fn(gint Socket, GIOCondition Condition, connection_t *Connection) {
+static int connection_fn(connection_t *Connection) {
 	PGconn *Conn = Connection->Conn;
 	if (!PQconsumeInput(Conn)) {
 		if (PQstatus(Conn) != CONNECTION_OK) {
@@ -334,7 +334,7 @@ static gboolean connection_fn(gint Socket, GIOCondition Condition, connection_t 
 					ml_state_schedule(Query->Caller, Error);
 				}
 			}
-			return G_SOURCE_REMOVE;
+			return 0;
 		}
 	}
 	while (Connection->Head && !PQisBusy(Conn)) {
@@ -407,7 +407,11 @@ static gboolean connection_fn(gint Socket, GIOCondition Condition, connection_t 
 		while (Waiting && query_send(Connection, Waiting)) Waiting = Waiting->Next;
 	}
 #endif
-	return G_SOURCE_CONTINUE;
+	return 1;
+}
+
+static gboolean gio_connection_fn(gint Socket, GIOCondition Condition, connection_t *Connection) {
+	return connection_fn(Connection) ? G_SOURCE_CONTINUE : G_SOURCE_REMOVE;
 }
 
 static ml_value_t *connection_connect(connection_t *Connection) {

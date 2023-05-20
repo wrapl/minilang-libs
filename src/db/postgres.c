@@ -11,10 +11,6 @@
 #undef ML_CATEGORY
 #define ML_CATEGORY "db/postgres"
 
-#if defined(PG_PIPELINE) && (PG_VERSION >= 14)
-#define PIPELINE
-#endif
-
 typedef struct connection_t connection_t;
 typedef struct statement_t statement_t;
 typedef struct query_t query_t;
@@ -23,16 +19,12 @@ struct connection_t {
 	ml_type_t *Type;
 	PGconn *Conn;
 	query_t *Head, *Tail;
-#ifdef PIPELINE
 	query_t *Waiting;
-#endif
 	ml_value_t *Result;
 	statement_t *Statements;
 	const char **Keywords, **Values;
 	int StatementId, Reconnect;
-#ifdef PIPELINE
-	int NeedsFlush;
-#endif
+	int Pipeline, NeedsFlush;
 };
 
 ML_TYPE(MLConnectionT, (), "postgres::connection");
@@ -60,12 +52,11 @@ struct query_t {
 };
 
 static int query_send(connection_t *Connection, query_t *Query) {
-#ifdef PIPELINE
+	if (!Connection->Conn) return 0;
 	if (Connection->NeedsFlush) {
 		if (!Connection->Waiting) Connection->Waiting = Query;
 		return 0;
 	}
-#endif
 	if (Query->SQL) {
 		if (Query->Name) {
 			PQsendPrepare(Connection->Conn, Query->Name, Query->SQL, 0, NULL);
@@ -75,13 +66,13 @@ static int query_send(connection_t *Connection, query_t *Query) {
 	} else {
 		PQsendQueryPrepared(Connection->Conn, Query->Name, Query->NumParams, Query->Values, Query->Lengths, Query->Formats, 0);
 	}
-#ifdef PIPELINE
-	PQsendFlushRequest(Connection->Conn);
-	Connection->Waiting = Query->Next;
-	Connection->NeedsFlush = PQflush(Connection->Conn);
-#else
-	PQflush(Connection->Conn);
-#endif
+	if (Connection->Pipeline) {
+		PQsendFlushRequest(Connection->Conn);
+		Connection->Waiting = Query->Next;
+		Connection->NeedsFlush = PQflush(Connection->Conn);
+	} else {
+		PQflush(Connection->Conn);
+	}
 	return 1;
 }
 
@@ -171,17 +162,8 @@ static ml_value_t *query_params(query_t *Query, int Count, ml_value_t **Args) {
 static void query_queue(connection_t *Connection, query_t *Query) {
 	query_t *Tail = Connection->Tail;
 	Connection->Tail = Query;
-	if (Tail) {
-		Tail->Next = Query;
-	} else {
-		Connection->Head = Query;
-#ifndef PIPELINE
-		if (Connection->Conn) query_send(Connection, Query);
-#endif
-	}
-#ifdef PIPELINE
-	query_send(Connection, Query);
-#endif
+	if (Tail) Tail->Next = Query; else Connection->Head = Query;
+	if (!Tail || Connection->Pipeline) query_send(Connection, Query);
 }
 
 ML_METHODVX("query", MLConnectionT, MLStringT) {
@@ -343,12 +325,10 @@ static int connection_fn(connection_t *Connection) {
 			query_t *Query = Connection->Head;
 			query_t *Next = Query->Next;
 			Connection->Head = Next;
-			if (Next) {
-#ifndef PIPELINE
-				query_send(Connection, Next);
-#endif
-			} else {
+			if (!Next) {
 				Connection->Tail = NULL;
+			} else if (!Connection->Pipeline) {
+				query_send(Connection, Next);
 			}
 			ml_state_schedule(Query->Caller, Connection->Result);
 		} else {
@@ -399,14 +379,12 @@ static int connection_fn(connection_t *Connection) {
 			}
 		}
 	}
-#ifdef PIPELINE
 	if (Connection->NeedsFlush) {
 		Connection->NeedsFlush = PQflush(Connection->Conn);
 		query_t *Waiting = Connection->Waiting;
 		Connection->Waiting = NULL;
 		while (Waiting && query_send(Connection, Waiting)) Waiting = Waiting->Next;
 	}
-#endif
 	return 1;
 }
 
@@ -432,15 +410,15 @@ static ml_value_t *connection_connect(connection_t *Connection) {
 		}
 	}
 	PQsetnonblocking(Conn, 1);
-#ifdef PIPELINE
-	PQenterPipelineMode(Conn);
-	query_t *Waiting = Connection->Head;
-	while (Waiting && query_send(Connection, Waiting)) Waiting = Waiting->Next;
-#else
-	if (Connection->Head) query_send(Connection, Connection->Head);
-#endif
+	if (Connection->Pipeline) {
+		PQenterPipelineMode(Conn);
+		query_t *Waiting = Connection->Head;
+		while (Waiting && query_send(Connection, Waiting)) Waiting = Waiting->Next;
+	} else if (Connection->Head) {
+		query_send(Connection, Connection->Head);
+	}
 	GSource *Source = g_unix_fd_source_new(PQsocket(Conn), G_IO_IN | G_IO_ERR);
-	g_source_set_callback(Source, (void *)connection_fn, Connection, NULL);
+	g_source_set_callback(Source, (void *)gio_connection_fn, Connection, NULL);
 	g_source_attach(Source, NULL);
 	return (ml_value_t *)Connection;
 }
@@ -452,18 +430,24 @@ ML_METHOD(MLConnectionT, MLMapT) {
 	int NumParams = ml_map_size(Args[0]);
 	const char **Keywords = anew(const char *, NumParams + 1);
 	const char **Values = anew(const char *, NumParams + 1);
-	int I = 0;
+	int I = 0, Pipeline = 0;
 	ML_MAP_FOREACH(Args[0], Iter) {
 		if (!ml_is(Iter->Key, MLStringT)) return ml_error("TypeError", "Parameter key must be string");
-		if (!ml_is(Iter->Value, MLStringT)) return ml_error("TypeError", "Parameter value must be string");
-		Keywords[I] = ml_string_value(Iter->Key);
-		Values[I] = ml_string_value(Iter->Value);
-		++I;
+		const char *Keyword = ml_string_value(Iter->Key);
+		if (!strcmp(Keyword, "pipeline")) {
+			Pipeline = ml_boolean_value(Iter->Value);
+		} else {
+			if (!ml_is(Iter->Value, MLStringT)) return ml_error("TypeError", "Parameter value must be string");
+			Keywords[I] = Keyword;
+			Values[I] = ml_string_value(Iter->Value);
+			++I;
+		}
 	}
 	connection_t *Connection = new(connection_t);
 	Connection->Type = MLConnectionT;
 	Connection->Keywords = Keywords;
 	Connection->Values = Values;
+	Connection->Pipeline = Pipeline;
 	return connection_connect(Connection);
 }
 
@@ -474,17 +458,23 @@ ML_METHODV(MLConnectionT, MLNamesT) {
 	int NumParams = ml_names_length(Args[0]);
 	const char **Keywords = anew(const char *, NumParams + 1);
 	const char **Values = anew(const char *, NumParams + 1);
-	int I = 0;
+	int I = 0, J = 1, Pipeline = 0;
 	ML_NAMES_FOREACH(Args[0], Iter) {
-		if (!ml_is(Args[I + 1], MLStringT)) return ml_error("TypeError", "Parameter value must be string");
-		Keywords[I] = ml_string_value(Iter->Value);
-		Values[I] = ml_string_value(Args[I + 1]);
-		++I;
+		const char *Keyword = ml_string_value(Iter->Value);
+		if (!strcmp(Keyword, "pipeline")) {
+			Pipeline = ml_boolean_value(Args[J++]);
+		} else {
+			if (!ml_is(Args[J], MLStringT)) return ml_error("TypeError", "Parameter value must be string");
+			Keywords[I] = ml_string_value(Iter->Value);
+			Values[I] = ml_string_value(Args[J++]);
+			++I;
+		}
 	}
 	connection_t *Connection = new(connection_t);
 	Connection->Type = MLConnectionT;
 	Connection->Keywords = Keywords;
 	Connection->Values = Values;
+	Connection->Pipeline = Pipeline;
 	return connection_connect(Connection);
 }
 

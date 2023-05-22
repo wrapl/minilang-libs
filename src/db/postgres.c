@@ -458,11 +458,13 @@ ML_METHODV(MLConnectionT, MLNamesT) {
 	int NumParams = ml_names_length(Args[0]);
 	const char **Keywords = anew(const char *, NumParams + 1);
 	const char **Values = anew(const char *, NumParams + 1);
-	int I = 0, J = 1, Pipeline = 0;
+	int I = 0, J = 1, Pipeline = 0, Reconnect = 0;
 	ML_NAMES_FOREACH(Args[0], Iter) {
 		const char *Keyword = ml_string_value(Iter->Value);
 		if (!strcmp(Keyword, "pipeline")) {
 			Pipeline = ml_boolean_value(Args[J++]);
+		} else if (!strcmp(Keyword, "reconnect")) {
+			Reconnect = 1000 * ml_real_value(Args[J++]);
 		} else {
 			if (!ml_is(Args[J], MLStringT)) return ml_error("TypeError", "Parameter value must be string");
 			Keywords[I] = ml_string_value(Iter->Value);
@@ -475,6 +477,7 @@ ML_METHODV(MLConnectionT, MLNamesT) {
 	Connection->Keywords = Keywords;
 	Connection->Values = Values;
 	Connection->Pipeline = Pipeline;
+	Connection->Reconnect = Reconnect;
 	return connection_connect(Connection);
 }
 

@@ -436,6 +436,8 @@ ML_METHOD(MLConnectionT, MLMapT) {
 		const char *Keyword = ml_string_value(Iter->Key);
 		if (!strcmp(Keyword, "pipeline")) {
 			Pipeline = ml_boolean_value(Iter->Value);
+		} else if (!strcmp(Keyword, "reconnect")) {
+			Reconnect = 1000 * ml_real_value(Iter->Value);
 		} else {
 			if (!ml_is(Iter->Value, MLStringT)) return ml_error("TypeError", "Parameter value must be string");
 			Keywords[I] = Keyword;

@@ -430,18 +430,21 @@ ML_METHOD(MLConnectionT, MLMapT) {
 	int NumParams = ml_map_size(Args[0]);
 	const char **Keywords = anew(const char *, NumParams + 1);
 	const char **Values = anew(const char *, NumParams + 1);
-	int I = 0, Pipeline = 0;
+	int I = 0, Pipeline = 0, Reconnect = 0;
 	ML_MAP_FOREACH(Args[0], Iter) {
 		if (!ml_is(Iter->Key, MLStringT)) return ml_error("TypeError", "Parameter key must be string");
+		if (!ml_is(Iter->Value, MLStringT)) return ml_error("TypeError", "Parameter value must be string");
 		const char *Keyword = ml_string_value(Iter->Key);
+		const char *Value = ml_string_value(Iter->Value);
 		if (!strcmp(Keyword, "pipeline")) {
-			Pipeline = ml_boolean_value(Iter->Value);
+			Pipeline = !strcmp(Value, "true");
 		} else if (!strcmp(Keyword, "reconnect")) {
-			Reconnect = 1000 * ml_real_value(Iter->Value);
+			char *End;
+			Reconnect = 1000 * strtod(Value, &End);
 		} else {
 			if (!ml_is(Iter->Value, MLStringT)) return ml_error("TypeError", "Parameter value must be string");
 			Keywords[I] = Keyword;
-			Values[I] = ml_string_value(Iter->Value);
+			Values[I] = Value;
 			++I;
 		}
 	}
@@ -450,6 +453,7 @@ ML_METHOD(MLConnectionT, MLMapT) {
 	Connection->Keywords = Keywords;
 	Connection->Values = Values;
 	Connection->Pipeline = Pipeline;
+	Connection->Reconnect = Reconnect;
 	return connection_connect(Connection);
 }
 
@@ -462,15 +466,17 @@ ML_METHODV(MLConnectionT, MLNamesT) {
 	const char **Values = anew(const char *, NumParams + 1);
 	int I = 0, J = 1, Pipeline = 0, Reconnect = 0;
 	ML_NAMES_FOREACH(Args[0], Iter) {
+		if (!ml_is(Args[J], MLStringT)) return ml_error("TypeError", "Parameter value must be string");
 		const char *Keyword = ml_string_value(Iter->Value);
+		const char *Value = ml_string_value(Args[J++]);
 		if (!strcmp(Keyword, "pipeline")) {
-			Pipeline = ml_boolean_value(Args[J++]);
+			Pipeline = !strcmp(Value, "true");
 		} else if (!strcmp(Keyword, "reconnect")) {
-			Reconnect = 1000 * ml_real_value(Args[J++]);
+			char *End;
+			Reconnect = 1000 * strtod(Value, &End);
 		} else {
-			if (!ml_is(Args[J], MLStringT)) return ml_error("TypeError", "Parameter value must be string");
-			Keywords[I] = ml_string_value(Iter->Value);
-			Values[I] = ml_string_value(Args[J++]);
+			Keywords[I] = Keyword;
+			Values[I] = Value;
 			++I;
 		}
 	}

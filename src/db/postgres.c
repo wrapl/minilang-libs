@@ -67,6 +67,7 @@ static int query_send(connection_t *Connection, query_t *Query) {
 		PQsendQueryPrepared(Connection->Conn, Query->Name, Query->NumParams, Query->Values, Query->Lengths, Query->Formats, 0);
 	}
 	if (Connection->Pipeline) {
+		PQpipelineSync(Connection->Conn);
 		PQsendFlushRequest(Connection->Conn);
 		Connection->Waiting = Query->Next;
 		Connection->NeedsFlush = PQflush(Connection->Conn);
@@ -329,7 +330,6 @@ static int connection_fn(connection_t *Connection) {
 			Connection->Head = Next;
 			if (!Next) {
 				Connection->Tail = NULL;
-				PQpipelineSync(Conn);
 			} else if (!Connection->Pipeline) {
 				query_send(Connection, Next);
 			}

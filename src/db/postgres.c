@@ -321,12 +321,15 @@ static int connection_fn(connection_t *Connection) {
 	}
 	while (Connection->Head && !PQisBusy(Conn)) {
 		PGresult *Result = PQgetResult(Conn);
+		ExecStatusType Status = PQresultStatus(Result);
+		if (Status == PGRES_PIPELINE_SYNC) continue;
 		if (!Result) {
 			query_t *Query = Connection->Head;
 			query_t *Next = Query->Next;
 			Connection->Head = Next;
 			if (!Next) {
 				Connection->Tail = NULL;
+				PQpipelineSync(Conn);
 			} else if (!Connection->Pipeline) {
 				query_send(Connection, Next);
 			}
@@ -334,7 +337,7 @@ static int connection_fn(connection_t *Connection) {
 		} else {
 			query_t *Query = Connection->Head;
 			if (Query->SQL && Query->Name) {
-				if (PQresultStatus(Result) != PGRES_COMMAND_OK) {
+				if (Status != PGRES_COMMAND_OK) {
 					Connection->Result = ml_error("DatabaseError", "%s", PQerrorMessage(Conn));
 				} else {
 					statement_t *Statement = new(statement_t);
@@ -349,7 +352,7 @@ static int connection_fn(connection_t *Connection) {
 					Connection->Result = (ml_value_t *)Statement;
 				}
 			} else {
-				switch (PQresultStatus(Result)) {
+				switch (Status) {
 				case PGRES_TUPLES_OK: {
 					ml_value_t *Rows = Connection->Result = ml_list();
 					int NumFields = PQnfields(Result);

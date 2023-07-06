@@ -15,6 +15,66 @@
 		return ml_error("RadbError", "Radb handle is closed"); \
 	}
 
+typedef struct ml_fixed_store_t {
+	const ml_type_t *Type;
+	fixed_store_t *Handle;
+} ml_fixed_store_t;
+
+ML_TYPE(FixedStoreT, (), "fixed-store");
+// A store for strings.
+
+ML_FUNCTION(FixedStoreOpen) {
+//<Path
+//>string_store
+// Opens an existing string store at :mini:`Path`.
+	ML_CHECK_ARG_COUNT(1);
+	ML_CHECK_ARG_TYPE(0, MLStringT);
+	ml_fixed_store_t *Store = new(ml_fixed_store_t);
+	Store->Type = FixedStoreT;
+	Store->Handle = fixed_store_open(ml_string_value(Args[0]));
+	if (!Store->Handle) return ml_error("StoreError", "Error opening fixed store");
+	return (ml_value_t *)Store;
+}
+
+ML_FUNCTION(FixedStoreCreate) {
+//<Path
+//<NodeSize
+//>string_store
+// Creates a new string store at :mini:`Path` with node size :mini:`NodeSize` and default chunk size.
+	ML_CHECK_ARG_COUNT(2);
+	ML_CHECK_ARG_TYPE(0, MLStringT);
+	ML_CHECK_ARG_TYPE(1, MLIntegerT);
+	size_t ChunkSize = 0;
+	ml_fixed_store_t *Store = new(ml_fixed_store_t);
+	Store->Type = FixedStoreT;
+	Store->Handle = fixed_store_create(ml_string_value(Args[0]), ml_integer_value_fast(Args[1]), ChunkSize);
+	CHECK_HANDLE(Store);
+	return (ml_value_t *)Store;
+}
+
+ML_METHOD("close", FixedStoreT) {
+//<Store
+// Closes :mini:`Store`.
+	ml_fixed_store_t *Store = (ml_fixed_store_t *)Args[0];
+	CHECK_HANDLE(Store);
+	fixed_store_close(Store->Handle);
+	Store->Handle = NULL;
+	return MLNil;
+}
+
+ML_METHOD("get", FixedStoreT, MLIntegerT) {
+//<Store
+//<Index
+//>string
+// Returns the entry at :mini:`Index` in :mini:`Store`.
+	ml_fixed_store_t *Store = (ml_fixed_store_t *)Args[0];
+	CHECK_HANDLE(Store);
+	size_t Index = ml_integer_value_fast(Args[1]);
+	void *Value = fixed_store_get(Store->Handle, Index);
+	size_t Length = fixed_store_node_size(Store->Handle);
+	return ml_buffer(Value, Length);
+}
+
 typedef struct ml_string_store_t {
 	const ml_type_t *Type;
 	string_store_t *Handle;
@@ -33,10 +93,12 @@ typedef struct ml_string_store_reader_t {
 ML_TYPE(StringStoreT, (), "string-store");
 // A store for strings.
 
-ML_METHOD(StringStoreT, MLStringT) {
+ML_FUNCTION(StringStoreOpen) {
 //<Path
 //>string_store
 // Opens an existing string store at :mini:`Path`.
+	ML_CHECK_ARG_COUNT(1);
+	ML_CHECK_ARG_TYPE(0, MLStringT);
 	ml_string_store_t *Store = new(ml_string_store_t);
 	Store->Type = StringStoreT;
 	Store->Handle = string_store_open(ml_string_value(Args[0]));
@@ -44,26 +106,19 @@ ML_METHOD(StringStoreT, MLStringT) {
 	return (ml_value_t *)Store;
 }
 
-ML_METHOD(StringStoreT, MLStringT, MLIntegerT) {
+ML_FUNCTION(StringStoreCreate) {
 //<Path
 //<NodeSize
 //>string_store
 // Creates a new string store at :mini:`Path` with node size :mini:`NodeSize` and default chunk size.
+	ML_CHECK_ARG_COUNT(2);
+	ML_CHECK_ARG_TYPE(0, MLStringT);
+	ML_CHECK_ARG_TYPE(1, MLIntegerT);
 	size_t ChunkSize = 0;
-	ml_string_store_t *Store = new(ml_string_store_t);
-	Store->Type = StringStoreT;
-	Store->Handle = string_store_create(ml_string_value(Args[0]), ml_integer_value_fast(Args[1]), ChunkSize);
-	CHECK_HANDLE(Store);
-	return (ml_value_t *)Store;
-}
-
-ML_METHOD(StringStoreT, MLStringT, MLIntegerT, MLIntegerT) {
-//<Path
-//<NodeSize
-//<ChunkSize
-//>string_store
-// Creates a new string store at :mini:`Path` with node size :mini:`NodeSize` and chunk size :mini:`ChunkSize`.
-	size_t ChunkSize = ml_integer_value_fast(Args[2]);
+	if (Count > 2) {
+		ML_CHECK_ARG_TYPE(2, MLIntegerT);
+		ChunkSize = ml_integer_value_fast(Args[2]);
+	}
 	ml_string_store_t *Store = new(ml_string_store_t);
 	Store->Type = StringStoreT;
 	Store->Handle = string_store_create(ml_string_value(Args[0]), ml_integer_value_fast(Args[1]), ChunkSize);
@@ -155,29 +210,29 @@ ML_METHOD("read", StringStoreT, MLIntegerT) {
 
 ML_TYPE(CborStoreT, (), "cbor-store");
 
-ML_METHOD(CborStoreT, MLStringT, MLIntegerT) {
-	size_t ChunkSize = 0;
-	ml_string_store_t *Store = new(ml_string_store_t);
-	Store->Type = CborStoreT;
-	Store->Handle = string_store_create(ml_string_value(Args[0]), ml_integer_value_fast(Args[1]), ChunkSize);
-	CHECK_HANDLE(Store);
-	return (ml_value_t *)Store;
-}
-
-ML_METHOD(CborStoreT, MLStringT, MLIntegerT, MLIntegerT) {
-	size_t ChunkSize = ml_integer_value_fast(Args[2]);
-	ml_string_store_t *Store = new(ml_string_store_t);
-	Store->Type = CborStoreT;
-	Store->Handle = string_store_create(ml_string_value(Args[0]), ml_integer_value_fast(Args[1]), ChunkSize);
-	CHECK_HANDLE(Store);
-	return (ml_value_t *)Store;
-}
-
-ML_METHOD(CborStoreT, MLStringT) {
+ML_FUNCTION(CborStoreOpen) {
+	ML_CHECK_ARG_COUNT(1);
+	ML_CHECK_ARG_TYPE(0, MLStringT);
 	ml_string_store_t *Store = new(ml_string_store_t);
 	Store->Type = CborStoreT;
 	Store->Handle = string_store_open(ml_string_value(Args[0]));
 	if (!Store->Handle) return ml_error("StoreError", "Error opening string store");
+	return (ml_value_t *)Store;
+}
+
+ML_FUNCTION(CborStoreCreate) {
+	ML_CHECK_ARG_COUNT(2);
+	ML_CHECK_ARG_TYPE(0, MLStringT);
+	ML_CHECK_ARG_TYPE(1, MLIntegerT);
+	size_t ChunkSize = 0;
+	if (Count > 2) {
+		ML_CHECK_ARG_TYPE(2, MLIntegerT);
+		ChunkSize = ml_integer_value_fast(Args[2]);
+	}
+	ml_string_store_t *Store = new(ml_string_store_t);
+	Store->Type = CborStoreT;
+	Store->Handle = string_store_create(ml_string_value(Args[0]), ml_integer_value_fast(Args[1]), ChunkSize);
+	CHECK_HANDLE(Store);
 	return (ml_value_t *)Store;
 }
 
@@ -459,13 +514,21 @@ ML_METHOD("close", UUIDIndexT) {
 
 ML_LIBRARY_ENTRY0(db_radb) {
 #include "radb_init.c"
+	stringmap_insert(FixedStoreT->Exports, "open", FixedStoreOpen);
+	stringmap_insert(FixedStoreT->Exports, "create", FixedStoreCreate);
+	stringmap_insert(StringStoreT->Exports, "open", StringStoreOpen);
+	stringmap_insert(StringStoreT->Exports, "create", StringStoreCreate);
+	stringmap_insert(CborStoreT->Exports, "open", CborStoreOpen);
+	stringmap_insert(CborStoreT->Exports, "create", CborStoreCreate);
+	stringmap_insert(StringIndexT->Exports, "open", StringIndexOpen);
+	stringmap_insert(StringIndexT->Exports, "create", StringIndexCreate);
+	stringmap_insert(UUIDIndexT->Exports, "open", UUIDIndexOpen);
+	stringmap_insert(UUIDIndexT->Exports, "create", UUIDIndexCreate);
 	Slot[0] = ml_module("radb",
+		"fixed_store", FixedStoreT,
 		"string_store", StringStoreT,
-		"string_index_create", StringIndexCreate,
-		"string_index_open", StringIndexOpen,
 		"cbor_store", CborStoreT,
+		"string_index", StringIndexT,
 		"uuid_index", UUIDIndexT,
-		"uuid_index_create", UUIDIndexCreate,
-		"uuid_index_open", UUIDIndexOpen,
 	NULL);
 }

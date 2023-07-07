@@ -52,6 +52,13 @@ ML_FUNCTION(FixedStoreCreate) {
 	return (ml_value_t *)Store;
 }
 
+ML_METHOD("count", FixedStoreT) {
+//<Store
+	ml_fixed_store_t *Store = (ml_fixed_store_t *)Args[0];
+	CHECK_HANDLE(Store);
+	return ml_integer(fixed_store_num_entries(Store->Handle));
+}
+
 ML_METHOD("close", FixedStoreT) {
 //<Store
 // Closes :mini:`Store`.
@@ -124,6 +131,13 @@ ML_FUNCTION(StringStoreCreate) {
 	Store->Handle = string_store_create(ml_string_value(Args[0]), ml_integer_value_fast(Args[1]), ChunkSize);
 	CHECK_HANDLE(Store);
 	return (ml_value_t *)Store;
+}
+
+ML_METHOD("count", StringStoreT) {
+//<Store
+	ml_string_store_t *Store = (ml_string_store_t *)Args[0];
+	CHECK_HANDLE(Store);
+	return ml_integer(string_store_num_entries(Store->Handle));
 }
 
 ML_METHOD("close", StringStoreT) {
@@ -234,6 +248,13 @@ ML_FUNCTION(CborStoreCreate) {
 	Store->Handle = string_store_create(ml_string_value(Args[0]), ml_integer_value_fast(Args[1]), ChunkSize);
 	CHECK_HANDLE(Store);
 	return (ml_value_t *)Store;
+}
+
+ML_METHOD("count", CborStoreT) {
+//<Store
+	ml_string_store_t *Store = (ml_string_store_t *)Args[0];
+	CHECK_HANDLE(Store);
+	return ml_integer(string_store_num_entries(Store->Handle));
 }
 
 ML_METHOD("close", CborStoreT) {

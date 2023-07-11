@@ -9,6 +9,6 @@ scope("onion";) do
 	end
 	PREBUILDS := old + [Lib]
 	CFLAGS := old + ["-DGC_PTHREADS", '-I{file("include")}']
-	LDFLAGS := old + [Lib]
+	LDFLAGS := old + [Lib, "-lgnutls"]
 	so_module("web/onion.so", [file("onion.o")])
 end

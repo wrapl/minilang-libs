@@ -44,7 +44,7 @@ scope("radb";) do
 		:>execute("cp -rv ~/Work/Radb", Dir)
 		Dir:chdir
 		execute("make clean")
-		execute('make libradb.a RADB_MEM=GC CFLAGS=-fpic -g', DEBUG and "DEBUG=1")
+		execute('make libradb.a RADB_MEM=GC CFLAGS=-fpic', DEBUG and "DEBUG=1")
 	end
 	PREBUILDS := old + [Lib]
 	so_module("db/radb.so", [file("radb.o")], [Lib])
@@ -57,7 +57,7 @@ scope("ravs";) do
 		execute("git clone --recursive -b dev https://github.com/rajamukherji/ravs.git", Dir)
 		Dir:chdir
 		execute("make clean")
-		execute("make libravs.a RADB_MEM=GC CFLAGS=-fpic -g")
+		execute("make libravs.a RADB_MEM=GC CFLAGS=-fpic")
 	end
 	PREBUILDS := old + [Lib]
 	so_module("db/ravs.so", [file("ravs.o")], [Lib])

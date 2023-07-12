@@ -322,8 +322,6 @@ static int connection_fn(connection_t *Connection) {
 	}
 	while (Connection->Head && !PQisBusy(Conn)) {
 		PGresult *Result = PQgetResult(Conn);
-		ExecStatusType Status = PQresultStatus(Result);
-		if (Status == PGRES_PIPELINE_SYNC) continue;
 		query_t *Query = Connection->Head;
 		if (!Result) {
 			query_t *Next = Query->Next;
@@ -335,6 +333,8 @@ static int connection_fn(connection_t *Connection) {
 			}
 			ml_state_schedule(Query->Caller, Connection->Result);
 		} else {
+			ExecStatusType Status = PQresultStatus(Result);
+			if (Status == PGRES_PIPELINE_SYNC) continue;
 			query_t *Query = Connection->Head;
 			if (Query->SQL && Query->Name) {
 				if (Status != PGRES_COMMAND_OK) {

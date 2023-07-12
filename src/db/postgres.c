@@ -91,13 +91,13 @@ static ml_value_t *ML_TYPED_FN(query_param, MLNilT, ml_value_t *Param, const cha
 }
 
 static ml_value_t *ML_TYPED_FN(query_param, MLIntegerT, ml_value_t *Param, const char **Value, int *Length, int *Format) {
-	*Length = asprintf((char **)Value, "%ld", ml_integer_value(Param));
+	*Length = GC_asprintf((char **)Value, "%ld", ml_integer_value(Param));
 	*Format = 0;
 	return NULL;
 }
 
 static ml_value_t *ML_TYPED_FN(query_param, MLRealT, ml_value_t *Param, const char **Value, int *Length, int *Format) {
-	*Length = asprintf((char **)Value, "0x%a", ml_real_value(Param));
+	*Length = GC_asprintf((char **)Value, "0x%a", ml_real_value(Param));
 	*Format = 0;
 	return NULL;
 }
@@ -194,7 +194,7 @@ ML_METHODX("prepare", MLConnectionT, MLStringT) {
 	query_t *Query = new(query_t);
 	Query->Caller = Caller;
 	Query->SQL = ml_string_value(Args[1]);
-	asprintf((char **)&Query->Name, "S%d", ++Connection->StatementId);
+	GC_asprintf((char **)&Query->Name, "S%d", ++Connection->StatementId);
 	query_queue(Connection, Query);
 }
 
@@ -324,8 +324,8 @@ static int connection_fn(connection_t *Connection) {
 		PGresult *Result = PQgetResult(Conn);
 		ExecStatusType Status = PQresultStatus(Result);
 		if (Status == PGRES_PIPELINE_SYNC) continue;
+		query_t *Query = Connection->Head;
 		if (!Result) {
-			query_t *Query = Connection->Head;
 			query_t *Next = Query->Next;
 			Connection->Head = Next;
 			if (!Next) {
@@ -378,8 +378,8 @@ static int connection_fn(connection_t *Connection) {
 					Connection->Result = ml_error("DatabaseError", "%s", PQerrorMessage(Conn));
 					break;
 				}
-				PQclear(Result);
 			}
+			PQclear(Result);
 		}
 	}
 	if (Connection->NeedsFlush) {

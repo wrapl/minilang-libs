@@ -381,6 +381,91 @@ static int connection_fn(connection_t *Connection) {
 			PQclear(Result);
 		}
 	}
+	return 1;
+}
+
+static gboolean gio_connection_fn(gint Socket, GIOCondition Condition, connection_t *Connection) {
+	return connection_fn(Connection) ? G_SOURCE_CONTINUE : G_SOURCE_REMOVE;
+}
+
+static int connection_pipeline_fn(connection_t *Connection) {
+	PGconn *Conn = Connection->Conn;
+	if (!PQconsumeInput(Conn)) {
+		if (PQstatus(Conn) != CONNECTION_OK) {
+			ml_value_t *Error = ml_error("DatabaseError", "%s", PQerrorMessage(Conn));
+			PQfinish(Conn);
+			Connection->Conn = NULL;
+			if (Connection->Reconnect) {
+				g_timeout_add(Connection->Reconnect, (GSourceFunc)connection_reconnect, Connection);
+			} else {
+				query_t *Query = Connection->Head;
+				if (Query) {
+					if (!(Connection->Head = Query->Next)) Connection->Tail = NULL;
+					ml_state_schedule(Query->Caller, Error);
+				}
+			}
+			return 0;
+		}
+	}
+	while (Connection->Head && !PQisBusy(Conn)) {
+		PGresult *Result = PQgetResult(Conn);
+		if (Result) {
+			ExecStatusType Status = PQresultStatus(Result);
+			if (Status == PGRES_PIPELINE_SYNC) {
+			} else {
+				query_t *Query = Connection->Head;
+				query_t *Next = Query->Next;
+				Connection->Head = Next;
+				if (!Next) Connection->Tail = NULL;
+				ml_value_t *Value = MLNil;
+				if (Query->SQL && Query->Name) {
+					if (Status != PGRES_COMMAND_OK) {
+						Value = ml_error("DatabaseError", "%s", PQerrorMessage(Conn));
+					} else {
+						statement_t *Statement = new(statement_t);
+						Statement->Type = StatementT;
+						Statement->Next = Connection->Statements;
+						Connection->Statements = Statement;
+						Statement->Name = Query->Name;
+						Statement->SQL = Query->SQL;
+						Statement->Connection = Connection;
+						Statement->NumFields = PQnfields(Result);
+						Statement->RecvFns = query_recv_fns(Result, Statement->NumFields);
+						Value = (ml_value_t *)Statement;
+					}
+				} else {
+					switch (Status) {
+					case PGRES_TUPLES_OK: {
+						Value = ml_list();
+						int NumFields = PQnfields(Result);
+						recv_fn *RecvFns = Query->RecvFns;
+						if (!RecvFns || Query->NumFields != NumFields) RecvFns = query_recv_fns(Result, NumFields);
+						for (int I = 0; I < PQntuples(Result); ++I) {
+							ml_tuple_t *Row = (ml_tuple_t *)ml_tuple(NumFields);
+							for (int J = 0; J < NumFields; ++J) {
+								if (PQgetisnull(Result, I, J)) {
+									Row->Values[J] = MLNil;
+								} else {
+									Row->Values[J] = RecvFns[J](PQgetvalue(Result, I, J), PQgetlength(Result, I, J));
+								}
+							}
+							ml_list_put(Value, (ml_value_t *)Row);
+						}
+						break;
+					}
+					case PGRES_COMMAND_OK:
+						Value = MLNil;
+						break;
+					default:
+						Value = ml_error("DatabaseError", "%s", PQerrorMessage(Conn));
+						break;
+					}
+				}
+				PQclear(Result);
+				ml_state_schedule(Query->Caller, Value);
+			}
+		}
+	}
 	if (Connection->NeedsFlush) {
 		Connection->NeedsFlush = PQflush(Connection->Conn);
 		query_t *Waiting = Connection->Waiting;
@@ -390,8 +475,8 @@ static int connection_fn(connection_t *Connection) {
 	return 1;
 }
 
-static gboolean gio_connection_fn(gint Socket, GIOCondition Condition, connection_t *Connection) {
-	return connection_fn(Connection) ? G_SOURCE_CONTINUE : G_SOURCE_REMOVE;
+static gboolean gio_connection_pipeline_fn(gint Socket, GIOCondition Condition, connection_t *Connection) {
+	return connection_pipeline_fn(Connection) ? G_SOURCE_CONTINUE : G_SOURCE_REMOVE;
 }
 
 static ml_value_t *connection_connect(connection_t *Connection) {
@@ -420,7 +505,11 @@ static ml_value_t *connection_connect(connection_t *Connection) {
 		query_send(Connection, Connection->Head);
 	}
 	GSource *Source = g_unix_fd_source_new(PQsocket(Conn), G_IO_IN | G_IO_ERR);
-	g_source_set_callback(Source, (void *)gio_connection_fn, Connection, NULL);
+	if (Connection->Pipeline) {
+		g_source_set_callback(Source, (void *)gio_connection_pipeline_fn, Connection, NULL);
+	} else {
+		g_source_set_callback(Source, (void *)gio_connection_fn, Connection, NULL);
+	}
 	g_source_attach(Source, NULL);
 	return (ml_value_t *)Connection;
 }

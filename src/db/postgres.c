@@ -7,6 +7,7 @@
 #include <glib-object.h>
 #include <glib-unix.h>
 #include <ctype.h>
+#include <errno.h>
 
 #undef ML_CATEGORY
 #define ML_CATEGORY "db/postgres"
@@ -320,6 +321,7 @@ static int connection_fn(connection_t *Connection) {
 			return 0;
 		}
 	}
+	int ShouldRetry = errno != EAGAIN && errno != EWOULDBLOCK;
 	while (Connection->Head && !PQisBusy(Conn)) {
 		query_t *Query = Connection->Head;
 		PGresult *Result = PQgetResult(Conn);
@@ -381,6 +383,7 @@ static int connection_fn(connection_t *Connection) {
 			PQclear(Result);
 		}
 	}
+	if (ShouldRetry) return connection_fn(Connection);
 	return 1;
 }
 
@@ -407,6 +410,7 @@ static int connection_pipeline_fn(connection_t *Connection) {
 			return 0;
 		}
 	}
+	int ShouldRetry = errno != EAGAIN && errno != EWOULDBLOCK;
 	while (Connection->Head && !PQisBusy(Conn)) {
 		PGresult *Result = PQgetResult(Conn);
 		if (Result) {
@@ -466,6 +470,7 @@ static int connection_pipeline_fn(connection_t *Connection) {
 			}
 		}
 	}
+	if (ShouldRetry) return connection_pipeline_fn(Connection);
 	if (Connection->NeedsFlush) {
 		Connection->NeedsFlush = PQflush(Connection->Conn);
 		query_t *Waiting = Connection->Waiting;

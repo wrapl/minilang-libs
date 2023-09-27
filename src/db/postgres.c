@@ -383,6 +383,7 @@ static int connection_fn(connection_t *Connection) {
 			PQclear(Result);
 		}
 	}
+	PQflush(Conn);
 	if (ShouldRetry) return connection_fn(Connection);
 	return 1;
 }
@@ -470,6 +471,7 @@ static int connection_pipeline_fn(connection_t *Connection) {
 			}
 		}
 	}
+	PQflush(Conn);
 	if (ShouldRetry) return connection_pipeline_fn(Connection);
 	if (Connection->NeedsFlush) {
 		Connection->NeedsFlush = PQflush(Connection->Conn);

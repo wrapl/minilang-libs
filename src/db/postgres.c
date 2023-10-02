@@ -320,7 +320,7 @@ static PGconn *connection_connect(connection_t *Connection) {
 			return Conn;
 		}
 		char *Message = PQerrorMessage(Conn);
-		if (strstr(Message, "FATAL") || !Connection->Reconnect) {
+		if (!Connection->Reconnect || strstr(Message, "FATAL")) {
 			Connection->Error = ml_error("DatabaseError", "%s", Message);
 			PQfinish(Conn);
 			break;

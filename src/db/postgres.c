@@ -21,7 +21,7 @@ struct connection_t {
 	PGconn *Conn;
 	query_t *Head, *Tail;
 	query_t *Waiting;
-	ml_value_t *Result;
+	ml_value_t *Error;
 	const char **Keywords, **Values;
 	pthread_mutex_t Lock[1];
 	pthread_cond_t Ready[1];
@@ -299,182 +299,6 @@ static recv_fn *query_recv_fns(PGresult *Result, int NumFields) {
 	return RecvFns;
 }
 
-static int connection_fn(connection_t *Connection) {
-	/*PGconn *Conn = Connection->Conn;
-	if (!PQconsumeInput(Conn)) {
-		if (PQstatus(Conn) != CONNECTION_OK) {
-			ml_value_t *Error = ml_error("DatabaseError", "%s", PQerrorMessage(Conn));
-			PQfinish(Conn);
-			Connection->Conn = NULL;
-			if (Connection->Reconnect) {
-				g_timeout_add(Connection->Reconnect, (GSourceFunc)connection_reconnect, Connection);
-			} else {
-				query_t *Query = Connection->Head;
-				if (Query) {
-					if (!(Connection->Head = Query->Next)) Connection->Tail = NULL;
-					ml_state_schedule(Query->Caller, Error);
-				}
-			}
-			return 0;
-		}
-	}
-	int ShouldRetry = errno != EAGAIN && errno != EWOULDBLOCK;
-	while (Connection->Head && !PQisBusy(Conn)) {
-		query_t *Query = Connection->Head;
-		PGresult *Result = PQgetResult(Conn);
-		if (!Result) {
-			query_t *Next = Query->Next;
-			Connection->Head = Next;
-			if (!Next) {
-				Connection->Tail = NULL;
-			} else if (!Connection->Pipeline) {
-				query_send(Connection, Next);
-			}
-			ml_state_schedule(Query->Caller, Connection->Result);
-		} else {
-			ExecStatusType Status = PQresultStatus(Result);
-			if (Status == PGRES_PIPELINE_SYNC) {
-			} else if (Query->SQL && Query->Name) {
-				if (Status != PGRES_COMMAND_OK) {
-					Connection->Result = ml_error("DatabaseError", "%s", PQerrorMessage(Conn));
-				} else {
-					statement_t *Statement = new(statement_t);
-					Statement->Type = StatementT;
-					Statement->Next = Connection->Statements;
-					Connection->Statements = Statement;
-					Statement->Name = Query->Name;
-					Statement->SQL = Query->SQL;
-					Statement->Connection = Connection;
-					Statement->NumFields = PQnfields(Result);
-					Statement->RecvFns = query_recv_fns(Result, Statement->NumFields);
-					Connection->Result = (ml_value_t *)Statement;
-				}
-			} else {
-				switch (Status) {
-				case PGRES_TUPLES_OK: {
-					ml_value_t *Rows = Connection->Result = ml_list();
-					int NumFields = PQnfields(Result);
-					recv_fn *RecvFns = Query->RecvFns;
-					if (!RecvFns || Query->NumFields != NumFields) RecvFns = query_recv_fns(Result, NumFields);
-					for (int I = 0; I < PQntuples(Result); ++I) {
-						ml_tuple_t *Row = (ml_tuple_t *)ml_tuple(NumFields);
-						for (int J = 0; J < NumFields; ++J) {
-							if (PQgetisnull(Result, I, J)) {
-								Row->Values[J] = MLNil;
-							} else {
-								Row->Values[J] = RecvFns[J](PQgetvalue(Result, I, J), PQgetlength(Result, I, J));
-							}
-						}
-						ml_list_put(Rows, (ml_value_t *)Row);
-					}
-					break;
-				}
-				case PGRES_COMMAND_OK:
-					Connection->Result = MLNil;
-					break;
-				default:
-					Connection->Result = ml_error("DatabaseError", "%s", PQerrorMessage(Conn));
-					break;
-				}
-			}
-			PQclear(Result);
-		}
-	}
-	PQflush(Conn);
-	if (ShouldRetry) return connection_fn(Connection);*/
-	return 1;
-}
-
-static int connection_pipeline_fn(connection_t *Connection) {
-	/*PGconn *Conn = Connection->Conn;
-	if (!PQconsumeInput(Conn)) {
-		if (PQstatus(Conn) != CONNECTION_OK) {
-			ml_value_t *Error = ml_error("DatabaseError", "%s", PQerrorMessage(Conn));
-			PQfinish(Conn);
-			Connection->Conn = NULL;
-			if (Connection->Reconnect) {
-				g_timeout_add(Connection->Reconnect, (GSourceFunc)connection_reconnect, Connection);
-			} else {
-				query_t *Query = Connection->Head;
-				if (Query) {
-					if (!(Connection->Head = Query->Next)) Connection->Tail = NULL;
-					ml_state_schedule(Query->Caller, Error);
-				}
-			}
-			return 0;
-		}
-	}
-	int ShouldRetry = errno != EAGAIN && errno != EWOULDBLOCK;
-	while (Connection->Head && !PQisBusy(Conn)) {
-		PGresult *Result = PQgetResult(Conn);
-		if (Result) {
-			ExecStatusType Status = PQresultStatus(Result);
-			if (Status == PGRES_PIPELINE_SYNC) {
-			} else {
-				query_t *Query = Connection->Head;
-				query_t *Next = Query->Next;
-				Connection->Head = Next;
-				if (!Next) Connection->Tail = NULL;
-				ml_value_t *Value = MLNil;
-				if (Query->SQL && Query->Name) {
-					if (Status != PGRES_COMMAND_OK) {
-						Value = ml_error("DatabaseError", "%s", PQerrorMessage(Conn));
-					} else {
-						statement_t *Statement = new(statement_t);
-						Statement->Type = StatementT;
-						Statement->Next = Connection->Statements;
-						Connection->Statements = Statement;
-						Statement->Name = Query->Name;
-						Statement->SQL = Query->SQL;
-						Statement->Connection = Connection;
-						Statement->NumFields = PQnfields(Result);
-						Statement->RecvFns = query_recv_fns(Result, Statement->NumFields);
-						Value = (ml_value_t *)Statement;
-					}
-				} else {
-					switch (Status) {
-					case PGRES_TUPLES_OK: {
-						Value = ml_list();
-						int NumFields = PQnfields(Result);
-						recv_fn *RecvFns = Query->RecvFns;
-						if (!RecvFns || Query->NumFields != NumFields) RecvFns = query_recv_fns(Result, NumFields);
-						for (int I = 0; I < PQntuples(Result); ++I) {
-							ml_tuple_t *Row = (ml_tuple_t *)ml_tuple(NumFields);
-							for (int J = 0; J < NumFields; ++J) {
-								if (PQgetisnull(Result, I, J)) {
-									Row->Values[J] = MLNil;
-								} else {
-									Row->Values[J] = RecvFns[J](PQgetvalue(Result, I, J), PQgetlength(Result, I, J));
-								}
-							}
-							ml_list_put(Value, (ml_value_t *)Row);
-						}
-						break;
-					}
-					case PGRES_COMMAND_OK:
-						Value = MLNil;
-						break;
-					default:
-						Value = ml_error("DatabaseError", "%s", PQerrorMessage(Conn));
-						break;
-					}
-				}
-				PQclear(Result);
-				ml_state_schedule(Query->Caller, Value);
-			}
-		}
-	}
-	PQflush(Conn);
-	if (ShouldRetry) return connection_pipeline_fn(Connection);
-	if (Connection->NeedsFlush) {
-		Connection->NeedsFlush = PQflush(Connection->Conn);
-		query_t *Waiting = Connection->Waiting;
-		Connection->Waiting = NULL;
-		while (Waiting && query_send(Connection, Waiting)) Waiting = Waiting->Next;
-	}*/
-	return 1;
-}
-
 static int connection_prepare(const char *Name, const char *SQL, connection_t *Connection) {
 	query_t *Query = new(query_t);
 	Query->Caller = NULL;
@@ -484,35 +308,44 @@ static int connection_prepare(const char *Name, const char *SQL, connection_t *C
 	return 0;
 }
 
-static ml_value_t *connection_connect(connection_t *Connection) {
-	pthread_mutex_lock(Connection->Lock);
+static PGconn *connection_connect(connection_t *Connection) {
 	for (;;) {
+		printf("Connecting to Postgres database\n");
 		PGconn *Conn = PQconnectdbParams(Connection->Keywords, Connection->Values, 0);
-		if (PQstatus(Conn) != CONNECTION_OK) {
-			ml_value_t *Error = ml_error("DatabaseError", "%s", PQerrorMessage(Conn));
-			PQfinish(Conn);
-			if (!Connection->Reconnect) {
-				pthread_mutex_unlock(Connection->Lock);
-				return Error;
-			}
-			usleep(Connection->Reconnect * 1000);
+		if (PQstatus(Conn) == CONNECTION_OK) {
+			Connection->Conn = Conn;
+			PQsetnonblocking(Conn, 1);
+			if (Connection->Pipeline) PQenterPipelineMode(Conn);
+			stringmap_foreach(Connection->Statements, Connection, (void *)connection_prepare);
+			return Conn;
 		}
-		Connection->Conn = Conn;
-		PQsetnonblocking(Conn, 1);
-		if (Connection->Pipeline) PQenterPipelineMode(Conn);
-		break;
+		char *Message = PQerrorMessage(Conn);
+		if (strstr(Message, "FATAL") || !Connection->Reconnect) {
+			Connection->Error = ml_error("DatabaseError", "%s", Message);
+			PQfinish(Conn);
+			break;
+		}
+		PQfinish(Conn);
+		usleep(Connection->Reconnect * 1000);
 	}
-	stringmap_foreach(Connection->Statements, Connection, (void *)connection_prepare);
-	pthread_cond_signal(Connection->Ready);
-	pthread_mutex_unlock(Connection->Lock);
-	return (ml_value_t *)Connection;
+	return NULL;
+}
+
+static int should_retry(ExecStatusType Status, PGresult *Result, PGconn *Conn) {
+	if (Status != PGRES_FATAL_ERROR) return 0;
+	if (PQstatus(Conn) != CONNECTION_OK) return 1;
+	char *Field = PQresultErrorField(Result, PG_DIAG_SQLSTATE);
+	return Field[0] == '5'&& Field[1] == '7';
 }
 
 static void *connection_thread_fn(connection_t *Connection) {
 	pthread_mutex_lock(Connection->Lock);
-	while (!Connection->Conn) pthread_cond_wait(Connection->Ready, Connection->Lock);
-	PGconn *Conn = Connection->Conn;
-	if (!Conn) return NULL;
+	PGconn *Conn = connection_connect(Connection);
+	pthread_cond_signal(Connection->Ready);
+	if (!Conn) {
+		pthread_mutex_unlock(Connection->Lock);
+		return NULL;
+	}
 	for (;;) {
 		while (!Connection->Head) pthread_cond_wait(Connection->Ready, Connection->Lock);
 		pthread_mutex_unlock(Connection->Lock);
@@ -521,12 +354,13 @@ static void *connection_thread_fn(connection_t *Connection) {
 		query_t *Query = Connection->Head;
 		if (Result) {
 			ExecStatusType Status = PQresultStatus(Result);
-			if (Status == PGRES_FATAL_ERROR && PQstatus(Conn) != CONNECTION_OK) {
+			if (should_retry(Status, Result, Conn)) {
+				PQclear(Result);
 				PQfinish(Conn);
 				Connection->Conn = NULL;
 				if (!Connection->Reconnect) return NULL;
-				connection_connect(Connection);
-				pthread_cond_wait(Connection->Ready, Connection->Lock);
+				Conn = connection_connect(Connection);
+				query_send(Connection, Query);
 			} else {
 				ml_value_t *Value = MLNil;
 				if (Query->SQL && Query->Name) {
@@ -590,9 +424,12 @@ static void *connection_thread_fn(connection_t *Connection) {
 
 static void *connection_pipeline_thread_fn(connection_t *Connection) {
 	pthread_mutex_lock(Connection->Lock);
-	while (!Connection->Conn) pthread_cond_wait(Connection->Ready, Connection->Lock);
-	PGconn *Conn = Connection->Conn;
-	if (!Conn) return NULL;
+	PGconn *Conn = connection_connect(Connection);
+	pthread_cond_signal(Connection->Ready);
+	if (!Conn) {
+		pthread_mutex_unlock(Connection->Lock);
+		return NULL;
+	}
 	for (;;) {
 		while (!Connection->Head) pthread_cond_wait(Connection->Ready, Connection->Lock);
 		pthread_mutex_unlock(Connection->Lock);
@@ -601,12 +438,14 @@ static void *connection_pipeline_thread_fn(connection_t *Connection) {
 		if (Result) {
 			ExecStatusType Status = PQresultStatus(Result);
 			if (Status == PGRES_PIPELINE_SYNC) {
-			} else if (Status == PGRES_FATAL_ERROR && PQstatus(Conn) != CONNECTION_OK) {
+			} else if (should_retry(Status, Result, Conn)) {
+				PQclear(Result);
 				PQfinish(Conn);
 				Connection->Conn = NULL;
 				if (!Connection->Reconnect) return NULL;
-				connection_connect(Connection);
-				pthread_cond_wait(Connection->Ready, Connection->Lock);
+				Connection->NeedsFlush = 1;
+				Connection->Waiting = Connection->Head;
+				Conn = connection_connect(Connection);
 			} else {
 				query_t *Query = Connection->Head;
 				query_t *Next = Query->Next;
@@ -681,14 +520,17 @@ static ml_value_t *connection_new(const char **Keywords, const char **Values, in
 	pthread_attr_t Attr;
 	pthread_attr_init(&Attr);
 	pthread_attr_setdetachstate(&Attr, PTHREAD_CREATE_DETACHED);
+	pthread_mutex_lock(Connection->Lock);
 	if (Connection->Pipeline) {
 		GC_pthread_create(&Connection->Thread, &Attr, (void *)connection_pipeline_thread_fn, Connection);
 	} else {
 		GC_pthread_create(&Connection->Thread, &Attr, (void *)connection_thread_fn, Connection);
 	}
 	pthread_setname_np(Connection->Thread, "postgres");
-	ml_value_t *Error = connection_connect(Connection);
-	return Error ?: (ml_value_t *)Connection;
+	pthread_cond_wait(Connection->Ready, Connection->Lock);
+	ml_value_t *Result = Connection->Error ?: (ml_value_t *)Connection;
+	pthread_mutex_unlock(Connection->Lock);
+	return Result;
 }
 
 ML_METHOD(MLConnectionT, MLMapT) {
@@ -701,16 +543,23 @@ ML_METHOD(MLConnectionT, MLMapT) {
 	int I = 0, Pipeline = 0, Reconnect = 0;
 	ML_MAP_FOREACH(Args[0], Iter) {
 		if (!ml_is(Iter->Key, MLStringT)) return ml_error("TypeError", "Parameter key must be string");
-		if (!ml_is(Iter->Value, MLStringT)) return ml_error("TypeError", "Parameter value must be string");
 		const char *Keyword = ml_string_value(Iter->Key);
-		const char *Value = ml_string_value(Iter->Value);
 		if (!strcmp(Keyword, "pipeline")) {
-			Pipeline = !strcmp(Value, "true");
+			if (ml_is(Iter->Value, MLStringT)) {
+				Pipeline = !strcmp(ml_string_value(Iter->Value), "true");
+			} else {
+				Pipeline = Iter->Value == (ml_value_t *)MLTrue;
+			}
 		} else if (!strcmp(Keyword, "reconnect")) {
-			char *End;
-			Reconnect = 1000 * strtod(Value, &End);
+			if (ml_is(Iter->Value, MLStringT)) {
+				char *End;
+				Reconnect = 1000 * strtod(ml_string_value(Iter->Value), &End);
+			} else {
+				Reconnect = 1000 * ml_real_value(Iter->Value);
+			}
 		} else {
 			if (!ml_is(Iter->Value, MLStringT)) return ml_error("TypeError", "Parameter value must be string");
+			const char *Value = ml_string_value(Iter->Value);
 			Keywords[I] = Keyword;
 			Values[I] = Value;
 			++I;
@@ -728,17 +577,25 @@ ML_METHODV(MLConnectionT, MLNamesT) {
 	const char **Values = anew(const char *, NumParams + 1);
 	int I = 0, J = 1, Pipeline = 0, Reconnect = 0;
 	ML_NAMES_FOREACH(Args[0], Iter) {
-		if (!ml_is(Args[J], MLStringT)) return ml_error("TypeError", "Parameter value must be string");
 		const char *Keyword = ml_string_value(Iter->Value);
-		const char *Value = ml_string_value(Args[J++]);
+		ml_value_t *Arg = Args[J++];
 		if (!strcmp(Keyword, "pipeline")) {
-			Pipeline = !strcmp(Value, "true");
+			if (ml_is(Arg, MLStringT)) {
+				Pipeline = !strcmp(ml_string_value(Arg), "true");
+			} else {
+				Pipeline = Arg == (ml_value_t *)MLTrue;
+			}
 		} else if (!strcmp(Keyword, "reconnect")) {
-			char *End;
-			Reconnect = 1000 * strtod(Value, &End);
+			if (ml_is(Arg, MLStringT)) {
+				char *End;
+				Reconnect = 1000 * strtod(ml_string_value(Arg), &End);
+			} else {
+				Reconnect = 1000 * ml_real_value(Arg);
+			}
 		} else {
+			if (!ml_is(Arg, MLStringT)) return ml_error("TypeError", "Parameter value must be string");
 			Keywords[I] = Keyword;
-			Values[I] = Value;
+			Values[I] = ml_string_value(Arg);
 			++I;
 		}
 	}

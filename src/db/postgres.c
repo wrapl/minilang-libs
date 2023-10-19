@@ -45,41 +45,6 @@ struct statement_t {
 	int NumFields;
 };
 
-struct query_t {
-	query_t *Next;
-	ml_state_t *Caller;
-	const char *Name, *SQL;
-	recv_fn *RecvFns;
-	const char **Values;
-	int *Lengths, *Formats;
-	int NumParams, NumFields;
-};
-
-static int query_send(connection_t *Connection, query_t *Query) {
-	if (!Connection->Conn) return 0;
-	if (Connection->NeedsFlush) {
-		if (!Connection->Waiting) Connection->Waiting = Query;
-		return 0;
-	}
-	if (Query->SQL) {
-		if (Query->Name) {
-			PQsendPrepare(Connection->Conn, Query->Name, Query->SQL, 0, NULL);
-		} else {
-			PQsendQueryParams(Connection->Conn, Query->SQL, Query->NumParams, NULL, Query->Values, Query->Lengths, Query->Formats, 0);
-		}
-	} else {
-		PQsendQueryPrepared(Connection->Conn, Query->Name, Query->NumParams, Query->Values, Query->Lengths, Query->Formats, 0);
-	}
-	if (Connection->Pipeline) {
-		PQpipelineSync(Connection->Conn);
-		Connection->Waiting = Query->Next;
-		Connection->NeedsFlush = PQflush(Connection->Conn);
-	} else {
-		PQflush(Connection->Conn);
-	}
-	return 1;
-}
-
 static ml_value_t *query_param(ml_value_t *Param, const char **Value, int *Length, int *Format) {
 	typeof(query_param) *function = ml_typed_fn_get(ml_typeof(Param), query_param);
 	if (!function) return ml_error("TypeError", "Unable to use %s in query", ml_typeof(Param)->Name);
@@ -151,6 +116,16 @@ static ml_value_t *ML_TYPED_FN(query_param, MLTimeT, ml_value_t *Param, const ch
 	return NULL;
 }
 
+struct query_t {
+	query_t *Next;
+	ml_state_t *Caller;
+	const char *Name, *SQL;
+	recv_fn *RecvFns;
+	const char **Values;
+	int *Lengths, *Formats;
+	int NumParams, NumFields;
+};
+
 static ml_value_t *query_params(query_t *Query, int Count, ml_value_t **Args) {
 	Query->NumParams = Count;
 	const char **Values = Query->Values = anew(const char *, Count);
@@ -161,6 +136,31 @@ static ml_value_t *query_params(query_t *Query, int Count, ml_value_t **Args) {
 		if (Error) return Error;
 	}
 	return NULL;
+}
+
+static int query_send(connection_t *Connection, query_t *Query) {
+	if (!Connection->Conn) return 0;
+	if (Connection->NeedsFlush) {
+		if (!Connection->Waiting) Connection->Waiting = Query;
+		return 0;
+	}
+	if (Query->SQL) {
+		if (Query->Name) {
+			PQsendPrepare(Connection->Conn, Query->Name, Query->SQL, 0, NULL);
+		} else {
+			PQsendQueryParams(Connection->Conn, Query->SQL, Query->NumParams, NULL, Query->Values, Query->Lengths, Query->Formats, 0);
+		}
+	} else {
+		PQsendQueryPrepared(Connection->Conn, Query->Name, Query->NumParams, Query->Values, Query->Lengths, Query->Formats, 0);
+	}
+	if (Connection->Pipeline) {
+		PQpipelineSync(Connection->Conn);
+		Connection->Waiting = Query->Next;
+		Connection->NeedsFlush = PQflush(Connection->Conn);
+	} else {
+		PQflush(Connection->Conn);
+	}
+	return 1;
 }
 
 static void query_queue(connection_t *Connection, query_t *Query) {

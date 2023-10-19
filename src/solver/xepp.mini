@@ -1,5 +1,5 @@
 import: xe("fmt/xe")
-import: terminal("io/terminal")
+:>import: terminal("io/terminal")
 
 class: env(:parent, :symbols, init is; Env, Parent, Symbols) do
 	Env:parent := Parent
@@ -304,7 +304,8 @@ end
 let Output := if Args[2] then
 	file(Args[2], "w")
 else
-	terminal::Stdout
+	:>terminal::Stdout
+	file("/dev/tty", "w")
 end
 
 for Node in Content do

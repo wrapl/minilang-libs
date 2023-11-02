@@ -7,6 +7,7 @@
 #include <ctype.h>
 #include <errno.h>
 #include <pthread.h>
+#include <poll.h>
 #include <gc/gc.h>
 
 #undef ML_CATEGORY
@@ -433,8 +434,13 @@ static void *connection_pipeline_thread_fn(connection_t *Connection) {
 	for (;;) {
 		while (!Connection->Head) pthread_cond_wait(Connection->Ready, Connection->Lock);
 		pthread_mutex_unlock(Connection->Lock);
-		PGresult *Result = PQgetResult(Conn);
+		struct pollfd Fds[1] = {{.fd = PQsocket(Conn), .events = POLL_IN}};
+		do {
+			poll(Fds, 1, -1);
+			PQconsumeInput(Conn);
+		} while (PQisBusy(Conn));
 		pthread_mutex_lock(Connection->Lock);
+		PGresult *Result = PQgetResult(Conn);
 		if (Result) {
 			ExecStatusType Status = PQresultStatus(Result);
 			if (Status == PGRES_PIPELINE_SYNC) {
@@ -499,7 +505,7 @@ static void *connection_pipeline_thread_fn(connection_t *Connection) {
 			}
 		}
 		if (Connection->NeedsFlush) {
-			Connection->NeedsFlush = PQflush(Connection->Conn);
+			Connection->NeedsFlush = PQflush(Conn);
 			query_t *Waiting = Connection->Waiting;
 			Connection->Waiting = NULL;
 			while (Waiting && query_send(Connection, Waiting)) Waiting = Waiting->Next;

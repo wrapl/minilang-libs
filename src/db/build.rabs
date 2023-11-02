@@ -70,8 +70,8 @@ scope("postgres";) do
 	end
 	CFLAGS := old + [
 		pkgconfig("--cflags gio-2.0"),
-		expr('pg_config --includedir') => fun() "-I" + shell('pg_config --includedir'):trim,
-		expr('pg_config --includedir-server') => fun() "-I" + shell('pg_config --includedir-server'):trim,
+		expr('pg_config --includedir';) "-I" + shell('pg_config --includedir'):trim,
+		expr('pg_config --includedir-server';) "-I" + shell('pg_config --includedir-server'):trim,
 		PGVERSION
 	]
 	if defined("PG_PIPELINE") then

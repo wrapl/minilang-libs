@@ -437,6 +437,7 @@ static void *connection_pipeline_thread_fn(connection_t *Connection) {
 		struct pollfd Fds[1] = {{.fd = PQsocket(Conn), .events = POLL_IN}};
 		do {
 			poll(Fds, 1, -1);
+			if (Fds[0].revents & POLLERR) break;
 			PQconsumeInput(Conn);
 		} while (PQisBusy(Conn));
 		pthread_mutex_lock(Connection->Lock);

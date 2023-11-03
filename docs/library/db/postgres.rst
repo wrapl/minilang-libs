@@ -21,7 +21,7 @@ db/postgres
    Connects to a Postgresql database with the supplied settings.
 
 
-:mini:`meth (Arg₁: connection):connect`
+:mini:`meth (Arg₁: connection):close`
    *TBD*
 
 

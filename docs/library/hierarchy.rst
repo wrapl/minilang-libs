@@ -72,7 +72,7 @@ hierarchy
       "any":e -> "event_base":w;
       "any":e -> "event":w;
       "any":e -> "event_http":w;
-      "any":e -> "connections":w;
+      "any":e -> "events":w;
       "any":e -> "connection":w;
       "any":e -> "source_field":w;
       "stream":e -> "md5":w;
@@ -86,6 +86,7 @@ hierarchy
       "any":e -> "sqlite":w;
       "sequence":e -> "sqlite::stmt":w;
       "any":e -> "version_store":w;
+      "any":e -> "fixed_store":w;
       "any":e -> "string_store":w;
       "stream":e -> "string_store_writer":w;
       "stream":e -> "string_store_reader":w;

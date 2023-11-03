@@ -39,19 +39,13 @@ general
    *TBD*
 
 
-.. _type-connections:
-
-:mini:`type connections`
-   *TBD*
-
-
 .. _type-context:
 
 :mini:`type context`
    *TBD*
 
 
-:mini:`meth (Arg₁: dqlite):start`
+:mini:`meth (Arg₁: dqlite):stop`
    *TBD*
 
 
@@ -85,15 +79,19 @@ general
    *TBD*
 
 
+.. _type-events:
+
+:mini:`type events`
+   *TBD*
+
+
 .. _type-f_d_b_database:
 
 :mini:`type f_d_b_database`
    *TBD*
 
 
-.. _type-f_d_b_transaction:
-
-:mini:`type f_d_b_transaction`
+:mini:`meth (Arg₁: f_d_b_transaction):get(Arg₂: address)`
    *TBD*
 
 
@@ -165,15 +163,17 @@ general
    *TBD*
 
 
-.. _fun-connect:
-
-:mini:`fun connect(Arg₁: string, Arg₂: object, Arg₃: any)`
-   *TBD*
-
-
 .. _fun-emit:
 
 :mini:`fun emit(Arg₁: string, Arg₂: object, Arg₃: any)`
+   *TBD*
+
+
+:mini:`meth (Arg₁: string):Connect(Arg₂: class, Arg₃: any, ...)`
+   *TBD*
+
+
+:mini:`meth (Arg₁: string):Connect(Arg₂: object, Arg₃: any, ...)`
    *TBD*
 
 
@@ -203,7 +203,7 @@ general
    *TBD*
 
 
-:mini:`meth (Arg₁: dqlite):stop`
+:mini:`meth (Arg₁: dqlite):start`
    *TBD*
 
 
@@ -217,11 +217,13 @@ general
    *TBD*
 
 
-:mini:`meth (Arg₁: f_d_b_transaction):get(Arg₂: address)`
+:mini:`meth (Arg₁: f_d_b_database):transaction`
    *TBD*
 
 
-:mini:`meth (Arg₁: f_d_b_database):transaction`
+.. _type-f_d_b_transaction:
+
+:mini:`type f_d_b_transaction`
    *TBD*
 
 

@@ -17,6 +17,10 @@ db/radb
    *TBD*
 
 
+:mini:`meth (Store: cbor_store):count`
+   *TBD*
+
+
 :mini:`meth (Arg₁: cbor_store):get(Arg₂: integer)`
    *TBD*
 
@@ -25,8 +29,50 @@ db/radb
    *TBD*
 
 
+.. _type-fixed_store:
+
+:mini:`type fixed_store`
+   A store for strings.
+
+
+:mini:`meth (Store: fixed_store):close`
+   Closes :mini:`Store`.
+
+
+:mini:`meth (Store: fixed_store):count`
+   *TBD*
+
+
+:mini:`meth (Store: fixed_store):get(Index: integer): string`
+   Returns the entry at :mini:`Index` in :mini:`Store`.
+
+
 :mini:`meth (Arg₁: string_store):append(Arg₂: integer)`
    *TBD*
+
+
+.. _fun-cborstorecreate:
+
+:mini:`fun cborstorecreate(Arg₁: string, Arg₂: integer)`
+   *TBD*
+
+
+.. _fun-cborstoreopen:
+
+:mini:`fun cborstoreopen(Arg₁: string)`
+   *TBD*
+
+
+.. _fun-fixedstorecreate:
+
+:mini:`fun fixedstorecreate(Path: string, NodeSize: integer): string_store`
+   Creates a new string store at :mini:`Path` with node size :mini:`NodeSize` and default chunk size.
+
+
+.. _fun-fixedstoreopen:
+
+:mini:`fun fixedstoreopen(Path: string): string_store`
+   Opens an existing string store at :mini:`Path`.
 
 
 .. _fun-stringindexcreate:
@@ -41,6 +87,18 @@ db/radb
    *TBD*
 
 
+.. _fun-stringstorecreate:
+
+:mini:`fun stringstorecreate(Path: string, NodeSize: integer): string_store`
+   Creates a new string store at :mini:`Path` with node size :mini:`NodeSize` and default chunk size.
+
+
+.. _fun-stringstoreopen:
+
+:mini:`fun stringstoreopen(Path: string): string_store`
+   Opens an existing string store at :mini:`Path`.
+
+
 .. _fun-uuidindexcreate:
 
 :mini:`fun uuidindexcreate(Arg₁: string)`
@@ -51,30 +109,6 @@ db/radb
 
 :mini:`fun uuidindexopen(Arg₁: string)`
    *TBD*
-
-
-:mini:`meth (Arg₁: string):CborStoreT`
-   *TBD*
-
-
-:mini:`meth (Arg₁: string):CborStoreT(Arg₂: integer)`
-   *TBD*
-
-
-:mini:`meth (Arg₁: string):CborStoreT(Arg₂: integer, Arg₃: integer)`
-   *TBD*
-
-
-:mini:`meth (Path: string):StringStoreT: string_store`
-   Opens an existing string store at :mini:`Path`.
-
-
-:mini:`meth (Path: string):StringStoreT(NodeSize: integer): string_store`
-   Creates a new string store at :mini:`Path` with node size :mini:`NodeSize` and default chunk size.
-
-
-:mini:`meth (Path: string):StringStoreT(NodeSize: integer, ChunkSize: integer): string_store`
-   Creates a new string store at :mini:`Path` with node size :mini:`NodeSize` and chunk size :mini:`ChunkSize`.
 
 
 .. _type-string_index:
@@ -115,6 +149,10 @@ db/radb
 
 :mini:`meth (Store: string_store):close`
    Closes :mini:`Store`.
+
+
+:mini:`meth (Store: string_store):count`
+   *TBD*
 
 
 :mini:`meth (Store: string_store):get(Index: integer): string`

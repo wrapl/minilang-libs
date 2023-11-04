@@ -119,7 +119,7 @@ static void event_emit(ml_state_t *Caller, events_t *Events, const char *Name, i
 
 ML_METHOD_ANON(SourceEvents, "source::events");
 
-ML_METHOD_ANON(Connect, "evvent::connect");
+ML_METHOD_ANON(Connect, "event::connect");
 
 ML_METHODV(Connect, MLStringT, MLObjectT, MLAnyT) {
 	ml_object_t *Object = (ml_object_t *)Args[1];
@@ -156,10 +156,9 @@ ML_METHODV(Connect, MLStringT, MLClassT, MLAnyT) {
 	return (ml_value_t *)Connection;
 }
 
-ML_FUNCTIONX(Emit) {
-	ML_CHECKX_ARG_COUNT(3);
-	ML_CHECKX_ARG_TYPE(0, MLStringT);
-	ML_CHECKX_ARG_TYPE(1, MLObjectT);
+ML_METHOD_ANON(Emit, "event::emit");
+
+ML_METHODVX(Emit, MLStringT, MLObjectT) {
 	ml_object_t *Object = (ml_object_t *)Args[1];
 	int Index;
 	for (ml_field_info_t *Info = Object->Type->Fields; Info; Info = Info->Next) {
@@ -177,6 +176,26 @@ found:;
 		Object->Fields[Index].Value = (ml_value_t *)Events;
 	}
 	return event_emit(Caller, Events, ml_string_value(Args[0]), Count - 1, Args + 1);
+}
+
+ML_METHODVX(Emit, MLMethodT, MLObjectT) {
+	ml_object_t *Object = (ml_object_t *)Args[1];
+	int Index;
+	for (ml_field_info_t *Info = Object->Type->Fields; Info; Info = Info->Next) {
+		if (Info->Method == SourceEvents) {
+			Index = Info->Index;
+			goto found;
+		}
+	}
+	ML_ERROR("TypeError", "Object does not support events");
+found:;
+	events_t *Events = (events_t *)Object->Fields[Index].Value;
+	if (ml_typeof((ml_value_t *)Events) != EventsT) {
+		Events = new(events_t);
+		Events->Type = EventsT;
+		Object->Fields[Index].Value = (ml_value_t *)Events;
+	}
+	return event_emit(Caller, Events, ml_method_name(Args[0]), Count - 1, Args + 1);
 }
 
 typedef struct {
@@ -203,7 +222,7 @@ ML_TYPE(SourceFieldT, (), "source::field",
 ML_LIBRARY_ENTRY(event) {
 #include "event_init.c"
 	ml_type_t *SourceT = ml_class("event::source");
-	ml_class_add_field(Caller->Context, SourceT, SourceEvents);
+	ml_class_add_field(Caller->Context, SourceT, SourceEvents, MLFieldT);
 	events_t *Events = new(events_t);
 	Events->Type = EventsT;
 	Events->Class = SourceT;

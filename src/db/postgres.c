@@ -470,6 +470,7 @@ static void *connection_pipeline_thread_fn(connection_t *Connection) {
 				if (!Next) Connection->Tail = NULL;
 				ml_value_t *Value = MLNil;
 				if (Query->SQL && Query->Name) {
+					//printf("Prepare complete: %s -> %s\n", Query->SQL, Query->Name);
 					if (Status != PGRES_COMMAND_OK) {
 						Value = ml_error("DatabaseError", "%s", PQerrorMessage(Conn));
 					} else {
@@ -484,6 +485,7 @@ static void *connection_pipeline_thread_fn(connection_t *Connection) {
 						Value = (ml_value_t *)Statement;
 					}
 				} else {
+					//printf("Query complete: %s\n", Query->Name);
 					switch (Status) {
 					case PGRES_TUPLES_OK: {
 						Value = ml_list();
@@ -512,6 +514,7 @@ static void *connection_pipeline_thread_fn(connection_t *Connection) {
 					}
 				}
 				PQclear(Result);
+
 				if (Query->Caller) ml_state_schedule(Query->Caller, Value);
 			}
 		}

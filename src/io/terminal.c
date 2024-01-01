@@ -84,8 +84,8 @@ ML_ENUM2(TerminalCFlagT, "terminal::cflag",
 	MODE(PARENB),
 	MODE(PARODD),
 	MODE(HUPCL),
-	MODE(CLOCAL),
-	MODE(ADDRB)
+	MODE(CLOCAL)//,
+	//MODE(ADDRB)
 );
 
 ML_ENUM2(TerminalLFlagT, "terminal::lflag",

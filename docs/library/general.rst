@@ -7,119 +7,94 @@
 general
 =======
 
-.. _fun-context:
+.. rst-class:: mini-api
 
-:mini:`fun context()`
+:mini:`meth :UevT()`
    *TBD*
 
 
-.. _fun-eventbasenew:
-
-:mini:`fun eventbasenew()`
+:mini:`meth (Arg₁: context):rectangle(Arg₂: real, Arg₃: real, Arg₄: real, Arg₅: real)`
    *TBD*
 
 
-.. _fun-eventsleep:
-
-:mini:`fun eventsleep()`
+:mini:`meth (Arg₁: context):tree`
    *TBD*
 
 
-:mini:`meth :FDBDatabaseT()`
+:mini:`meth (Arg₁: fdbtransaction):commit`
    *TBD*
 
-
-:mini:`meth :GraphT()`
-   *TBD*
-
-
-.. _type-connection:
-
-:mini:`type connection`
-   *TBD*
-
-
-.. _type-context:
-
-:mini:`type context`
-   *TBD*
-
-
-:mini:`meth (Arg₁: dqlite):stop`
-   *TBD*
-
-
-.. _type-event:
-
-:mini:`type event`
-   *TBD*
-
-
-.. _type-event_base:
-
-:mini:`type event_base`
-   *TBD*
-
-
-:mini:`meth (Arg₁: event_base):dispatch`
-   *TBD*
-
-
-:mini:`meth (Arg₁: event_base):http`
-   *TBD*
-
-
-:mini:`meth (Arg₁: event_base):new(Arg₂: file)`
-   *TBD*
-
-
-.. _type-event_http:
-
-:mini:`type event_http`
-   *TBD*
-
-
-.. _type-events:
-
-:mini:`type events`
-   *TBD*
-
-
-.. _type-f_d_b_database:
-
-:mini:`type f_d_b_database`
-   *TBD*
-
-
-:mini:`meth (Arg₁: f_d_b_transaction):get(Arg₂: address)`
-   *TBD*
-
-
-:mini:`meth (Arg₁: f_d_b_transaction):set(Arg₂: address, Arg₃: address)`
-   *TBD*
-
-
-.. _type-geometry:
 
 :mini:`type geometry`
    *TBD*
 
 
-.. _type-graph:
-
-:mini:`type graph`
+:mini:`type graph < object`
    *TBD*
 
 
-.. _type-instance:
+:mini:`meth (Arg₁: fdbtransaction):set(Arg₂: address, Arg₃: address)`
+   *TBD*
+
+
+:mini:`meth (Arg₁: fdbtransaction):get(Arg₂: address)`
+   *TBD*
+
+
+:mini:`type fdbtransaction`
+   *TBD*
+
+
+:mini:`type graphdesc < enum`
+   * :mini:`::Directed`
+   * :mini:`::Undirected`
+
 
 :mini:`type instance`
    *TBD*
 
 
-.. _fun-mldqlite:
+:mini:`meth (Arg₁: graph):nodes`
+   *TBD*
 
-:mini:`fun mldqlite(Arg₁: integer, Arg₂: string, Arg₃: string)`
+
+:mini:`meth (Arg₁: graph)[Arg₂: string]`
+   *TBD*
+
+
+:mini:`meth (Arg₁: node) --- (Arg₂: node)`
+   *TBD*
+
+
+:mini:`type eventhttp`
+   *TBD*
+
+
+:mini:`meth (Arg₁: string::buffer):append(Arg₂: node)`
+   *TBD*
+
+
+:mini:`meth (Arg₁: node):remove`
+   *TBD*
+
+
+:mini:`type object`
+   *TBD*
+
+
+:mini:`type eventbase`
+   *TBD*
+
+
+:mini:`type node < object`
+   *TBD*
+
+
+:mini:`meth (Arg₁: object):get(Arg₂: string)`
+   *TBD*
+
+
+:mini:`meth (Arg₁: object):set(Arg₂: string, Arg₃: string)`
    *TBD*
 
 
@@ -131,13 +106,13 @@ general
    *TBD*
 
 
-.. _type-port:
+:mini:`type pluginclass`
+   *TBD*
+
 
 :mini:`type port`
    *TBD*
 
-
-.. _type-prolog:
 
 :mini:`type prolog`
    *TBD*
@@ -147,33 +122,27 @@ general
    *TBD*
 
 
-:mini:`meth (Arg₁: ra_instance)[Arg₂: string]`
+:mini:`type query`
    *TBD*
 
 
-.. _type-ra_schema_index:
-
-:mini:`type ra_schema_index`
+:mini:`type rainstance`
    *TBD*
 
 
-.. _type-source_field:
-
-:mini:`type source_field`
+:mini:`meth (Arg₁: rainstance)[Arg₂: string]`
    *TBD*
 
 
-.. _fun-emit:
-
-:mini:`fun emit(Arg₁: string, Arg₂: object, Arg₃: any)`
+:mini:`type ralistener`
    *TBD*
 
 
-:mini:`meth (Arg₁: string):Connect(Arg₂: class, Arg₃: any, ...)`
+:mini:`type raschema`
    *TBD*
 
 
-:mini:`meth (Arg₁: string):Connect(Arg₂: object, Arg₃: any, ...)`
+:mini:`type raschemaindex`
    *TBD*
 
 
@@ -181,57 +150,85 @@ general
    *TBD*
 
 
-.. _type-term:
+:mini:`meth (Arg₁: string):GraphT`
+   *TBD*
+
+
+:mini:`meth (Arg₁: string):GraphT(Arg₂: graphdesc)`
+   *TBD*
+
 
 :mini:`type term < sequence`
+   *TBD*
+
+
+:mini:`meth (Arg₁: node):edges`
+   *TBD*
+
+
+:mini:`meth (Arg₁: rainstance):delete`
+   *TBD*
+
+
+:mini:`type plugin`
+   *TBD*
+
+
+:mini:`meth (Arg₁: ralistener):delete`
+   *TBD*
+
+
+:mini:`meth (Arg₁: node):out`
+   *TBD*
+
+
+:mini:`meth (Arg₁: node) --> (Arg₂: node)`
+   *TBD*
+
+
+:mini:`meth (Arg₁: string::buffer):append(Arg₂: edge)`
+   *TBD*
+
+
+:mini:`fun mldqlite(Arg₁: integer, Arg₂: string, Arg₃: string)`
+   *TBD*
+
+
+:mini:`meth (Arg₁: edge):remove`
+   *TBD*
+
+
+:mini:`meth (Arg₁: fdbdatabase):transaction`
+   *TBD*
+
+
+:mini:`meth (Arg₁: eventbase):http`
+   *TBD*
+
+
+:mini:`type fdbdatabase`
+   *TBD*
+
+
+:mini:`meth (Arg₁: eventbase):dispatch`
+   *TBD*
+
+
+:mini:`meth (Arg₁: eventbase):new(Arg₂: file)`
+   *TBD*
+
+
+:mini:`type event`
+   *TBD*
+
+
+:mini:`meth (Arg₁: string::buffer):append(Arg₂: graph)`
    *TBD*
 
 
 :mini:`meth (Arg₁: term) . (Arg₂: term)`
    *TBD*
 
-
-.. _type-terminal:
-
-:mini:`type terminal < stream::fd`
-   *TBD*
-
-
-.. _type-ra_instance:
-
-:mini:`type ra_instance`
-   *TBD*
-
-
-:mini:`meth (Arg₁: dqlite):start`
-   *TBD*
-
-
-.. _type-dqlite:
-
-:mini:`type dqlite`
-   *TBD*
-
-
-:mini:`meth (Arg₁: f_d_b_transaction):commit`
-   *TBD*
-
-
-:mini:`meth (Arg₁: f_d_b_database):transaction`
-   *TBD*
-
-
-.. _type-f_d_b_transaction:
-
-:mini:`type f_d_b_transaction`
-   *TBD*
-
-
-:mini:`meth (Arg₁: terminal):winsize`
-   *TBD*
-
-
-.. _type-tree:
 
 :mini:`type tree`
    *TBD*
@@ -240,8 +237,6 @@ general
 :mini:`meth (Arg₁: tree):insert(Arg₂: geometry, Arg₃: any)`
    *TBD*
 
-
-.. _type-uev:
 
 :mini:`type uev`
    *TBD*
@@ -255,7 +250,7 @@ general
    *TBD*
 
 
-:mini:`meth (Arg₁: uev):io(Arg₂: stream::fd, Arg₃: uev_flags, Arg₄: function)`
+:mini:`meth (Arg₁: uev):io(Arg₂: stream::fd, Arg₃: uevflags, Arg₄: function)`
    *TBD*
 
 
@@ -263,41 +258,35 @@ general
    *TBD*
 
 
-:mini:`meth (Arg₁: ra_instance):delete`
+:mini:`type context`
    *TBD*
 
 
-:mini:`meth (Arg₁: ra_listener):delete`
+:mini:`meth (Arg₁: node):in`
    *TBD*
 
 
-.. _type-ra_listener:
-
-:mini:`type ra_listener`
+:mini:`meth (Arg₁: dqlite):stop`
    *TBD*
 
 
-.. _type-ra_schema:
-
-:mini:`type ra_schema`
+:mini:`meth (Arg₁: dqlite):start`
    *TBD*
 
 
-.. _type-query:
-
-:mini:`type query`
+:mini:`type edge < object`
    *TBD*
 
 
-:mini:`meth :UevT()`
+:mini:`meth :FDBDatabaseT()`
    *TBD*
 
 
-:mini:`meth (Arg₁: context):tree`
+:mini:`fun getallplugins()`
    *TBD*
 
 
-:mini:`meth (Arg₁: context):rectangle(Arg₂: real, Arg₃: real, Arg₄: real, Arg₅: real)`
+:mini:`meth (Arg₁: string::buffer):append(Arg₂: atom)`
    *TBD*
 
 
@@ -309,67 +298,56 @@ general
    *TBD*
 
 
-.. _type-uev_event:
-
-:mini:`type uev_event`
+:mini:`type uevevent`
    *TBD*
 
 
-:mini:`meth (Arg₁: uev_event):start`
+:mini:`meth (Arg₁: uevevent):start`
    *TBD*
 
-
-.. _type-plugin:
-
-:mini:`type plugin`
-   *TBD*
-
-
-.. _type-plugin_class:
-
-:mini:`type plugin_class`
-   *TBD*
-
-
-.. _fun-raschema:
-
-:mini:`fun raschema()`
-   *TBD*
-
-
-:mini:`meth (Arg₁: string::buffer):append(Arg₂: atom)`
-   *TBD*
-
-
-:mini:`meth (Arg₁: uev_event):stop`
-   *TBD*
-
-
-.. _type-uev_flags:
-
-:mini:`type uev_flags < flags`
-   *TBD*
-
-
-.. _type-atom:
 
 :mini:`type atom`
    *TBD*
 
 
-.. _fun-getallplugins:
-
-:mini:`fun getallplugins()`
+:mini:`type dqlite`
    *TBD*
 
 
-.. _type-variable:
+:mini:`fun raschema()`
+   *TBD*
+
+
+:mini:`fun eventsleep()`
+   *TBD*
+
+
+:mini:`meth (Arg₁: uevevent):stop`
+   *TBD*
+
+
+:mini:`type uevflags < flags`
+   * :mini:`::Err`
+   * :mini:`::Read`
+   * :mini:`::Write`
+   * :mini:`::Pri`
+   * :mini:`::Hup`
+   * :mini:`::RdHup`
+   * :mini:`::Edge`
+   * :mini:`::Once`
+
+
+:mini:`fun context()`
+   *TBD*
+
+
+:mini:`fun eventbasenew()`
+   *TBD*
+
 
 :mini:`type variable`
    *TBD*
 
-
-.. _value-Prolog:
 
 :mini:`def Prolog: prolog`
    *TBD*

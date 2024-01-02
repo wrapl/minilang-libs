@@ -3,6 +3,9 @@
 #include <minilang/ml_object.h>
 #include <minilang/ml_library.h>
 
+#undef ML_CATEGORY
+#define ML_CATEGORY "event"
+
 typedef struct events_t events_t;
 typedef struct signal_t signal_t;
 typedef struct connection_t connection_t;
@@ -13,6 +16,7 @@ struct events_t {
 };
 
 ML_TYPE(EventsT, (), "source::events");
+//!internal
 
 #define CONNECTION_ONCE 1
 
@@ -122,6 +126,8 @@ ML_METHOD_ANON(SourceEvents, "source::events");
 ML_METHOD_ANON(Connect, "event::connect");
 
 ML_METHODV(Connect, MLStringT, MLObjectT, MLAnyT) {
+//@event::connect
+//>connection
 	ml_object_t *Object = (ml_object_t *)Args[1];
 	int Index;
 	for (ml_field_info_t *Info = Object->Type->Fields; Info; Info = Info->Next) {
@@ -143,6 +149,8 @@ found:;
 }
 
 ML_METHODV(Connect, MLStringT, MLClassT, MLAnyT) {
+//@event::connect
+//>connection
 	ml_type_t *Class = (ml_type_t *)Args[1];
 	events_t *Events = (events_t *)ml_typed_fn_get(Class, EventsT);
 	if (!Events) return ml_error("TypeError", "Class does not support events");
@@ -159,6 +167,7 @@ ML_METHODV(Connect, MLStringT, MLClassT, MLAnyT) {
 ML_METHOD_ANON(Emit, "event::emit");
 
 ML_METHODVX(Emit, MLStringT, MLObjectT) {
+//@event::emit
 	ml_object_t *Object = (ml_object_t *)Args[1];
 	int Index;
 	for (ml_field_info_t *Info = Object->Type->Fields; Info; Info = Info->Next) {
@@ -179,6 +188,7 @@ found:;
 }
 
 ML_METHODVX(Emit, MLMethodT, MLObjectT) {
+//@event::emit
 	ml_object_t *Object = (ml_object_t *)Args[1];
 	int Index;
 	for (ml_field_info_t *Info = Object->Type->Fields; Info; Info = Info->Next) {
@@ -214,10 +224,15 @@ static void source_field_call(ml_state_t *Caller, ml_field_t *Field, int Count, 
 }
 
 ML_TYPE(SourceFieldT, (), "source::field",
+//!internal
 	.deref = (void *)source_field_deref,
 	.assign = (void *)source_field_assign,
 	.call = (void *)source_field_call
 );
+
+/*
+ML_TYPE(SourceT, (MLObjectT), "source");
+*/
 
 ML_LIBRARY_ENTRY(event) {
 #include "event_init.c"

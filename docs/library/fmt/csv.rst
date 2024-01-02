@@ -7,7 +7,7 @@
 fmt/csv
 =======
 
-.. _type-csv:
+.. rst-class:: mini-api
 
 :mini:`type csv`
    An open CSV file.

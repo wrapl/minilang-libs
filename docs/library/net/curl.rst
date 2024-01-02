@@ -7,13 +7,11 @@
 net/curl
 ========
 
-.. _fun-curl:
+.. rst-class:: mini-api
 
 :mini:`fun curl()`
    *TBD*
 
-
-.. _type-curl:
 
 :mini:`type curl`
    *TBD*
@@ -23,37 +21,46 @@ net/curl
    *TBD*
 
 
-:mini:`meth (Arg₁: curl):set(Arg₂: curl_option, Arg₃: boolean)`
+:mini:`meth (Arg₁: curl):set(Arg₂: curloption, Arg₃: boolean)`
    *TBD*
 
 
-:mini:`meth (Arg₁: curl):set(Arg₂: curl_option, Arg₃: function)`
+:mini:`meth (Arg₁: curl):set(Arg₂: curloption, Arg₃: function)`
    *TBD*
 
 
-:mini:`meth (Arg₁: curl):set(Arg₂: curl_option, Arg₃: integer)`
+:mini:`meth (Arg₁: curl):set(Arg₂: curloption, Arg₃: integer)`
    *TBD*
 
 
-:mini:`meth (Arg₁: curl):set(Arg₂: curl_option, Arg₃: list)`
+:mini:`meth (Arg₁: curl):set(Arg₂: curloption, Arg₃: list)`
    *TBD*
 
 
-:mini:`meth (Arg₁: curl):set(Arg₂: curl_option, Arg₃: nil)`
+:mini:`meth (Arg₁: curl):set(Arg₂: curloption, Arg₃: nil)`
    *TBD*
 
 
-:mini:`meth (Arg₁: curl):set(Arg₂: curl_option, Arg₃: stream)`
+:mini:`meth (Arg₁: curl):set(Arg₂: curloption, Arg₃: stream)`
    *TBD*
 
 
-:mini:`meth (Arg₁: curl):set(Arg₂: curl_option, Arg₃: string)`
+:mini:`meth (Arg₁: curl):set(Arg₂: curloption, Arg₃: string)`
    *TBD*
 
 
-.. _type-curl_option:
-
-:mini:`type curl_option < enum`
-   *TBD*
+:mini:`type curloption < enum`
+   * :mini:`::Verbose`
+   * :mini:`::Header`
+   * :mini:`::NoProgress`
+   * :mini:`::NoSignal`
+   * :mini:`::WriteFunc`
+   * :mini:`::WriteData`
+   * :mini:`::ReadFunc`
+   * :mini:`::ReadData`
+   * :mini:`::IoctlFunc`
+   * :mini:`::IoctlData`
+   * :mini:`::XferInfoFunc`
+   * :mini:`::XferInfoData`
 
 

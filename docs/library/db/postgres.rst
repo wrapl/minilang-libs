@@ -7,7 +7,7 @@
 db/postgres
 ===========
 
-.. _type-connection:
+.. rst-class:: mini-api
 
 :mini:`type connection`
    A connection to a Postgresql database.
@@ -41,8 +41,6 @@ db/postgres
 :mini:`meth (Arg₁: connection):reconnect(Arg₂: number)`
    *TBD*
 
-
-.. _type-statement:
 
 :mini:`type statement < function`
    A prepared statement. Calling a statement executes the prepared statement on the associated connection,  with the provided arguments (if any).

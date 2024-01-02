@@ -7,25 +7,19 @@
 libuv
 =====
 
-.. _fun-fsopen:
+.. rst-class:: mini-api
 
 :mini:`fun fsopen()`
    *TBD*
 
 
-.. _fun-run:
-
 :mini:`fun run(Arg₁: function)`
    *TBD*
 
 
-.. _fun-sleep:
-
 :mini:`fun sleep(Arg₁: integer)`
    *TBD*
 
-
-.. _type-uvfile:
 
 :mini:`type uvfile`
    *TBD*

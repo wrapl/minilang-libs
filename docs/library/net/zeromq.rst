@@ -7,6 +7,8 @@
 net/zeromq
 ==========
 
+.. rst-class:: mini-api
+
 :mini:`meth :MessageT(): message`
    Returns a new empty message.
 
@@ -18,8 +20,6 @@ net/zeromq
 :mini:`meth (Frame₁: any):MessageT(...): message`
    Returns a new message with the specified content. :mini:`Frameᵢ` can be bytes (address / string),  a frame,  another message or :mini:`nil` to add an empty frame.
 
-
-.. _type-frame:
 
 :mini:`type frame`
    ZeroMQ frame.
@@ -36,8 +36,6 @@ net/zeromq
 :mini:`meth (Signal: integer):MessageT: message`
    Returns a new signal message with specified value.
 
-
-.. _type-message:
 
 :mini:`type message < sequence`
    ZeroMQ message.
@@ -78,8 +76,6 @@ net/zeromq
 :mini:`meth (Arg₁: string::buffer):append(Arg₂: message)`
    *TBD*
 
-
-.. _type-socket:
 
 :mini:`type socket`
    ZeroMQ socket.
@@ -617,19 +613,31 @@ net/zeromq
    *TBD*
 
 
-.. _type-socket_event:
+:mini:`type socketevent < enum`
+   * :mini:`::In`
+   * :mini:`::Out`
+   * :mini:`::Err`
+   * :mini:`::Pri`
 
-:mini:`type socket_event < enum`
-   *TBD*
 
-
-.. _type-socket_type:
-
-:mini:`type socket_type < enum`
+:mini:`type sockettype < enum`
    ZeroMQ socket type.
+   
+   * :mini:`::Pair`
+   * :mini:`::Pub`
+   * :mini:`::Sub`
+   * :mini:`::Req`
+   * :mini:`::Rep`
+   * :mini:`::Dealer`
+   * :mini:`::Router`
+   * :mini:`::Pull`
+   * :mini:`::Push`
+   * :mini:`::XPub`
+   * :mini:`::XSub`
+   * :mini:`::Stream`
 
 
-:mini:`meth (Type: socket_type):SocketT: socket`
+:mini:`meth (Type: sockettype):SocketT: socket`
    Returns a new socket of the specified type.
 
 

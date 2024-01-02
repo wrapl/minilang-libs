@@ -1,7 +1,13 @@
+random::seed(1)
+
 let OutputDirectory := Args[1]
 
-popen('rm -r {OutputDirectory}', 'r'):close
-popen('mkdir {OutputDirectory}', 'r'):close
+for FileName in dir(OutputDirectory) do
+	if FileName[-4, 0] = ".rst" then
+		print('Unlinking {FileName}\n')
+		file::unlink(OutputDirectory + "/" + FileName)
+	end
+end
 
 fun category_name(Type) do
 	if Type = "MLStateT" then
@@ -31,6 +37,7 @@ fun write_category(Name, Items) do
 	File:write(Name, "\n")
 	for I in Name do File:write("=") end
 	File:write("\n\n")
+	File:write(".. rst-class:: mini-api\n\n")
 	loop
 		let (Docs, Key) := while Items:next
 		:>print('\t{Key}\n')
@@ -51,28 +58,39 @@ end
 
 fun type_name(var Type) do
 	Type or ret "any"
-	Type := Type:replace(" ## ", "::")
-	if let Match := Type % r"^ML(.*)T$" then
-		if let Match2 := Match[2] % r"([A-Z]{1,2}[a-z]+)([A-Z][a-z]+)" then
-			ret '{Match2[2]:lower}::{Match2[3]:lower}'
+	Type := Type:replace(" ## ", "")
+	let Name := if let Match := Type % r"^ML(.*)T$" then
+		if let Match2 := Match[2] % r"([A-Z]{1,2}[a-z]+)([A-Z]{1,2}[a-z0-9]+)([A-Z]{1,2}[a-z0-9]+)" then
+			'{Match2[2]:lower}::{Match2[3]:lower}::{Match2[4]:lower}'
+		elseif let Match2 := Match[2] % r"([A-Z]{1,2}[a-z]+)([A-Z]{1,2}[a-z0-9]+)" then
+			'{Match2[2]:lower}::{Match2[3]:lower}'
+		else
+			Match[2]:lower:trim(":")
 		end
-		ret Match[2]:lower:trim(":")
 	elseif let Match := Type % r"^Gir(.*)T$" then
-		ret "gir::" + Match[2]:lower:trim(":")
+		"gir::" + Match[2]:lower:trim(":")
 	elseif let Match := Type % r"^XE(.*)T$" then
-		ret "xe::" + Match[2]:lower:trim(":")
+		"xe::" + Match[2]:lower:trim(":")
+	elseif let Match := Type % r"^Ast(.+)ExprT$" then
+		"ast::expr::" + Match[2]:lower:trim(":")
+	elseif let Match := Type % r"^Ast(.*)T$" then
+		"ast::" + Match[2]:lower:trim(":")
 	elseif let Match := Type % r"^(.*)T$" then
-		ret Match[2]:replace(r"[A-Z]", fun(X) '_{X:lower}'):trim(":_")
+		Match[2]:lower:trim(":")
 	else
-		ret Type
+		Type
 	end
+	:<if first(grid([Type], ["Array", "Matrix", "Vector", "::"], :find)) then
+		print(Type, " -> ", Name, "\n")
+	end>:
+	ret Name
 end
 
 fun is_symbol(Method) Method:lower = Method:upper
 
 method: image()
 
-meth image(V: any) string(V)
+meth image(V: any) := string
 meth image(V: nil) "nil"
 meth image(S: string) '\"{S:escape}\"'
 meth image(A: address) with B := string::buffer() do
@@ -118,15 +136,18 @@ fun write_examples(Buffer, Examples) do
 	end
 	Buffer:write("\n   .. code-block:: mini\n\n")
 	for Example in Examples do
+		print('Example = {Example}\n')
 		var Result := ""
 		let Last := Example:after("\n", -1) or Example
-		Parser:input(Example)
+		Parser:reset:input(Example)
 		loop
 			let Next := Parser:evaluate(Compiler)
-			until Next = compiler::EOI
+			until type(Next) = any and Next = compiler::EOI
 			Result := image(Next)
+			print('\tResult = {Result}\n')
 		on Error do
 			Result := image(Error)
+			print('\tError = {Error}\n')
 			exit
 		end
 		if (Last + Result):length > 60 then
@@ -171,12 +192,13 @@ fun write_method(Category, Kind, Method0, Params, Return, Description, Examples,
 		Buffer:write("(", Params[1][1], ": ", type_name(Params[1][2]), ")[")
 		Terminator := "]"
 	elseif is_symbol(Method) then
+		let Escaped := Method:replace("\\", "\\\\")
 		if Params:length = 0 then
-			Buffer:write('{Method}()')
+			Buffer:write('{Escaped}()')
 		elseif Params:length = 1 and not Variadic then
-			Buffer:write('{Method}({Params[1][1]}: {type_name(Params[1][2])})')
+			Buffer:write('{Escaped}({Params[1][1]}: {type_name(Params[1][2])})')
 		else
-			Buffer:write('({Params[1][1]}: {type_name(Params[1][2])}) {Method} (')
+			Buffer:write('({Params[1][1]}: {type_name(Params[1][2])}) {Escaped} (')
 			Terminator := ")"
 		end
 	elseif Method[1] != ":" then
@@ -247,7 +269,7 @@ fun write_method(Category, Kind, Method0, Params, Return, Description, Examples,
 	Examples[1] and write_examples(Buffer, Examples)
 	Buffer:write("\n")
 	if Return[1] and Method = type_name(Return[1]) then
-		emit(Category, (Method, item::Constructor), Buffer:rest)
+		emit(Category, (Method, item::Constructor, sum(Params -> _[2] ->? 1)), Buffer:rest)
 	elseif Method = ":append" then
 		emit(Category, (type_name(Params[2][2]), item::Append, Method, sum(Params -> _[2] ->? 1)), Buffer:rest)
 	elseif Params[1] then
@@ -259,7 +281,7 @@ end
 
 fun write_function(Category, Kind, Name, Params, Return, Description, Examples, Location) do
 	let Buffer := string::buffer()
-	Buffer:write('.. _fun-{Name:replace("::", "-")}:\n\n')
+	:>Buffer:write('.. _fun-{Name:replace("::", "-")}:\n\n')
 	var Terminator := ""
 	Buffer:write(':mini:`fun ', Name, "(")
 	var Seperator := ""
@@ -300,7 +322,7 @@ end
 
 fun write_constructor(Category, Kind, Name, Params, Return, Description, Location) do
 	let Buffer := string::buffer()
-	Buffer:write('.. _fun-{Name:replace("::", "-")}:\n\n')
+	:>Buffer:write('.. _fun-{Name:replace("::", "-")}:\n\n')
 	var Terminator := ""
 	Buffer:write(':mini:`constructor ', Name, "(")
 	var Seperator := ""
@@ -335,14 +357,15 @@ let TypesGraph := string::buffer()
 fun write_type(Category, Name, Parents, Description, Examples, Location) do
 	let TypeName := type_name(Name)
 	let Buffer := string::buffer()
-	Buffer:write('.. _type-{TypeName:replace("::", "-")}:\n\n')
+	:>Buffer:write('.. _type-{TypeName:replace("::", "-")}:\n\n')
 	Buffer:write(':mini:`type {TypeName}')
 	if Parents:length > 0 then
 		Buffer:write(" < ")
 		var Seperator := ""
 		if Category != "internal" then
 			for Parent in Parents do
-				TypesGraph:write('      \"{type_name(Parent)}\":e -> \"{TypeName}\":w;\n')
+				let ParentName := type_name(Parent)
+				TypesGraph:write('      \"{ParentName}\":e -> \"{TypeName}\":w;\n')
 				Buffer:write(Seperator, type_name(Parent))
 				Seperator := ", "
 			end
@@ -353,7 +376,14 @@ fun write_type(Category, Name, Parents, Description, Examples, Location) do
 		end
 	end
 	Buffer:write("`\n")
+	var List := 1
 	for Line in Description do
+		if Line:starts("*") then
+			List or Buffer:write("   \n")
+			List := 1
+		else
+			List := nil
+		end
 		Buffer:write("   ", Line)
 	end
 	Description[1] or Buffer:write("   *TBD*\n")
@@ -364,7 +394,7 @@ end
 
 fun write_value(Category, Name, Type, Description, Location) do
 	let Buffer := string::buffer()
-	Buffer:write('.. _value-{Name:replace("::", "-")}:\n\n')
+	:>Buffer:write('.. _value-{Name:replace("::", "-")}:\n\n')
 	Buffer:write(':mini:`def {Name}: {type_name(Type)}`\n')
 	for Line in Description do
 		Buffer:write("   ", Line)
@@ -439,7 +469,7 @@ fun process(FileName) do
 				write_overview(DefaultCategory, Description)
 			elseif Line % r"^ML_METHOD_DECL" then
 			elseif Line % r"^ML_METHOD_ANON" then
-			elseif Line % r"^ML_METHOD" then
+			elseif Line % r"^(ML_METHOD)" then
 				let Location := (FileName, LineNo)
 				let I := Line:find("("), J := Line:find(")")
 				let Kind := Line[1, I]
@@ -671,7 +701,7 @@ fun process(FileName) do
 				else
 					write_constructor(Category, Kind, Name, Params, [Name], Description, Location)
 				end
-			elseif Line % r"^(ML_TYPE|ML_INTERFACE)" then
+			elseif Line % r"^(ML_TYPE|ML_INTERFACE|ML_CLASS)" then
 				let Location := (FileName, LineNo)
 				let I := Line:find("("), J := Line:find(", (", I + 1) + 2
 				let K := Line:find(")", J + 1)
@@ -715,7 +745,11 @@ fun process(FileName) do
 				let K := Line:find(",", J + 1)
 				var Name := Line[I + 1, J]:trim(", ")
 				var Category := DefaultCategory
-				let Parent := if Line % r"^ML_ENUM" then "MLEnumT" else "MLFlagsT" end
+				let Parent := switch Line: string
+					case r"^ML_ENUM_CYCLIC" do "MLEnumCyclicT"
+					case r"^ML_ENUM" do "MLEnumT"
+					else "MLFlagsT"
+				end
 				let Title := Line[J + 1, K]:trim(", ){")
 				let Description := []
 				let Examples := []
@@ -738,6 +772,12 @@ fun process(FileName) do
 					elseif Line % r"^/[/*]\$= " then
 						Example:write("      ", Line[6, -1])
 						Examples:put(Example:rest)
+					elseif let Match := Line % r"\s*\"([A-Za-z0-9_]+)\"," or Line % r"\s*[A-Za-z0-9_]+\(([A-Za-z0-9_]+)\)" then
+						if let Comment := Line:after("//") then
+							Description:put('* :mini:`::{Match[2]}` - {Comment:trim}\n')
+						else
+							Description:put('* :mini:`::{Match[2]}`\n')
+						end
 					else
 						exit
 					end
@@ -879,4 +919,3 @@ hierarchy
 ')
 	File:close
 end
-

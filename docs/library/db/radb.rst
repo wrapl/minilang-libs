@@ -7,209 +7,177 @@
 db/radb
 =======
 
-.. _type-cbor_store:
+.. rst-class:: mini-api
 
-:mini:`type cbor_store`
+:mini:`type cborstore`
    *TBD*
 
 
-:mini:`meth (Arg₁: cbor_store):close`
+:mini:`meth (Arg₁: cborstore):close`
    *TBD*
 
 
-:mini:`meth (Store: cbor_store):count`
+:mini:`meth (Store: cborstore):count`
    *TBD*
 
 
-:mini:`meth (Arg₁: cbor_store):get(Arg₂: integer)`
+:mini:`meth (Arg₁: cborstore):get(Arg₂: integer)`
    *TBD*
 
 
-:mini:`meth (Arg₁: cbor_store):set(Arg₂: integer, Arg₃: any)`
+:mini:`meth (Arg₁: cborstore):set(Arg₂: integer, Arg₃: any)`
    *TBD*
 
 
-.. _type-fixed_store:
-
-:mini:`type fixed_store`
+:mini:`type fixedstore`
    A store for strings.
 
 
-:mini:`meth (Store: fixed_store):close`
+:mini:`meth (Store: fixedstore):close`
    Closes :mini:`Store`.
 
 
-:mini:`meth (Store: fixed_store):count`
+:mini:`meth (Store: fixedstore):count`
    *TBD*
 
 
-:mini:`meth (Store: fixed_store):get(Index: integer): string`
+:mini:`meth (Store: fixedstore):get(Index: integer): string`
    Returns the entry at :mini:`Index` in :mini:`Store`.
 
 
-:mini:`meth (Arg₁: string_store):append(Arg₂: integer)`
+:mini:`meth (Arg₁: stringstore):append(Arg₂: integer)`
    *TBD*
 
-
-.. _fun-cborstorecreate:
 
 :mini:`fun cborstorecreate(Arg₁: string, Arg₂: integer)`
    *TBD*
 
 
-.. _fun-cborstoreopen:
-
 :mini:`fun cborstoreopen(Arg₁: string)`
    *TBD*
 
-
-.. _fun-fixedstorecreate:
 
 :mini:`fun fixedstorecreate(Path: string, NodeSize: integer): string_store`
    Creates a new string store at :mini:`Path` with node size :mini:`NodeSize` and default chunk size.
 
 
-.. _fun-fixedstoreopen:
-
 :mini:`fun fixedstoreopen(Path: string): string_store`
    Opens an existing string store at :mini:`Path`.
 
-
-.. _fun-stringindexcreate:
 
 :mini:`fun stringindexcreate(Arg₁: string)`
    *TBD*
 
 
-.. _fun-stringindexopen:
-
 :mini:`fun stringindexopen(Arg₁: string)`
    *TBD*
 
-
-.. _fun-stringstorecreate:
 
 :mini:`fun stringstorecreate(Path: string, NodeSize: integer): string_store`
    Creates a new string store at :mini:`Path` with node size :mini:`NodeSize` and default chunk size.
 
 
-.. _fun-stringstoreopen:
-
 :mini:`fun stringstoreopen(Path: string): string_store`
    Opens an existing string store at :mini:`Path`.
 
-
-.. _fun-uuidindexcreate:
 
 :mini:`fun uuidindexcreate(Arg₁: string)`
    *TBD*
 
 
-.. _fun-uuidindexopen:
-
 :mini:`fun uuidindexopen(Arg₁: string)`
    *TBD*
 
 
-.. _type-string_index:
-
-:mini:`type string_index`
+:mini:`type stringindex`
    *TBD*
 
 
-:mini:`meth (Arg₁: string_index):close`
+:mini:`meth (Arg₁: stringindex):close`
    *TBD*
 
 
-:mini:`meth (Arg₁: string_index):count`
+:mini:`meth (Arg₁: stringindex):count`
    *TBD*
 
 
-:mini:`meth (Arg₁: string_index):delete(Arg₂: string)`
+:mini:`meth (Arg₁: stringindex):delete(Arg₂: string)`
    *TBD*
 
 
-:mini:`meth (Arg₁: string_index):get(Arg₂: integer)`
+:mini:`meth (Arg₁: stringindex):get(Arg₂: integer)`
    *TBD*
 
 
-:mini:`meth (Arg₁: string_index):insert(Arg₂: string)`
+:mini:`meth (Arg₁: stringindex):insert(Arg₂: string)`
    *TBD*
 
 
-:mini:`meth (Arg₁: string_index):search(Arg₂: string)`
+:mini:`meth (Arg₁: stringindex):search(Arg₂: string)`
    *TBD*
 
 
-.. _type-string_store:
-
-:mini:`type string_store`
+:mini:`type stringstore`
    A store for strings.
 
 
-:mini:`meth (Store: string_store):close`
+:mini:`meth (Store: stringstore):close`
    Closes :mini:`Store`.
 
 
-:mini:`meth (Store: string_store):count`
+:mini:`meth (Store: stringstore):count`
    *TBD*
 
 
-:mini:`meth (Store: string_store):get(Index: integer): string`
+:mini:`meth (Store: stringstore):get(Index: integer): string`
    Returns the entry at :mini:`Index` in :mini:`Store`.
 
 
-:mini:`meth (Arg₁: string_store):read(Arg₂: integer)`
+:mini:`meth (Arg₁: stringstore):read(Arg₂: integer)`
    *TBD*
 
 
-:mini:`meth (Store: string_store):set(Index: integer, Value: string): string`
+:mini:`meth (Store: stringstore):set(Index: integer, Value: string): string`
    Stores :mini:`Value` as the entry at :mini:`Index` in :mini:`Store` and returns :mini:`Value`.
 
 
-:mini:`meth (Arg₁: string_store):write(Arg₂: integer)`
+:mini:`meth (Arg₁: stringstore):write(Arg₂: integer)`
    *TBD*
 
 
-.. _type-string_store_reader:
-
-:mini:`type string_store_reader < stream`
+:mini:`type stringstorereader < stream`
    A stream for reading from a string store entry.
 
 
-.. _type-string_store_writer:
-
-:mini:`type string_store_writer < stream`
+:mini:`type stringstorewriter < stream`
    A stream for writing to a string store entry.
 
 
-.. _type-u_u_i_d_index:
-
-:mini:`type u_u_i_d_index`
+:mini:`type uuidindex`
    *TBD*
 
 
-:mini:`meth (Arg₁: u_u_i_d_index):close`
+:mini:`meth (Arg₁: uuidindex):close`
    *TBD*
 
 
-:mini:`meth (Arg₁: u_u_i_d_index):count`
+:mini:`meth (Arg₁: uuidindex):count`
    *TBD*
 
 
-:mini:`meth (Arg₁: u_u_i_d_index):delete(Arg₂: uuid)`
+:mini:`meth (Arg₁: uuidindex):delete(Arg₂: uuid)`
    *TBD*
 
 
-:mini:`meth (Arg₁: u_u_i_d_index):get(Arg₂: integer)`
+:mini:`meth (Arg₁: uuidindex):get(Arg₂: integer)`
    *TBD*
 
 
-:mini:`meth (Arg₁: u_u_i_d_index):insert(Arg₂: uuid)`
+:mini:`meth (Arg₁: uuidindex):insert(Arg₂: uuid)`
    *TBD*
 
 
-:mini:`meth (Arg₁: u_u_i_d_index):search(Arg₂: uuid)`
+:mini:`meth (Arg₁: uuidindex):search(Arg₂: uuid)`
    *TBD*
 
 

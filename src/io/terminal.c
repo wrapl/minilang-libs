@@ -7,6 +7,9 @@
 #include <sys/ioctl.h>
 #include <errno.h>
 
+#undef ML_CATEGORY
+#define ML_CATEGORY "io/terminal"
+
 ML_TYPE(TerminalT, (MLStreamFdT), "terminal");
 
 ML_METHOD("winsize", TerminalT) {
@@ -21,7 +24,7 @@ ML_METHOD("winsize", TerminalT) {
 
 #define MODE(VALUE) #VALUE, VALUE
 
-ML_ENUM2(TerminalIFlagT, "terminal::iflag",
+ML_ENUM2(IFlagT, "terminal::iflag",
 	MODE(IGNBRK),
 	MODE(BRKINT),
 	MODE(IGNPAR),
@@ -39,7 +42,7 @@ ML_ENUM2(TerminalIFlagT, "terminal::iflag",
 	MODE(IUTF8)
 );
 
-ML_ENUM2(TerminalOFlagT, "terminal::oflag",
+ML_ENUM2(OFlagT, "terminal::oflag",
 	MODE(OPOST),
 	MODE(OLCUC),
 	MODE(ONLCR),
@@ -73,7 +76,7 @@ ML_ENUM2(TerminalOFlagT, "terminal::oflag",
 	MODE(XTABS)
 );
 
-ML_ENUM2(TerminalCFlagT, "terminal::cflag",
+ML_ENUM2(CFlagT, "terminal::cflag",
 	MODE(CSIZE),
 	MODE(CS5),
 	MODE(CS6),
@@ -84,11 +87,13 @@ ML_ENUM2(TerminalCFlagT, "terminal::cflag",
 	MODE(PARENB),
 	MODE(PARODD),
 	MODE(HUPCL),
-	MODE(CLOCAL)//,
-	//MODE(ADDRB)
+	MODE(CLOCAL)
+#ifdef ADDRB
+	, MODE(ADDRB)
+#endif
 );
 
-ML_ENUM2(TerminalLFlagT, "terminal::lflag",
+ML_ENUM2(LFlagT, "terminal::lflag",
 	MODE(ISIG),
 	MODE(ICANON),
 	MODE(XCASE),
@@ -107,25 +112,42 @@ ML_ENUM2(TerminalLFlagT, "terminal::lflag",
 	MODE(EXTPROC)
 );
 
+typedef struct {
+	ml_type_t *Type;
+	struct termios Termios;
+} terminal_attrs_t;
+
+ML_TYPE(AttrsT, (), "terminal::attrs");
+
+ML_METHOD("attrs", TerminalT) {
+	int Fd = ml_fd_stream_fd(Args[0]);
+	terminal_attrs_t *Attrs = new(terminal_attrs_t);
+	Attrs->Type = AttrsT;
+	tcgetattr(Fd, &Attrs->Termios);
+	return (ml_value_t *)Attrs;
+}
+
+ML_METHOD("attrs", TerminalT, AttrsT, MLIntegerT) {
+	int Fd = ml_fd_stream_fd(Args[0]);
+	terminal_attrs_t *Attrs = (terminal_attrs_t *)Args[1];
+	tcsetattr(Fd, ml_integer_value(Args[2]), &Attrs->Termios);
+	return Args[0];
+}
+
 #define FLAG_METHODS(UPPER, LOWER) \
 \
-ML_METHOD("get", TerminalT, Terminal ## UPPER ## FlagT) { \
-	int Fd = ml_fd_stream_fd(Args[0]); \
-	struct termios Termios; \
-	tcgetattr(Fd, &Termios); \
-	return ml_boolean(Termios.c_ ## LOWER ## flag & ml_enum_value_value(Args[1])); \
+ML_METHOD("get", AttrsT, UPPER ## FlagT) { \
+	terminal_attrs_t *Attrs = (terminal_attrs_t *)Args[0]; \
+	return ml_boolean(Attrs->Termios.c_ ## LOWER ## flag & ml_enum_value_value(Args[1])); \
 } \
 \
-ML_METHOD("set", TerminalT, Terminal ## UPPER ## FlagT, MLBooleanT) { \
-	int Fd = ml_fd_stream_fd(Args[0]); \
-	struct termios Termios; \
-	tcgetattr(Fd, &Termios); \
+ML_METHOD("set", AttrsT, UPPER ## FlagT, MLBooleanT) { \
+	terminal_attrs_t *Attrs = (terminal_attrs_t *)Args[0]; \
 	if (ml_boolean_value(Args[2])) { \
-		Termios.c_ ## LOWER ## flag |= ml_enum_value_value(Args[1]); \
+		Attrs->Termios.c_ ## LOWER ## flag |= ml_enum_value_value(Args[1]); \
 	} else { \
-		Termios.c_ ## LOWER ## flag &= ~ml_enum_value_value(Args[1]); \
+		Attrs->Termios.c_ ## LOWER ## flag &= ~ml_enum_value_value(Args[1]); \
 	}  \
-	tcsetattr(Fd, TCSAFLUSH, &Termios); \
 	return Args[0]; \
 }
 
@@ -133,6 +155,12 @@ FLAG_METHODS(I, i)
 FLAG_METHODS(O, o)
 FLAG_METHODS(C, c)
 FLAG_METHODS(L, l)
+
+ML_METHOD("setraw", AttrsT) {
+	terminal_attrs_t *Attrs = (terminal_attrs_t *)Args[0];;
+	cfmakeraw(&Attrs->Termios);
+	return Args[0];
+}
 
 static struct termios SavedIn;
 static struct termios SavedOut;
@@ -146,10 +174,15 @@ static void restore_termios() {
 
 ML_LIBRARY_ENTRY0(io_terminal) {
 #include "terminal_init.c"
-	stringmap_insert(TerminalT->Exports, "iflag", TerminalIFlagT);
-	stringmap_insert(TerminalT->Exports, "oflag", TerminalOFlagT);
-	stringmap_insert(TerminalT->Exports, "cflag", TerminalCFlagT);
-	stringmap_insert(TerminalT->Exports, "lflag", TerminalLFlagT);
+	stringmap_insert(TerminalT->Exports, "iflag", IFlagT);
+	stringmap_insert(TerminalT->Exports, "oflag", OFlagT);
+	stringmap_insert(TerminalT->Exports, "cflag", CFlagT);
+	stringmap_insert(TerminalT->Exports, "lflag", LFlagT);
+	stringmap_insert(TerminalT->Exports, "attrs", AttrsT);
+	stringmap_insert(TerminalT->Exports, "TCSANOW", ml_integer(TCSANOW));
+	stringmap_insert(TerminalT->Exports, "TCSADRAIN", ml_integer(TCSADRAIN));
+	stringmap_insert(TerminalT->Exports, "TCSAFLUSH", ml_integer(TCSAFLUSH));
+	//stringmap_insert(TerminalT->Exports, "TCSASOFT", ml_integer(TCSASOFT));
 	if (isatty(STDIN_FILENO)) tcgetattr(STDIN_FILENO, &SavedIn);
 	if (isatty(STDOUT_FILENO)) tcgetattr(STDOUT_FILENO, &SavedOut);
 	if (isatty(STDERR_FILENO)) tcgetattr(STDERR_FILENO, &SavedErr);

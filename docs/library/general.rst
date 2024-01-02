@@ -9,7 +9,19 @@ general
 
 .. rst-class:: mini-api
 
-:mini:`meth :UevT()`
+:mini:`fun context()`
+   *TBD*
+
+
+:mini:`fun eventsleep()`
+   *TBD*
+
+
+:mini:`meth :FDBDatabaseT()`
+   *TBD*
+
+
+:mini:`type context`
    *TBD*
 
 
@@ -21,48 +33,23 @@ general
    *TBD*
 
 
-:mini:`meth (Arg₁: fdbtransaction):commit`
+:mini:`type dqlite`
    *TBD*
 
 
-:mini:`type geometry`
+:mini:`meth (Arg₁: dqlite):start`
    *TBD*
 
 
-:mini:`type graph < object`
+:mini:`meth (Arg₁: dqlite):stop`
    *TBD*
 
 
-:mini:`meth (Arg₁: fdbtransaction):set(Arg₂: address, Arg₃: address)`
+:mini:`meth (Arg₁: eventbase):dispatch`
    *TBD*
 
 
-:mini:`meth (Arg₁: fdbtransaction):get(Arg₂: address)`
-   *TBD*
-
-
-:mini:`type fdbtransaction`
-   *TBD*
-
-
-:mini:`type graphdesc < enum`
-   * :mini:`::Directed`
-   * :mini:`::Undirected`
-
-
-:mini:`type instance`
-   *TBD*
-
-
-:mini:`meth (Arg₁: graph):nodes`
-   *TBD*
-
-
-:mini:`meth (Arg₁: graph)[Arg₂: string]`
-   *TBD*
-
-
-:mini:`meth (Arg₁: node) --- (Arg₂: node)`
+:mini:`meth (Arg₁: eventbase):http`
    *TBD*
 
 
@@ -70,31 +57,47 @@ general
    *TBD*
 
 
-:mini:`meth (Arg₁: string::buffer):append(Arg₂: node)`
+:mini:`type fdbdatabase`
    *TBD*
 
 
-:mini:`meth (Arg₁: node):remove`
+:mini:`meth (Arg₁: fdbdatabase):transaction`
    *TBD*
 
 
-:mini:`type object`
+:mini:`type fdbtransaction`
    *TBD*
 
 
-:mini:`type eventbase`
+:mini:`meth (Arg₁: fdbtransaction):commit`
    *TBD*
 
 
-:mini:`type node < object`
+:mini:`meth (Arg₁: fdbtransaction):get(Arg₂: address)`
    *TBD*
 
 
-:mini:`meth (Arg₁: object):get(Arg₂: string)`
+:mini:`meth (Arg₁: eventbase):new(Arg₂: file)`
    *TBD*
 
 
-:mini:`meth (Arg₁: object):set(Arg₂: string, Arg₃: string)`
+:mini:`meth (Arg₁: fdbtransaction):set(Arg₂: address, Arg₃: address)`
+   *TBD*
+
+
+:mini:`type geometry`
+   *TBD*
+
+
+:mini:`type instance`
+   *TBD*
+
+
+:mini:`fun mldqlite(Arg₁: integer, Arg₂: string, Arg₃: string)`
+   *TBD*
+
+
+:mini:`type plugin`
    *TBD*
 
 
@@ -103,10 +106,6 @@ general
 
 
 :mini:`meth (Arg₁: plugin):uri`
-   *TBD*
-
-
-:mini:`type pluginclass`
    *TBD*
 
 
@@ -122,47 +121,7 @@ general
    *TBD*
 
 
-:mini:`type query`
-   *TBD*
-
-
-:mini:`type rainstance`
-   *TBD*
-
-
 :mini:`meth (Arg₁: rainstance)[Arg₂: string]`
-   *TBD*
-
-
-:mini:`type ralistener`
-   *TBD*
-
-
-:mini:`type raschema`
-   *TBD*
-
-
-:mini:`type raschemaindex`
-   *TBD*
-
-
-:mini:`meth (Arg₁: string):FDBDatabaseT`
-   *TBD*
-
-
-:mini:`meth (Arg₁: string):GraphT`
-   *TBD*
-
-
-:mini:`meth (Arg₁: string):GraphT(Arg₂: graphdesc)`
-   *TBD*
-
-
-:mini:`type term < sequence`
-   *TBD*
-
-
-:mini:`meth (Arg₁: node):edges`
    *TBD*
 
 
@@ -170,59 +129,15 @@ general
    *TBD*
 
 
-:mini:`type plugin`
-   *TBD*
-
-
 :mini:`meth (Arg₁: ralistener):delete`
    *TBD*
 
 
-:mini:`meth (Arg₁: node):out`
+:mini:`meth (Arg₁: string):FDBDatabaseT`
    *TBD*
 
 
-:mini:`meth (Arg₁: node) --> (Arg₂: node)`
-   *TBD*
-
-
-:mini:`meth (Arg₁: string::buffer):append(Arg₂: edge)`
-   *TBD*
-
-
-:mini:`fun mldqlite(Arg₁: integer, Arg₂: string, Arg₃: string)`
-   *TBD*
-
-
-:mini:`meth (Arg₁: edge):remove`
-   *TBD*
-
-
-:mini:`meth (Arg₁: fdbdatabase):transaction`
-   *TBD*
-
-
-:mini:`meth (Arg₁: eventbase):http`
-   *TBD*
-
-
-:mini:`type fdbdatabase`
-   *TBD*
-
-
-:mini:`meth (Arg₁: eventbase):dispatch`
-   *TBD*
-
-
-:mini:`meth (Arg₁: eventbase):new(Arg₂: file)`
-   *TBD*
-
-
-:mini:`type event`
-   *TBD*
-
-
-:mini:`meth (Arg₁: string::buffer):append(Arg₂: graph)`
+:mini:`type term < sequence`
    *TBD*
 
 
@@ -258,31 +173,31 @@ general
    *TBD*
 
 
-:mini:`type context`
+:mini:`type event`
    *TBD*
 
 
-:mini:`meth (Arg₁: node):in`
+:mini:`type eventbase`
    *TBD*
 
 
-:mini:`meth (Arg₁: dqlite):stop`
+:mini:`type ralistener`
    *TBD*
 
 
-:mini:`meth (Arg₁: dqlite):start`
+:mini:`type raschema`
    *TBD*
 
 
-:mini:`type edge < object`
+:mini:`type query`
    *TBD*
 
 
-:mini:`meth :FDBDatabaseT()`
+:mini:`type rainstance`
    *TBD*
 
 
-:mini:`fun getallplugins()`
+:mini:`type raschemaindex`
    *TBD*
 
 
@@ -310,7 +225,7 @@ general
    *TBD*
 
 
-:mini:`type dqlite`
+:mini:`type pluginclass`
    *TBD*
 
 
@@ -318,7 +233,7 @@ general
    *TBD*
 
 
-:mini:`fun eventsleep()`
+:mini:`meth :UevT()`
    *TBD*
 
 
@@ -337,11 +252,11 @@ general
    * :mini:`::Once`
 
 
-:mini:`fun context()`
+:mini:`fun eventbasenew()`
    *TBD*
 
 
-:mini:`fun eventbasenew()`
+:mini:`fun getallplugins()`
    *TBD*
 
 

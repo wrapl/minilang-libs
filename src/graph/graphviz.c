@@ -4,6 +4,9 @@
 #include <minilang/ml_macros.h>
 #include <graphviz/cgraph.h>
 
+#undef ML_CATEGORY
+#define ML_CATEGORY "graph/graphviz"
+
 typedef struct {
 	ml_type_t *Type;
 	void *Handle;
@@ -31,8 +34,10 @@ typedef struct {
 ML_TYPE(GraphT, (ObjectT), "graph");
 
 ML_ENUM(GraphDescT, "graph::desc",
-	"Directed", "StrictDirected",
-	"Undirected", "StrictUndirected"
+	"Directed",
+	"StrictDirected",
+	"Undirected",
+	"StrictUndirected"
 );
 
 static void graph_finalize(graph_t *Graph, void *Data) {

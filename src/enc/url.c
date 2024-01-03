@@ -90,7 +90,7 @@ ML_FUNCTION(Decode) {
 	return ml_string(OutChars, OutSize);
 }
 
-void ml_library_entry0(ml_value_t **Slot) {
+ML_LIBRARY_ENTRY0(enc_url) {
 #include "url_init.c"
 	Slot[0] = ml_module("url",
 		"encode", Encode,

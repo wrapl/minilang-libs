@@ -7,7 +7,11 @@
 util/bitset
 ===========
 
-.. _type-bitset:
+.. rst-class:: mini-api
+
+:mini:`fun decodebitset(Arg₁: address)`
+   *TBD*
+
 
 :mini:`type bitset < sequence`
    *TBD*

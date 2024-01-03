@@ -1,1 +1,1 @@
-DEFAULT[mini_module("jupyter/kernel.mini")]
+mini_module("jupyter/kernel.mini")

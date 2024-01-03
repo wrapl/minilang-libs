@@ -1,0 +1,1 @@
+so_module("graph/graphviz.so", [file("graphviz.o")], ["-lcdt", "-lcgraph"])

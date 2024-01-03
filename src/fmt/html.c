@@ -65,7 +65,11 @@ ML_FUNCTION(Parse) {
 	return (ml_value_t *)Xml;
 }
 
-void ml_library_entry0(ml_value_t **Slot) {
+ml_value_t *html_entity(const char *Value, int Length) {
+
+}
+
+ML_LIBRARY_ENTRY0(fmt_html) {
 #include "html_init.c"
 	Slot[0] = ml_module("html",
 		"parse", Parse,

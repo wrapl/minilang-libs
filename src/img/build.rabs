@@ -1,10 +1,12 @@
-CFLAGS := old + [
-	pkgconfig("--cflags cairo-gobject"),
-	pkgconfig("--cflags gobject-introspection-1.0")
-]
-LDFLAGS := old + [
-	pkgconfig("--libs cairo-gobject"),
-	pkgconfig("--libs gobject-introspection-1.0")
-]
-
-DEFAULT[so_module("img/cairo.so", [file("cairo.o")])]
+scope("cairo";) do
+	CFLAGS := old + [
+		pkgconfig("--cflags cairo-gobject"),
+		pkgconfig("--cflags gobject-introspection-1.0")
+	]
+	LDFLAGS := old + [
+		pkgconfig("--libs cairo-gobject"),
+		pkgconfig("--libs gobject-introspection-1.0")
+	]
+	
+	so_module("img/cairo.so", [file("cairo.o")])
+end

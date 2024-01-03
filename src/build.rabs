@@ -12,6 +12,18 @@ let SourceTypes := {
 	"cpp" is [c_includes, c_compile]
 }
 
+INIT_HEADERS := meta("MINILANG"):scan("INCLUDES") => fun() do
+	var Lines := shell(CC, '-c', CFLAGS, '-M -MG', file("ml_test.c"))
+	Lines := Lines:replace("\\\n ", "")
+	Lines := Lines[Lines:find(": ") + 2, 0]:trim
+	var Files := Lines / r"[^\\]( +)"
+	for File in Files do
+		File := file(File:replace("\\ ", " "))
+	end
+	check(Files)
+	ret Files
+end
+
 fun generate_init_file(Source) do
 	let InitFile := Source:basename:replace(".c", "_init.c")
 	let Target := file(InitFile)[Source, PREBUILDS, INIT_HEADERS] => fun() do
@@ -32,6 +44,21 @@ fun generate_init_file(Source) do
 	end
 end
 
+let Exports := file("exports.lst")
+let Modules := []
+
+fun module(Name, File, Tags) do
+	Modules:put((Name:before("."), File, []))
+	if defined("INSTALL") then
+		let Installed := (InstallModules / Name)[File] => fun(Target) do
+			print(File, " -> ", Target, "\n")
+			Target:dir:mkdir
+			File:copy(Target)
+		end
+		Modules:put((Name:before("."), Installed, []))
+	end
+end
+
 so_module := fun(Name, Objects, Libraries) do
 	let Library := MODULE_DIR / Name
 	let Sources := []
@@ -47,23 +74,22 @@ so_module := fun(Name, Objects, Libraries) do
 			end
 		end
 	end
-	install(Library, InstallModules / Name)
 	Library[Objects, Libraries] => fun(Library) do
 		Library:dir:mkdir
-		execute('cc', '-o', Library, '-shared', '-export-dynamic', Objects, Libraries, LDFLAGS)
+		execute('cc', '-o', Library, '-shared', '-export-dynamic', Objects, Libraries, LDFLAGS, '-Wl,--dynamic-list={Exports}')
 		:>DEBUG or execute("strip", Library)
 	end
+	module(Name, Library, [])
 end
 
 mini_module := fun(Name) do
 	let Library := MODULE_DIR / Name
 	let Source := file((Name / "/")[-1])
-	install(Library, InstallModules / Name)
 	Library[Source] => fun(Target) do
-		print(Source, " -> ", Target, "\n")
 		Target:dir:mkdir
 		Source:copy(Target)
 	end
+	module(Name, Library, [])
 end
 
 CFLAGS := old + [
@@ -85,7 +111,7 @@ CFLAGS := old + [
 	'-D{PLATFORM}',
 	"-fpic", "-I.."
 ]
-LDFLAGS := old + ["-lm", "-ldl", '-Wl,--dynamic-list={file("exports.lst")}']
+LDFLAGS := old + ["-lm", "-ldl"]
 
 DEBUG := defined("DEBUG")
 
@@ -97,18 +123,22 @@ else
 	LDFLAGS := old + ["-g"]
 end
 
-subdir("db")
-subdir("digest")
-subdir("enc")
-subdir("event")
-subdir("fmt")
-subdir("img")
-subdir("jupyter")
-subdir("log")
-subdir("net")
-subdir("parse")
-:>subdir("phys")
-subdir("snd")
-subdir("solver")
-subdir("util")
-subdir("web")
+for Path in file(""):ls do
+	if Path / "build.rabs" exists () then
+		subdir(Path:basename)
+	end
+end
+
+context():parent:in(;) do
+	let All := meta("all")
+	let ByTag := {}
+	for (Name, File, Tags) in Modules do
+		:>print('Found module: {Name} -> {File}\n')
+		let Meta := meta(Name)[File]
+		All[Meta]
+		:>print('\tMeta = {Meta:id}\n')
+		for Tag in Tags do
+			ByTag[Tag, meta][File]
+		end
+	end
+end

@@ -1,1 +1,1 @@
-DEFAULT[so_module("digest/hmac.so", [file("hmac.o")], ["-lnettle"])]
+so_module("digest/hmac.so", [file("hmac.o")], ["-lnettle"])

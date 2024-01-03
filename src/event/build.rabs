@@ -6,8 +6,23 @@ LIBUV := file("lib/libuv_a.a") => fun() do
 	execute("make install")
 end
 
+scope("libuev";) do
+	let LIBUEV := file("lib/libuev.a") => fun() do
+		let Dir := file("libuev"):rmdir:mkdir:chdir
+		execute("git clone --recursive https://github.com/troglobit/libuev.git .")
+		execute("./autogen.sh")
+		execute('./configure --prefix={PATH}')
+		execute("make -j4")
+		execute("make install")
+	end
+	CFLAGS := old + ['-I{file("include")}']
+	PREBUILDS := old + [LIBUEV]
+	so_module("event/uev.so", [file("uev.o"), LIBUEV])
+end
 
 scope("libevent";) do
 	LDFLAGS := old + ["-levent"]
-	DEFAULT[so_module("event/libevent.so", [file("libevent.o")])]
+	so_module("event/libevent.so", [file("libevent.o")])
 end
+
+so_module("event.so", [file("event.o")])

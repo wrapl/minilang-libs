@@ -8,5 +8,5 @@ scope("zlog";) do
 	end
 	PREBUILDS := old + [Lib]
 	CFLAGS := old + ["-I", file("zlog/src")]
-	DEFAULT[so_module("log/zlog.so", [file("zlog.o")], [Lib])]
+	so_module("log/zlog.so", [file("zlog.o")], [Lib])
 end

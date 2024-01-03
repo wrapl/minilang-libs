@@ -1,5 +1,5 @@
 {
-	"argv": ["~/Work/Minilang/bin/minilang", "-L", "~/Work/MinilangLibs/lib/minilang", "-g", "-m", "jupyter/kernel", "{connection_file}"],
+	"argv": ["minilang", "-g", "-m", "jupyter/kernel", "{connection_file}"],
 	"display_name": "Minilang",
 	"language": "minilang"
 }

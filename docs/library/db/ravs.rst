@@ -7,53 +7,49 @@
 db/ravs
 =======
 
-.. _fun-versionstorecreate:
+.. rst-class:: mini-api
 
 :mini:`fun versionstorecreate(Arg₁: string)`
    *TBD*
 
 
-.. _fun-versionstoreopen:
-
 :mini:`fun versionstoreopen(Arg₁: string)`
    *TBD*
 
 
-.. _type-version_store:
-
-:mini:`type version_store`
+:mini:`type versionstore`
    *TBD*
 
 
-:mini:`meth (Arg₁: version_store):add(Arg₂: any)`
+:mini:`meth (Arg₁: versionstore):add(Arg₂: any)`
    *TBD*
 
 
-:mini:`meth (Arg₁: version_store):change(Arg₂: string)`
+:mini:`meth (Arg₁: versionstore):change(Arg₂: string)`
    *TBD*
 
 
-:mini:`meth (Arg₁: version_store):changes(Arg₂: integer)`
+:mini:`meth (Arg₁: versionstore):changes(Arg₂: integer)`
    *TBD*
 
 
-:mini:`meth (Arg₁: version_store):close`
+:mini:`meth (Arg₁: versionstore):close`
    *TBD*
 
 
-:mini:`meth (Arg₁: version_store):get(Arg₂: integer)`
+:mini:`meth (Arg₁: versionstore):get(Arg₂: integer)`
    *TBD*
 
 
-:mini:`meth (Arg₁: version_store):get(Arg₂: integer, Arg₃: integer)`
+:mini:`meth (Arg₁: versionstore):get(Arg₂: integer, Arg₃: integer)`
    *TBD*
 
 
-:mini:`meth (Arg₁: version_store):history(Arg₂: integer)`
+:mini:`meth (Arg₁: versionstore):history(Arg₂: integer)`
    *TBD*
 
 
-:mini:`meth (Arg₁: version_store):set(Arg₂: integer, Arg₃: any)`
+:mini:`meth (Arg₁: versionstore):set(Arg₂: integer, Arg₃: any)`
    *TBD*
 
 

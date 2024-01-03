@@ -16,9 +16,9 @@ extern ml_type_t CurlT[];
 
 static int progress_callback(curl_t *Curl, curl_off_t DLTotal, curl_off_t DLNow, curl_off_t ULTotal, curl_off_t ULNow) {
 	for (;;) {
-		ml_queued_state_t Queued = ml_scheduler_queue_next();
+		ml_queued_state_t Queued = ml_default_queue_next();
 		if (!Queued.State) break;
-		Queued.State->run(Queued.State, Queued.Value);
+		ml_state_schedule(Queued.State, Queued.Value);
 	}
 	return CURL_PROGRESSFUNC_CONTINUE;
 }
@@ -388,7 +388,7 @@ static void *GC_calloc(size_t N, size_t S) {
 	return GC_malloc(N * S);
 }
 
-void ml_library_entry0(ml_value_t **Slot) {
+ML_LIBRARY_ENTRY0(net_curl) {
 	curl_global_init_mem(CURL_GLOBAL_DEFAULT,
 		GC_malloc, nop_free, GC_realloc,
 		GC_strdup, GC_calloc

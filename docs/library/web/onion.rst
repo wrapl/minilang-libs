@@ -7,7 +7,7 @@
 web/onion
 =========
 
-.. _fun-onionurl:
+.. rst-class:: mini-api
 
 :mini:`fun onionurl()`
    *TBD*
@@ -24,8 +24,6 @@ web/onion
 :mini:`meth (Arg₁: integer):OnionHandlerT(Arg₂: string)`
    *TBD*
 
-
-.. _type-onion:
 
 :mini:`type onion`
    *TBD*
@@ -55,7 +53,7 @@ web/onion
    *TBD*
 
 
-:mini:`meth (Arg₁: onion):set_internal_error_handler(Arg₂: onion_handler)`
+:mini:`meth (Arg₁: onion):set_internal_error_handler(Arg₂: onionhandler)`
    *TBD*
 
 
@@ -67,137 +65,123 @@ web/onion
    *TBD*
 
 
-:mini:`meth (Arg₁: onion):set_root_handler(Arg₂: onion_handler)`
+:mini:`meth (Arg₁: onion):set_root_handler(Arg₂: onionhandler)`
    *TBD*
 
 
-.. _type-onion_handler:
-
-:mini:`type onion_handler`
+:mini:`type onionhandler`
    *TBD*
 
 
-:mini:`meth (Arg₁: onion_handler):add(Arg₂: onion_handler)`
+:mini:`meth (Arg₁: onionhandler):add(Arg₂: onionhandler)`
    *TBD*
 
 
-:mini:`meth (Arg₁: onion_mode):OnionT`
+:mini:`meth (Arg₁: onionmode):OnionT`
    *TBD*
 
 
-.. _type-onion_request:
-
-:mini:`type onion_request`
+:mini:`type onionrequest`
    *TBD*
 
 
-.. _fun-onionwebsocket:
-
-:mini:`fun onionwebsocket(Arg₁: onion_request, Arg₂: onion_response)`
+:mini:`fun onionwebsocket(Arg₁: onionrequest, Arg₂: onionresponse)`
    *TBD*
 
 
-:mini:`meth (Arg₁: onion_request):get_cookie(Arg₂: string)`
+:mini:`meth (Arg₁: onionrequest):get_cookie(Arg₂: string)`
    *TBD*
 
 
-:mini:`meth (Arg₁: onion_request):get_data`
+:mini:`meth (Arg₁: onionrequest):get_data`
    *TBD*
 
 
-:mini:`meth (Arg₁: onion_request):get_file(Arg₂: string)`
+:mini:`meth (Arg₁: onionrequest):get_file(Arg₂: string)`
    *TBD*
 
 
-:mini:`meth (Arg₁: onion_request):get_fullpath`
+:mini:`meth (Arg₁: onionrequest):get_fullpath`
    *TBD*
 
 
-:mini:`meth (Arg₁: onion_request):get_header(Arg₂: string)`
+:mini:`meth (Arg₁: onionrequest):get_header(Arg₂: string)`
    *TBD*
 
 
-:mini:`meth (Arg₁: onion_request):get_path`
+:mini:`meth (Arg₁: onionrequest):get_path`
    *TBD*
 
 
-:mini:`meth (Arg₁: onion_request):get_post(Arg₂: string)`
+:mini:`meth (Arg₁: onionrequest):get_post(Arg₂: string)`
    *TBD*
 
 
-:mini:`meth (Arg₁: onion_request):get_query(Arg₂: string)`
+:mini:`meth (Arg₁: onionrequest):get_query(Arg₂: string)`
    *TBD*
 
 
-.. _type-onion_response:
-
-:mini:`type onion_response < stream`
+:mini:`type onionresponse < stream`
    *TBD*
 
 
-:mini:`meth (Arg₁: onion_response):add_cookie(Arg₂: string, Arg₃: string)`
+:mini:`meth (Arg₁: onionresponse):add_cookie(Arg₂: string, Arg₃: string)`
    *TBD*
 
 
-:mini:`meth (Arg₁: onion_response):flush`
+:mini:`meth (Arg₁: onionresponse):flush`
    *TBD*
 
 
-:mini:`meth (Arg₁: onion_response):set_code(Arg₂: integer)`
+:mini:`meth (Arg₁: onionresponse):set_code(Arg₂: integer)`
    *TBD*
 
 
-:mini:`meth (Arg₁: onion_response):set_header(Arg₂: string, Arg₃: string)`
+:mini:`meth (Arg₁: onionresponse):set_header(Arg₂: string, Arg₃: string)`
    *TBD*
 
 
-:mini:`meth (Arg₁: onion_response):write(Arg₂: string)`
+:mini:`meth (Arg₁: onionresponse):write(Arg₂: string)`
    *TBD*
 
 
-.. _type-onion_state:
-
-:mini:`type onion_state`
+:mini:`type onionstate`
    *TBD*
 
 
-.. _type-onion_url:
-
-:mini:`type onion_url`
+:mini:`type onionurl`
    *TBD*
 
 
-:mini:`meth (Arg₁: onion_url):add(Arg₂: string, Arg₃: function)`
+:mini:`meth (Arg₁: onionurl):add(Arg₂: string, Arg₃: function)`
    *TBD*
 
 
-:mini:`meth (Arg₁: onion_url):add(Arg₂: string, Arg₃: onion_handler)`
+:mini:`meth (Arg₁: onionurl):add(Arg₂: string, Arg₃: onionhandler)`
    *TBD*
 
 
-:mini:`meth (Arg₁: onion_url):add_static(Arg₂: string, Arg₃: integer, Arg₄: string)`
+:mini:`meth (Arg₁: onionurl):add_static(Arg₂: string, Arg₃: integer, Arg₄: string)`
    *TBD*
 
 
-:mini:`meth (Arg₁: onion_url):to_handler`
+:mini:`meth (Arg₁: onionurl):to_handler`
    *TBD*
 
 
-.. _type-onion_websocket:
-
-:mini:`type onion_websocket`
+:mini:`type onionwebsocket`
    *TBD*
 
 
-:mini:`meth (Arg₁: onion_websocket):set_callback(Arg₂: function)`
+:mini:`meth (Arg₁: onionwebsocket):set_callback(Arg₂: function)`
    *TBD*
 
 
-:mini:`meth (Arg₁: onion_websocket):set_opcode(Arg₂: onion_websocket_opcode)`
+:mini:`meth (Arg₁: onionwebsocket):set_opcode(Arg₂: onionwebsocketopcode)`
    *TBD*
 
 
-:mini:`meth (Arg₁: onion_websocket):write(Arg₂: string)`
+:mini:`meth (Arg₁: onionwebsocket):write(Arg₂: string)`
    *TBD*
 
 

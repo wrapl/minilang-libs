@@ -16,7 +16,7 @@ static uv_idle_t Idle[1];
 static unsigned int MLUVCounter = 100;
 
 static void ml_uv_resume(uv_idle_t *Idle) {
-	ml_queued_state_t QueuedState = ml_scheduler_queue_next();
+	ml_queued_state_t QueuedState = ml_default_queue_next();
 	if (QueuedState.State) {
 		MLUVCounter = 100;
 		QueuedState.State->run(QueuedState.State, QueuedState.Value);
@@ -26,7 +26,7 @@ static void ml_uv_resume(uv_idle_t *Idle) {
 }
 
 static void ml_uv_swap(ml_state_t *State, ml_value_t *Value) {
-	if (ml_scheduler_queue_add(State, Value) == 1) {
+	if (ml_default_queue_add(State, Value) == 1) {
 		uv_idle_start(Idle, ml_uv_resume);
 	}
 }
@@ -170,7 +170,7 @@ void *ml_calloc(size_t Count, size_t Size) {
 void ml_free(void *Ptr) {
 }
 
-void ml_library_entry0(ml_value_t **Slot) {
+ML_LIBRARY_ENTRY0 {
 	uv_replace_allocator(GC_malloc, GC_realloc, ml_calloc, ml_free);
 	Loop = uv_default_loop();
 	uv_idle_init(Loop, Idle);

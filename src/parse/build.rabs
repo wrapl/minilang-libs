@@ -1,4 +1,4 @@
-DEFAULT[mini_module("parse/rapc.mini")]
+mini_module("parse/rapc.mini")
 
 scope("mpc";) do
 	let MPC := file("mpc/mpc.c") => fun() do
@@ -7,10 +7,10 @@ scope("mpc";) do
 		execute("cat", file("mpc_extra.c"), " >> ", "mpc/mpc.c")
 	end
 	PREBUILDS := old + [MPC]
-	DEFAULT[so_module("parse/mpc.so", [file("mpc.o"), file("mpc/mpc.o")])]
+	so_module("parse/mpc.so", [file("mpc.o"), file("mpc/mpc.o")])
 end
 
-scope("cleri";) do
+:<scope("cleri";) do
 	let Obj := file("libcleri/src"):mkdir
 	CFLAGS := old + ['-I{file("libcleri/inc")}']
 	let Objects := [file("ml_cleri.o")]
@@ -18,5 +18,5 @@ scope("cleri";) do
 		Objects:put(Obj / (Source % "o" basename ()))
 	end
 	LDFLAGS := old + ["-lpcre2-8"]
-	DEFAULT[so_module("parse/cleri.so", Objects)]
-end
+	so_module("parse/cleri.so", Objects)
+end>:

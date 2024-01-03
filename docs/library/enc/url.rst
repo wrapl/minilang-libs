@@ -7,13 +7,11 @@
 enc/url
 =======
 
-.. _fun-decode:
+.. rst-class:: mini-api
 
 :mini:`fun decode(String: address): address`
    *TBD*
 
-
-.. _fun-encode:
 
 :mini:`fun encode(Address: address): string`
    *TBD*

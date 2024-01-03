@@ -7,13 +7,11 @@
 db/sqlite
 =========
 
-.. _type-sqlite:
+.. rst-class:: mini-api
 
 :mini:`type sqlite`
    *TBD*
 
-
-.. _fun-sqlite:
 
 :mini:`fun sqlite(Arg₁: string, Arg₂: sqlite::open): sqlite`
    *TBD*
@@ -31,13 +29,30 @@ db/sqlite
    *TBD*
 
 
-.. _type-sqlite-open:
-
 :mini:`type sqlite::open < flags`
-   *TBD*
+   * :mini:`::READONLY`
+   * :mini:`::READWRITE`
+   * :mini:`::CREATE`
+   * :mini:`::DELETEONCLOSE`
+   * :mini:`::EXCLUSIVE`
+   * :mini:`::AUTOPROXY`
+   * :mini:`::URI`
+   * :mini:`::MEMORY`
+   * :mini:`::MAIN_DB`
+   * :mini:`::TEMP_DB`
+   * :mini:`::TRANSIENT_DB`
+   * :mini:`::MAIN_JOURNAL`
+   * :mini:`::TEMP_JOURNAL`
+   * :mini:`::SUBJOURNAL`
+   * :mini:`::SUPER_JOURNAL`
+   * :mini:`::NOMUTEX`
+   * :mini:`::FULLMUTEX`
+   * :mini:`::SHAREDCACHE`
+   * :mini:`::PRIVATECACHE`
+   * :mini:`::WAL`
+   * :mini:`::NOFOLLOW`
+   * :mini:`::EXRESCODE`
 
-
-.. _type-sqlite-stmt:
 
 :mini:`type sqlite::stmt < sequence`
    *TBD*

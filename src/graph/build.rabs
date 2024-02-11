@@ -1,1 +1,17 @@
+:<let GraphvizUrl := "https://gitlab.com/api/v4/projects/4207231/packages/generic/graphviz-releases/9.0.0/graphviz-9.0.0.tar.gz"
+
+scope("graphviz";) do
+	let Dir := file("graphviz")
+	let Graphviz := meta("graphviz") => fun() do
+		Dir:rmdir:mkdir:chdir
+		execute("wget", GraphvizUrl, "-O- | tar xvzP --strip-components=1")
+		execute("./configure")
+		execute("make clean")
+		execute("make -j4")
+	end
+	PREBUILDS := old + [Graphviz]
+	CFLAGS := old + ["-I", Dir/"include"]
+	so_module("graph/graphviz.so", [file("graphviz.o")], [])
+end>:
+
 so_module("graph/graphviz.so", [file("graphviz.o")], ["-lcdt", "-lcgraph"])

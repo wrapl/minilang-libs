@@ -216,7 +216,7 @@ ML_METHOD("---", NodeT, NodeT) {
 	node_t *B = (node_t *)Args[1];
 	graph_t *Graph = A->Graph;
 	if (Graph != B->Graph) return ml_error("GraphError", "Nodes are from different graphs");
-	return edge(Graph, agedge(Graph->Handle, A->Handle, B->Handle, NULL, TRUE));
+	return edge(Graph, agedge(Graph->Handle, B->Handle, A->Handle, NULL, TRUE));
 }
 
 ML_METHOD("-->", NodeT, NodeT) {
@@ -224,7 +224,7 @@ ML_METHOD("-->", NodeT, NodeT) {
 	node_t *B = (node_t *)Args[1];
 	graph_t *Graph = A->Graph;
 	if (Graph != B->Graph) return ml_error("GraphError", "Nodes are from different graphs");
-	return edge(Graph, agedge(Graph->Handle, A->Handle, B->Handle, NULL, TRUE));
+	return edge(Graph, agedge(Graph->Handle, B->Handle, A->Handle, NULL, TRUE));
 }
 
 ML_METHOD("out", NodeT) {

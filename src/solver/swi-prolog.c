@@ -185,7 +185,7 @@ static ml_value_t *ML_TYPED_FN(ml_to_term, MLSymbolT, ml_symbol_t *Symbol, term_
 	}
 	PL_put_variable(Arg);
 	query_var_t *Var = new(query_var_t);
-	Var->Name = ml_string(Name, Length);
+	Var->Name = ml_string_unchecked(Name, Length);
 	Var->Next = Query->Variables;
 	Var->Term = Arg;
 	Query->Variables = Var;

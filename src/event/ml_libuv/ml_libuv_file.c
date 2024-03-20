@@ -64,7 +64,7 @@ static void ml_uv_fs_read_cb(ml_uv_fs_buf_t *Request) {
 	ml_state_t *Caller = (ml_state_t *)Request->Base.data;
 	ml_value_t *Result;
 	if (Request->Base.result > 0) {
-		Result = ml_string(Request->IOV[0].base, Request->Base.result);
+		Result = ml_string_unchecked(Request->IOV[0].base, Request->Base.result);
 	} else {
 		Result = ml_error("ReadError", "error reading from file");
 	}

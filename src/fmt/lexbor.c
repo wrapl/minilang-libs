@@ -29,7 +29,7 @@ ML_METHOD("name", NodeT) {
 	node_t *Node = (node_t *)Args[0];
 	size_t Length;
 	const lxb_char_t *Name = lxb_dom_node_name(Node->Handle, &Length);
-	return ml_string((const char *)Name, Length);
+	return ml_string_unchecked((const char *)Name, Length);
 }
 
 ML_METHOD("parent", NodeT) {
@@ -41,7 +41,7 @@ ML_METHOD("text", NodeT) {
 	node_t *Node = (node_t *)Args[0];
 	size_t Length;
 	const lxb_char_t *Text = lxb_dom_node_text_content(Node->Handle, &Length);
-	return ml_string((const char *)Text, Length);
+	return ml_string_unchecked((const char *)Text, Length);
 }
 
 ML_METHOD("append", MLStringBufferT, NodeT) {
@@ -148,7 +148,7 @@ ML_METHOD("value", ElementT) {
 	node_t *Node = (node_t *)Args[0];
 	lexbor_str_t *IsValue = ((lxb_dom_element_t *)Node->Handle)->is_value;
 	if (!IsValue) return MLNil;
-	return ml_string((const char *)IsValue->data, IsValue->length);
+	return ml_string_unchecked((const char *)IsValue->data, IsValue->length);
 }
 
 typedef struct {
@@ -163,7 +163,7 @@ static ml_value_t *attribute_deref(attribute_t *Attribute) {
 	const lxb_char_t *Text = lxb_dom_element_get_attribute(Attribute->Element,
 		Attribute->Name, Attribute->Length, &Length
 	);
-	return ml_string((const char *)Text, Length);
+	return ml_string_unchecked((const char *)Text, Length);
 }
 
 static void attribute_assign(ml_state_t *Caller, attribute_t *Attribute, ml_value_t *Value) {
@@ -233,13 +233,13 @@ static void ML_TYPED_FN(ml_iter_next, AttrIterT, ml_state_t *Caller, attribute_i
 static void ML_TYPED_FN(ml_iter_key, AttrIterT, ml_state_t *Caller, attribute_iter_t *Iter) {
 	size_t Length;
 	const lxb_char_t *Text = lxb_dom_attr_local_name(Iter->Current, &Length);
-	ML_RETURN(ml_string((const char *)Text, Length));
+	ML_RETURN(ml_string_unchecked((const char *)Text, Length));
 }
 
 static void ML_TYPED_FN(ml_iter_value, AttrIterT, ml_state_t *Caller, attribute_iter_t *Iter) {
 	size_t Length;
 	const lxb_char_t *Text = lxb_dom_attr_value(Iter->Current, &Length);
-	ML_RETURN(ml_string((const char *)Text, Length));
+	ML_RETURN(ml_string_unchecked((const char *)Text, Length));
 }
 
 typedef struct {

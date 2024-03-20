@@ -243,7 +243,7 @@ static ml_value_t *query_recv_string(const char *Value, int Length) {
 	char *Copy = snew(Length + 1);
 	memcpy(Copy, Value, Length);
 	Copy[Length] = 0;
-	return ml_string(Copy, Length);
+	return ml_string_unchecked(Copy, Length);
 }
 
 static uint8_t hexdigit(char C) {
@@ -264,7 +264,7 @@ static ml_value_t *query_recv_bytes(const char *Value, int Length) {
 		char *Copy = snew(Length + 1);
 		memcpy(Copy, Value, Length);
 		Copy[Length] = 0;
-		return ml_string(Copy, Length);
+		return ml_string_unchecked(Copy, Length);
 	}
 }
 

@@ -236,44 +236,44 @@ ML_METHOD("set_port", OnionT, MLStringT) {
 
 ML_METHOD("get_path", OnionRequestT) {
 	ml_onion_request_t *Request = (ml_onion_request_t *)Args[0];
-	return ml_string(onion_request_get_path(Request->Handle), -1);
+	return ml_string_unchecked(onion_request_get_path(Request->Handle), -1);
 }
 
 ML_METHOD("get_fullpath", OnionRequestT) {
 	ml_onion_request_t *Request = (ml_onion_request_t *)Args[0];
-	return ml_string(onion_request_get_fullpath(Request->Handle), -1);
+	return ml_string_unchecked(onion_request_get_fullpath(Request->Handle), -1);
 }
 
 ML_METHOD("get_header", OnionRequestT, MLStringT) {
 	ml_onion_request_t *Request = (ml_onion_request_t *)Args[0];
-	return ml_string(onion_request_get_header(Request->Handle, ml_string_value(Args[1])), -1);
+	return ml_string_unchecked(onion_request_get_header(Request->Handle, ml_string_value(Args[1])), -1);
 }
 
 ML_METHOD("get_query", OnionRequestT, MLStringT) {
 	ml_onion_request_t *Request = (ml_onion_request_t *)Args[0];
-	return ml_string(onion_request_get_query(Request->Handle, ml_string_value(Args[1])), -1);
+	return ml_string_unchecked(onion_request_get_query(Request->Handle, ml_string_value(Args[1])), -1);
 }
 
 ML_METHOD("get_post", OnionRequestT, MLStringT) {
 	ml_onion_request_t *Request = (ml_onion_request_t *)Args[0];
-	return ml_string(onion_request_get_post(Request->Handle, ml_string_value(Args[1])), -1);
+	return ml_string_unchecked(onion_request_get_post(Request->Handle, ml_string_value(Args[1])), -1);
 }
 
 ML_METHOD("get_file", OnionRequestT, MLStringT) {
 	ml_onion_request_t *Request = (ml_onion_request_t *)Args[0];
-	return ml_string(onion_request_get_file(Request->Handle, ml_string_value(Args[1])), -1);
+	return ml_string_unchecked(onion_request_get_file(Request->Handle, ml_string_value(Args[1])), -1);
 }
 
 ML_METHOD("get_cookie", OnionRequestT, MLStringT) {
 	ml_onion_request_t *Request = (ml_onion_request_t *)Args[0];
-	return ml_string(onion_request_get_cookie(Request->Handle, ml_string_value(Args[1])), -1);
+	return ml_string_unchecked(onion_request_get_cookie(Request->Handle, ml_string_value(Args[1])), -1);
 }
 
 ML_METHOD("get_data", OnionRequestT) {
 	ml_onion_request_t *Request = (ml_onion_request_t *)Args[0];
 	const onion_block *Block = onion_request_get_data(Request->Handle);
 	if (!Block) return MLNil;
-	return ml_string(onion_block_data(Block), onion_block_size(Block));
+	return ml_string_unchecked(onion_block_data(Block), onion_block_size(Block));
 }
 
 ML_METHOD("set_code", OnionResponseT, MLIntegerT) {

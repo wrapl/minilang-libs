@@ -20,7 +20,7 @@ ML_FUNCTION(Encode) {
 		*Out++ = HexDigits[C & 15];
 	}
 	*Out = 0;
-	return ml_string(OutChars, OutSize);
+	return ml_string_unchecked(OutChars, OutSize);
 }
 
 ML_FUNCTION(Decode) {

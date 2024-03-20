@@ -13,3 +13,13 @@ so_module("fmt/csv.so", [file("csv.o"), file("libcsv.o")])
 end>:
 
 so_module("fmt/html.so", [file("html.o")], ["-lgumbo"])
+
+scope("md4c";) do
+	let MD4C := file("md4c/src/md4c.c") => fun() do
+		file("md4c"):rmdir
+		execute("git clone https://github.com/mity/md4c.git")
+	end
+	PREBUILDS := old + [MD4C]
+	CFLAGS := old + ['-I{MD4C:dir}']
+	so_module("fmt/markdown.so", [file("markdown.o")])
+end

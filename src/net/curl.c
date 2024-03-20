@@ -332,7 +332,7 @@ static size_t function_callback(char *Buffer, size_t Size, size_t N, callback_st
 	ml_value_t *Result = State->Result;
 	if (!Result) {
 		ml_value_t **Args = ml_alloc_args(1);
-		Args[0] = State->Write ? ml_buffer(Buffer, Size * N) : ml_string(Buffer, Size * N);
+		Args[0] = State->Write ? ml_buffer(Buffer, Size * N) : ml_string_unchecked(Buffer, Size * N);
 		ml_call((ml_state_t *)State, State->Value, 1, Args);
 		if (!State->Result) {
 			State->Paused = 1;

@@ -17,12 +17,12 @@ static void convert_to_xml(ml_xml_element_t *Parent, GumboNode *Node) {
 	}
 	case GUMBO_NODE_ELEMENT: {
 		ml_xml_element_t *Child = ml_xml_element(gumbo_normalized_tagname(Node->v.element.tag));
-		ml_value_t *Attributes = ml_xml_element_attributes((ml_value_t *)Child);
+		ml_value_t *Attributes = ml_xml_element_attributes(Child);
 		for (int I = 0; I < Node->v.element.attributes.length; ++I) {
 			GumboAttribute *Attribute = (GumboAttribute *)Node->v.element.attributes.data[I];
 			ml_map_insert(Attributes,
-				ml_string(GC_strdup(Attribute->name), -1),
-				ml_string(GC_strdup(Attribute->value), -1)
+				ml_string_unchecked(GC_strdup(Attribute->name), -1),
+				ml_string_unchecked(GC_strdup(Attribute->value), -1)
 			);
 		}
 		for (int I = 0; I < Node->v.element.children.length; ++I) {
@@ -34,10 +34,10 @@ static void convert_to_xml(ml_xml_element_t *Parent, GumboNode *Node) {
 	case GUMBO_NODE_DOCUMENT: {
 		ml_xml_element_t *Child = ml_xml_element("html");
 		if (Node->v.document.has_doctype) {
-			ml_value_t *ChildAttrs = ml_xml_element_attributes((ml_value_t *)Child);
+			ml_value_t *ChildAttrs = ml_xml_element_attributes(Child);
 			ml_map_insert(ChildAttrs,
 				ml_cstring("doctype"),
-				ml_string(GC_strdup(Node->v.document.name), -1)
+				ml_string_unchecked(GC_strdup(Node->v.document.name), -1)
 			);
 		}
 		for (int I = 0; I < Node->v.document.children.length; ++I) {

@@ -17,7 +17,7 @@ fmt/markdown
    * :mini:`::NoIndentedCodeBlocks`
    * :mini:`::NoHTMLBlocks`
    * :mini:`::NoHTMLSpans`
-   * :mini:`::FlagTables`
+   * :mini:`::Tables`
    * :mini:`::StrikeThrough`
    * :mini:`::PermissiveWWWAutoLinks`
    * :mini:`::TaskLists`
@@ -27,7 +27,7 @@ fmt/markdown
    * :mini:`::HardSoftBreaks`
 
 
-:mini:`fun parse(Arg₁: string, Arg₂: Flag)`
+:mini:`fun parse(Markdown: string, Arg₂: Flag): xml`
    *TBD*
 
 

@@ -12,7 +12,7 @@ so_module("fmt/csv.so", [file("csv.o"), file("libcsv.o")])
 	so_module("fmt/html.so", [file("html.o")], [LEXBOR])
 end>:
 
-so_module("fmt/html.so", [file("html.o")], ["-lgumbo"])
+let Html := so_module("fmt/html.so", [file("html.o")], ["-lgumbo"])
 
 scope("md4c";) do
 	let MD4C := file("md4c/src/md4c.c") => fun() do
@@ -21,5 +21,5 @@ scope("md4c";) do
 	end
 	PREBUILDS := old + [MD4C]
 	CFLAGS := old + ['-I{MD4C:dir}']
-	so_module("fmt/markdown.so", [file("markdown.o")])
+	so_module("fmt/markdown.so", [file("markdown.o")], [Html])
 end

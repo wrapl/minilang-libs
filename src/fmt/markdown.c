@@ -39,7 +39,16 @@ static const char *SpanTags[] = {
 	[MD_SPAN_U] = "u"
 };
 
-static int enter_block(MD_BLOCKTYPE Type, void *Detail0, ml_xml_element_t **Node) {
+typedef struct {
+	ml_xml_element_t *Node;
+	ml_stringbuffer_t Buffer[1];
+} xml_builder_t;
+
+static int enter_block(MD_BLOCKTYPE Type, void *Detail0, xml_builder_t *Builder) {
+	if (Builder->Buffer->Length) {
+		size_t Length = Builder->Buffer->Length;
+		ml_xml_element_put(Builder->Node, ml_xml_text(ml_stringbuffer_get_string(Builder->Buffer), Length));
+	}
 	switch (Type) {
 	case MD_BLOCK_DOC:
 	case MD_BLOCK_QUOTE:
@@ -48,20 +57,20 @@ static int enter_block(MD_BLOCKTYPE Type, void *Detail0, ml_xml_element_t **Node
 	case MD_BLOCK_HR:
 	case MD_BLOCK_TR: {
 		ml_xml_element_t *Child = ml_xml_element(BlockTags[Type]);
-		ml_xml_element_put(*Node, (ml_xml_node_t *)Child);
-		*Node = Child;
+		ml_xml_element_put(Builder->Node, (ml_xml_node_t *)Child);
+		Builder->Node = Child;
 		break;
 	}
 	case MD_BLOCK_UL: {
 		ml_xml_element_t *Child = ml_xml_element(BlockTags[Type]);
-		ml_xml_element_put(*Node, (ml_xml_node_t *)Child);
-		*Node = Child;
+		ml_xml_element_put(Builder->Node, (ml_xml_node_t *)Child);
+		Builder->Node = Child;
 		break;
 	}
 	case MD_BLOCK_OL: {
 		ml_xml_element_t *Child = ml_xml_element(BlockTags[Type]);
-		ml_xml_element_put(*Node, (ml_xml_node_t *)Child);
-		*Node = Child;
+		ml_xml_element_put(Builder->Node, (ml_xml_node_t *)Child);
+		Builder->Node = Child;
 		break;
 	}
 	case MD_BLOCK_LI: {
@@ -74,8 +83,8 @@ static int enter_block(MD_BLOCKTYPE Type, void *Detail0, ml_xml_element_t **Node
 				ml_map_insert(ml_xml_element_attributes(Checkbox), ml_cstring("checked"), ml_cstring("true"));
 			}
 		}
-		ml_xml_element_put(*Node, (ml_xml_node_t *)Child);
-		*Node = Child;
+		ml_xml_element_put(Builder->Node, (ml_xml_node_t *)Child);
+		Builder->Node = Child;
 		break;
 	}
 	case MD_BLOCK_H: {
@@ -89,46 +98,54 @@ static int enter_block(MD_BLOCKTYPE Type, void *Detail0, ml_xml_element_t **Node
 		case 5: Child = ml_xml_element("h5"); break;
 		default: Child = ml_xml_element("h6"); break;
 		}
-		ml_xml_element_put(*Node, (ml_xml_node_t *)Child);
-		*Node = Child;
+		ml_xml_element_put(Builder->Node, (ml_xml_node_t *)Child);
+		Builder->Node = Child;
 		break;
 	}
 	case MD_BLOCK_CODE: {
 		ml_xml_element_t *Child = ml_xml_element(BlockTags[Type]);
-		ml_xml_element_put(*Node, (ml_xml_node_t *)Child);
-		*Node = Child;
+		ml_xml_element_put(Builder->Node, (ml_xml_node_t *)Child);
+		Builder->Node = Child;
 		break;
 	}
 	case MD_BLOCK_TABLE: {
 		ml_xml_element_t *Child = ml_xml_element(BlockTags[Type]);
-		ml_xml_element_put(*Node, (ml_xml_node_t *)Child);
-		*Node = Child;
+		ml_xml_element_put(Builder->Node, (ml_xml_node_t *)Child);
+		Builder->Node = Child;
 		break;
 	}
 	case MD_BLOCK_THEAD:
 	case MD_BLOCK_TBODY: {
 		ml_xml_element_t *Child = ml_xml_element(BlockTags[Type]);
-		ml_xml_element_put(*Node, (ml_xml_node_t *)Child);
-		*Node = Child;
+		ml_xml_element_put(Builder->Node, (ml_xml_node_t *)Child);
+		Builder->Node = Child;
 		break;
 	}
 	case MD_BLOCK_TH:
 	case MD_BLOCK_TD: {
 		ml_xml_element_t *Child = ml_xml_element(BlockTags[Type]);
-		ml_xml_element_put(*Node, (ml_xml_node_t *)Child);
-		*Node = Child;
+		ml_xml_element_put(Builder->Node, (ml_xml_node_t *)Child);
+		Builder->Node = Child;
 		break;
 	}
 	}
 	return 0;
 }
 
-static int leave_block(MD_BLOCKTYPE Type, void *Detail0, ml_xml_element_t **Node) {
-	*Node = ml_xml_node_parent((ml_xml_node_t *)*Node);
+static int leave_block(MD_BLOCKTYPE Type, void *Detail0, xml_builder_t *Builder) {
+	if (Builder->Buffer->Length) {
+		size_t Length = Builder->Buffer->Length;
+		ml_xml_element_put(Builder->Node, ml_xml_text(ml_stringbuffer_get_string(Builder->Buffer), Length));
+	}
+	Builder->Node = ml_xml_node_parent((ml_xml_node_t *)Builder->Node);
 	return 0;
 }
 
-static int enter_span(MD_SPANTYPE Type, void *Detail0, ml_xml_element_t **Node) {
+static int enter_span(MD_SPANTYPE Type, void *Detail0, xml_builder_t *Builder) {
+	if (Builder->Buffer->Length) {
+		size_t Length = Builder->Buffer->Length;
+		ml_xml_element_put(Builder->Node, ml_xml_text(ml_stringbuffer_get_string(Builder->Buffer), Length));
+	}
 	switch (Type) {
 	case MD_SPAN_EM:
 	case MD_SPAN_STRONG:
@@ -139,8 +156,8 @@ static int enter_span(MD_SPANTYPE Type, void *Detail0, ml_xml_element_t **Node) 
 	case MD_SPAN_WIKILINK:
 	case MD_SPAN_U: {
 		ml_xml_element_t *Child = ml_xml_element(SpanTags[Type]);
-		ml_xml_element_put(*Node, (ml_xml_node_t *)Child);
-		*Node = Child;
+		ml_xml_element_put(Builder->Node, (ml_xml_node_t *)Child);
+		Builder->Node = Child;
 		break;
 	}
 	case MD_SPAN_A: {
@@ -149,8 +166,8 @@ static int enter_span(MD_SPANTYPE Type, void *Detail0, ml_xml_element_t **Node) 
 		ml_value_t *Attributes = ml_xml_element_attributes(Child);
 		ml_map_insert(Attributes, ml_cstring("href"), ml_string_copy(Detail->href.text, Detail->href.size));
 		ml_map_insert(Attributes, ml_cstring("title"), ml_string_copy(Detail->title.text, Detail->title.size));
-		ml_xml_element_put(*Node, (ml_xml_node_t *)Child);
-		*Node = Child;
+		ml_xml_element_put(Builder->Node, (ml_xml_node_t *)Child);
+		Builder->Node = Child;
 		break;
 	}
 	case MD_SPAN_IMG: {
@@ -159,50 +176,71 @@ static int enter_span(MD_SPANTYPE Type, void *Detail0, ml_xml_element_t **Node) 
 		ml_value_t *Attributes = ml_xml_element_attributes(Child);
 		ml_map_insert(Attributes, ml_cstring("src"), ml_string_copy(Detail->src.text, Detail->src.size));
 		ml_map_insert(Attributes, ml_cstring("title"), ml_string_copy(Detail->title.text, Detail->title.size));
-		ml_xml_element_put(*Node, (ml_xml_node_t *)Child);
-		*Node = Child;
+		ml_xml_element_put(Builder->Node, (ml_xml_node_t *)Child);
+		Builder->Node = Child;
 		break;
 	}
 	}
 	return 0;
 }
 
-static int leave_span(MD_SPANTYPE Type, void *Detail0, ml_xml_element_t **Node) {
-	*Node = ml_xml_node_parent((ml_xml_node_t *)*Node);
+static int leave_span(MD_SPANTYPE Type, void *Detail0, xml_builder_t *Builder) {
+	if (Builder->Buffer->Length) {
+		size_t Length = Builder->Buffer->Length;
+		ml_xml_element_put(Builder->Node, ml_xml_text(ml_stringbuffer_get_string(Builder->Buffer), Length));
+	}
+	Builder->Node = ml_xml_node_parent((ml_xml_node_t *)Builder->Node);
 	return 0;
 }
 
-static int text(MD_TEXTTYPE Type, const MD_CHAR *Text, MD_SIZE Size, ml_xml_element_t **Node) {
+#include "entities.c"
+
+const unsigned char *html_entity(const char *Value, int Length) {
+	const struct entity_t *Entity = entity_lookup(Value, Length);
+	return Entity ? Entity->Chars : NULL;
+}
+
+static int text(MD_TEXTTYPE Type, const MD_CHAR *Text, MD_SIZE Size, xml_builder_t *Builder) {
 	switch (Type) {
 	case MD_TEXT_NORMAL: {
-		ml_xml_element_put(*Node, ml_xml_text(Text, Size));
+		ml_stringbuffer_write(Builder->Buffer, Text, Size);
 		break;
 	}
 	case MD_TEXT_NULLCHAR: {
-		ml_xml_element_put(*Node, ml_xml_text("\uFFFD", strlen("\uFFFD")));
+		ml_stringbuffer_write(Builder->Buffer, "\uFFFD", strlen("\uFFFD"));
 		break;
 	}
 	case MD_TEXT_BR: {
-		ml_xml_element_put(*Node, (ml_xml_node_t *)ml_xml_element("br"));
+		if (Builder->Buffer->Length) {
+			size_t Length = Builder->Buffer->Length;
+			ml_xml_element_put(Builder->Node, ml_xml_text(ml_stringbuffer_get_string(Builder->Buffer), Length));
+		}
+		ml_xml_element_put(Builder->Node, (ml_xml_node_t *)ml_xml_element("br"));
 		break;
 	}
 	case MD_TEXT_SOFTBR: {
-		ml_xml_element_put(*Node, ml_xml_text("\n", strlen("\n")));
+		ml_stringbuffer_write(Builder->Buffer, "\n", strlen("\n"));
 		break;
 	}
 	case MD_TEXT_ENTITY: {
+		const char *Chars = Size > 1 ? (char *)html_entity(Text + 1, Size - 1) : NULL;
+		if (Chars) {
+			ml_stringbuffer_write(Builder->Buffer, Chars, strlen(Chars));
+		} else {
+			ml_stringbuffer_write(Builder->Buffer, Text, Size);
+		}
 		break;
 	}
 	case MD_TEXT_CODE: {
-		ml_xml_element_put(*Node, ml_xml_text(Text, Size));
+		ml_stringbuffer_write(Builder->Buffer, Text, Size);
 		break;
 	}
 	case MD_TEXT_HTML: {
-		ml_xml_element_put(*Node, ml_xml_text(Text, Size));
+		ml_stringbuffer_write(Builder->Buffer, Text, Size);
 		break;
 	}
 	case MD_TEXT_LATEXMATH: {
-		ml_xml_element_put(*Node, ml_xml_text(Text, Size));
+		ml_stringbuffer_write(Builder->Buffer, Text, Size);
 		break;
 	}
 	}
@@ -217,7 +255,7 @@ ML_FLAGS2(Flag, "markdown::flag",
 	"NoIndentedCodeBlocks", MD_FLAG_NOINDENTEDCODEBLOCKS,
 	"NoHTMLBlocks", MD_FLAG_NOHTMLBLOCKS,
 	"NoHTMLSpans", MD_FLAG_NOHTMLSPANS,
-	"FlagTables", MD_FLAG_TABLES,
+	"Tables", MD_FLAG_TABLES,
 	"StrikeThrough", MD_FLAG_STRIKETHROUGH,
 	"PermissiveWWWAutoLinks", MD_FLAG_PERMISSIVEWWWAUTOLINKS,
 	"TaskLists", MD_FLAG_TASKLISTS,
@@ -228,6 +266,8 @@ ML_FLAGS2(Flag, "markdown::flag",
 );
 
 ML_FUNCTION(Parse) {
+//<Markdown
+//>xml
 	ML_CHECK_ARG_COUNT(2);
 	ML_CHECK_ARG_TYPE(0, MLStringT);
 	ML_CHECK_ARG_TYPE(1, Flag);
@@ -238,8 +278,9 @@ ML_FUNCTION(Parse) {
 	Parser->enter_span = (void *)enter_span;
 	Parser->leave_span = (void *)leave_span;
 	Parser->text = (void *)text;
-	ml_xml_element_t *Root = ml_xml_element("html"), *Node = Root;
-	if (md_parse(ml_string_value(Args[0]), ml_string_length(Args[0]), Parser, &Node)) {
+	ml_xml_element_t *Root = ml_xml_element("html");
+	xml_builder_t Builder[1] = {Root, {ML_STRINGBUFFER_INIT}};
+	if (md_parse(ml_string_value(Args[0]), ml_string_length(Args[0]), Parser, &Builder)) {
 		return ml_error("MarkdownError", "Error parsing markdown");
 	}
 	return (ml_value_t *)Root;

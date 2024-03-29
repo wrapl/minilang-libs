@@ -57,6 +57,7 @@ fun module(Name, File, Tags) do
 		end
 		Modules:put((Name:before("."), Installed, []))
 	end
+	File
 end
 
 so_module := fun(Name, Objects, Libraries) do

@@ -128,7 +128,8 @@ listen("Shell", Shell; Ids, Signature, Header, Parent, Metadata, Content) do
 				"name" is "minilang",
 				"version" is "0.0.1",
 				"mimetype" is "text/x-minilang",
-				"file_extension" is ".mini"
+				"file_extension" is ".mini",
+				"codemirror_mode" is "minilang"
 			},
 			"banner" is "Minilang in Jupyter :)"
 		});
@@ -188,7 +189,8 @@ listen("Control", Control; Ids, Signature, Header, Parent, Metadata, Content) do
 				"name" is "minilang",
 				"version" is "0.0.1",
 				"mimetype" is "text/x-minilang",
-				"file_extension" is ".mini"
+				"file_extension" is ".mini",
+				"codemirror_mode" is "minilang"
 			},
 			"banner" is "Minilang in Jupyter :)"
 		});

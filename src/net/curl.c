@@ -9,17 +9,14 @@
 
 typedef struct {
 	ml_type_t *Type;
+	ml_scheduler_t *Scheduler;
 	CURL *Handle;
 } curl_t;
 
 extern ml_type_t CurlT[];
 
 static int progress_callback(curl_t *Curl, curl_off_t DLTotal, curl_off_t DLNow, curl_off_t ULTotal, curl_off_t ULNow) {
-	for (;;) {
-		ml_queued_state_t Queued = ml_default_queue_next();
-		if (!Queued.State) break;
-		ml_state_schedule(Queued.State, Queued.Value);
-	}
+	if (Curl->Scheduler) Curl->Scheduler->run(Curl->Scheduler);
 	return CURL_PROGRESSFUNC_CONTINUE;
 }
 
@@ -27,6 +24,7 @@ ML_FUNCTIONX(Curl) {
 	curl_t *Curl = new(curl_t);
 	Curl->Type = CurlT;
 	Curl->Handle = curl_easy_init();
+	Curl->Scheduler = ml_context_get(Caller->Context, ML_SCHEDULER_INDEX);
 	curl_easy_setopt(Curl->Handle, CURLOPT_PRIVATE, Curl);
 	curl_easy_setopt(Curl->Handle, CURLOPT_XFERINFOFUNCTION, progress_callback);
 	curl_easy_setopt(Curl->Handle, CURLOPT_XFERINFODATA, Curl);

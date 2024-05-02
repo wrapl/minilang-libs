@@ -159,7 +159,7 @@ ML_METHOD("append", MLStringBufferT, NodeT) {
 
 ML_METHOD("[]", GraphT, MLStringT) {
 	graph_t *Graph = (graph_t *)Args[0];
-	return node(Graph, agnode(Graph->Handle, (char *)ml_string_value(Args[1]), TRUE));
+	return node(Graph, agnode(Graph->Handle, (char *)ml_string_value(Args[1]), 1));
 }
 
 ML_METHOD("nodes", GraphT) {
@@ -216,7 +216,7 @@ ML_METHOD("---", NodeT, NodeT) {
 	node_t *B = (node_t *)Args[1];
 	graph_t *Graph = A->Graph;
 	if (Graph != B->Graph) return ml_error("GraphError", "Nodes are from different graphs");
-	return edge(Graph, agedge(Graph->Handle, B->Handle, A->Handle, NULL, TRUE));
+	return edge(Graph, agedge(Graph->Handle, B->Handle, A->Handle, NULL, 1));
 }
 
 ML_METHOD("-->", NodeT, NodeT) {
@@ -224,7 +224,7 @@ ML_METHOD("-->", NodeT, NodeT) {
 	node_t *B = (node_t *)Args[1];
 	graph_t *Graph = A->Graph;
 	if (Graph != B->Graph) return ml_error("GraphError", "Nodes are from different graphs");
-	return edge(Graph, agedge(Graph->Handle, B->Handle, A->Handle, NULL, TRUE));
+	return edge(Graph, agedge(Graph->Handle, B->Handle, A->Handle, NULL, 1));
 }
 
 ML_METHOD("out", NodeT) {

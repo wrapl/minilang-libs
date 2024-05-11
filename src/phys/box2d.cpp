@@ -280,7 +280,7 @@ ML_METHOD("create", BodyT, ShapeT, MLRealT) {
 extern "C" {
 
 ML_LIBRARY_ENTRY0(geom_geos) {
-#include "box2d_init.c"
+#include "box2d_init.cpp"
 	WorldT->Constructor = (ml_value_t *)World;
 	Slot[0] = (ml_value_t *)WorldT;
 }

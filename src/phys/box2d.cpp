@@ -153,16 +153,6 @@ struct CNAME ## _shape_t { \
 	b2 ## NAME ## Shape Value; \
 }
 
-struct points_setter_t {
-	b2Vec2 *Points;
-	ml_array_getter_float get;
-};
-
-static void points_set(void *Address, int *Indices, void *Data) {
-	points_setter_t *Setter = (points_setter_t *)Data;
-	Setter->Points[Indices[0]](Indices[1]) = Setter->get(Address);
-}
-
 SHAPE_TYPE(Chain, chain);
 
 ML_METHOD(ChainT, MLArrayT) {
@@ -171,8 +161,11 @@ ML_METHOD(ChainT, MLArrayT) {
 	if (Array->Dimensions[1].Size != 2) return ml_error("ShapeError", "Invalid points");
 	int Size = Array->Dimensions[0].Size;
 	b2Vec2 Points[Size];
-	points_setter_t Setter = {Points, ml_array_float_getter(Array->Format)};
-	ml_array_foreach(Array, &Setter, points_set);
+	ml_array_getter_float get = ml_array_float_getter(Array->Format);
+	for (int I = 0; I < Size; ++I) {
+		Points[I].x = get(ml_array_get(Array, I, 0));
+		Points[I].y = get(ml_array_get(Array, I, 1));
+	}
 	chain_shape_t *Shape = new (GC) chain_shape_t;
 	Shape->Type = ChainT;
 	Shape->Value.CreateLoop(Points, Size);
@@ -220,8 +213,11 @@ ML_METHOD(PolygonT, MLArrayT) {
 	if (Array->Dimensions[1].Size != 2) return ml_error("ShapeError", "Invalid points");
 	int Size = Array->Dimensions[0].Size;
 	b2Vec2 Points[Size];
-	points_setter_t Setter = {Points, ml_array_float_getter(Array->Format)};
-	ml_array_foreach(Array, &Setter, points_set);
+	ml_array_getter_float get = ml_array_float_getter(Array->Format);
+	for (int I = 0; I < Size; ++I) {
+		Points[I].x = get(ml_array_get(Array, I, 0));
+		Points[I].y = get(ml_array_get(Array, I, 1));
+	}
 	polygon_shape_t *Shape = new (GC) polygon_shape_t;
 	Shape->Type = PolygonT;
 	Shape->Value.Set(Points, Size);

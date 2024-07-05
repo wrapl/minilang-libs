@@ -1,6 +1,6 @@
 so_module("util/bitset.so", [file("bitset.o"), file("roaring.o")])
 
-GIR := scope("gir";) do
+:<GIR := scope("gir";) do
 	CFLAGS := old + [
 		pkgconfig("--cflags gobject-introspection-1.0")
 	]
@@ -9,7 +9,7 @@ GIR := scope("gir";) do
 	]
 	
 	so_module("gir.so", [file("gir.o")])
-end
+end>:
 
 scope("gtk_console";) do
 	CFLAGS := old + [

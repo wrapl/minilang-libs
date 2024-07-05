@@ -1075,6 +1075,15 @@ void gtk_console_load_file(gtk_console_t *Console, const char *FileName, ml_valu
 	ml_load_file((ml_state_t *)State, (void *)console_global_get, Console, FileName, NULL);
 }
 
+ML_METHOD("load", ConsoleT, MLStringT, MLListT) {
+	gtk_console_t *Console = (gtk_console_t *)Args[0];
+	const char *FileName = ml_string_value(Args[1]);
+	ml_call_state_t *State = ml_call_state((ml_state_t *)Console, 1);
+	State->Args[0] = Args[2];
+	ml_load_file((ml_state_t *)State, (void *)console_global_get, Console, FileName, NULL);
+	return (ml_value_t *)Console;
+}
+
 ML_LIBRARY_ENTRY(util_gtk_console) {
 #include "gtk_console_init.c"
 	gtk_console_t *Console = gtk_console(Caller, (ml_getter_t)ml_stringmap_global_get, MLGlobals);

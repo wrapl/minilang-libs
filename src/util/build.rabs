@@ -7,7 +7,7 @@ so_module("util/bitset.so", [file("bitset.o"), file("roaring.o")])
 	LDFLAGS := old + [
 		pkgconfig("--libs gobject-introspection-1.0 gio-2.0")
 	]
-	
+
 	so_module("gir.so", [file("gir.o")])
 end>:
 
@@ -20,6 +20,6 @@ scope("gtk_console";) do
 		pkgconfig("--libs gobject-introspection-1.0 gio-2.0"),
 		pkgconfig("--libs gtk+-3.0 gdk-pixbuf-2.0 gtksourceview-4")
 	]
-	PREBUILDS := old + [GIR]
+	:>PREBUILDS := old + [GIR]
 	so_module("util/gtk_console.so", [file("gtk_console.o"), file("gtk_console_completion.o")])
 end

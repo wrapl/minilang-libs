@@ -60,7 +60,7 @@ fun module(Name, File, Tags) do
 	File
 end
 
-so_module := fun(Name, Objects, Libraries) do
+so_module := fun(Name, Objects, Libraries, Extra) do
 	let Library := MODULE_DIR / Name
 	let Sources := []
 	for Object in Objects or [] do
@@ -78,6 +78,7 @@ so_module := fun(Name, Objects, Libraries) do
 	Library[Objects, Libraries] => fun(Library) do
 		Library:dir:mkdir
 		execute('cc', '-o', Library, '-shared', '-Wl,--export-dynamic', Objects, Libraries, LDFLAGS, '-Wl,--dynamic-list={Exports}')
+		Extra and Extra(Library)
 		:>DEBUG or execute("strip", Library)
 	end
 	module(Name, Library, [])

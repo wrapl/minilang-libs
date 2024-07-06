@@ -1084,13 +1084,28 @@ ML_METHOD("load", ConsoleT, MLStringT, MLListT) {
 	return (ml_value_t *)Console;
 }
 
-ML_LIBRARY_ENTRY(util_gtk_console) {
+typedef struct {
+	ml_state_t Base;
+	ml_value_t **Slot;
+} load_state_t;
+
+static void finish_load(load_state_t *State, ml_value_t *GirModule) {
+	ml_state_t *Caller = State->Base.Caller;
 #include "gtk_console_init.c"
 	gtk_console_t *Console = gtk_console(Caller, (ml_getter_t)ml_stringmap_global_get, MLGlobals);
-	Slot[0] = (ml_value_t *)Console;
+	State->Slot[0] = (ml_value_t *)Console;
 	gtk_console_show(Console, NULL);
 	/*if (MainModule) gtk_console_load_file(Console, MainModule, Args);
 	if (Command) gtk_console_evaluate(Console, Command);
 	while (!MainResult) Scheduler->run(Scheduler);*/
 	ML_RETURN(Console);
+}
+
+ML_LIBRARY_ENTRY(util_gtk_console) {
+	load_state_t *State = new(load_state_t);
+	State->Base.Caller = Caller;
+	State->Base.Context = Caller->Context;
+	State->Base.run = (ml_state_fn)finish_load;
+	State->Slot = Slot;
+	ml_library_load((ml_state_t *)State, NULL, "gir");
 }

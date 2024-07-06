@@ -16,9 +16,8 @@ class MinilangLexer(RegexLexer):
 		'root': [
 			(words((
 				"_", "and", "case", "debug", "def", "do", "each", "else", "elseif", "end", "exit", "for",
-				"fun", "if", "in", "is", "it", "let", "loop", "meth", "must", "next", "nil", "not", "old",
-				"on", "or", "ref", "ret", "susp", "switch", "then", "to", "until", "var", "when", "while",
-				"with"
+				"fun", "if", "in", "is", "let", "loop", "meth", "next", "nil", "not", "old", "on", "or", "ref",
+				"ret", "susp", "switch", "then", "to", "until", "var", "when", "while", "with"
 			), suffix = r'\b'), Keyword),
 			(words((
 				"class", "method", "any", "type", "function", "number",
@@ -39,7 +38,7 @@ class MinilangLexer(RegexLexer):
 			(r':>.*\n', Comment),
 			(':<', Comment.Multiline, 'comment'),
 			(r'\s+', Text),
-			(r'[A-Za-z_](\w|[₊₋₌₍₎⁰¹²³⁴⁵⁶⁷⁸⁹₀₁₂₃₄₅₆₇₈₉])*', Text),
+			(r'[A-Za-z_]\w*', Text),
 			(':=', Operator),
 			(',', Operator),
 			(';', Operator),
@@ -102,7 +101,6 @@ class MiniStyle(Style):
 		Name.Attribute: '#5caf8f',
 		Name.Function: '#df631c',
 		Name.Class: '#ad00bc',
-		Name.Builtin: '#0da400',
 		Comment: '#a0a1a7',
 		String: '#c5a332',
 		String.Escape: '#823ff1',

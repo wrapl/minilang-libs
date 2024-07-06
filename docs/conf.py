@@ -8,7 +8,7 @@ from sphinx import version_info
 
 class FoldersDirective(Directive):
 	has_content = True
-	
+
 	def run(self):
 		env = self.state.document.settings.env
 		block_quote = nodes.line_block()

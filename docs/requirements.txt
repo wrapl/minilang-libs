@@ -1,6 +1,9 @@
-sphinx == 4.5.0
+sphinx
 sphinxcontrib-domaintools
 sphinxcontrib-fulltoc
+sphinxcontrib-ansi
 sphinx_toolbox
 sphinx-a4doc
-sphinxawesome-theme == 3.3.7
+insipid-sphinx-theme
+graphviz
+breathe

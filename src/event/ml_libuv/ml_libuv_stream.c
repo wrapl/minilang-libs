@@ -71,7 +71,7 @@ static void ml_uv_read_cb(uv_stream_t *Stream, ssize_t Count, const uv_buf_t *Bu
 		char *String = GC_malloc_atomic(Count + 1);
 		memcpy(String, Buffer->base, Count);
 		String[Count] = 0;
-		Args[0] = ml_string(String, Count);
+		Args[0] = ml_string_unchecked(String, Count);
 	} else {
 		Args[0] = ml_error("ReadError", "%s", uv_strerror(Count));
 	}

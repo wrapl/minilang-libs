@@ -24,7 +24,7 @@ ML_TYPE(MLParserValueT, (MLParserT), "value-parser");
 static ml_value_t Skip[1] = {{MLAnyT}};
 
 static mpc_val_t *ml_mpc_apply_value(mpc_val_t *Value) {
-	return ml_string(Value, -1);
+	return ml_string_unchecked(Value, -1);
 }
 
 static ml_value_t *ml_mpc_value_parser(ml_mpc_parser_t *StringParser) {
@@ -125,7 +125,7 @@ ML_METHOD("->", MLParserValueT, MLFunctionT) {
 }
 
 static mpc_val_t *ml_mpc_apply_to_string(mpc_val_t *Value, void *Function) {
-	ml_value_t *Args[1] = {ml_string(Value, -1)};
+	ml_value_t *Args[1] = {ml_string_unchecked(Value, -1)};
 	return ml_simple_call((ml_value_t *)Function, 1, Args);
 }
 
@@ -150,7 +150,7 @@ ML_METHOD("?", MLParserValueT, MLFunctionT) {
 }
 
 static int ml_mpc_check_with_string(mpc_val_t **Slot, void *Function) {
-	Slot[0] = ml_string(Slot[0], -1);
+	Slot[0] = ml_string_unchecked(Slot[0], -1);
 	ml_value_t *Result = ml_simple_call((ml_value_t *)Function, 1, (ml_value_t **)Slot);
 	if (Result == MLNil) return 0;
 	return 1;
@@ -178,7 +178,7 @@ ML_METHOD("->?", MLParserValueT, MLFunctionT) {
 }
 
 static int ml_mpc_filter_with_string(mpc_val_t **Slot, void *Function) {
-	Slot[0] = ml_string(Slot[0], -1);
+	Slot[0] = ml_string_unchecked(Slot[0], -1);
 	ml_value_t *Result = ml_simple_call((ml_value_t *)Function, 1, (ml_value_t **)Slot);
 	if (Result == MLNil) return 0;
 	Slot[0] = Result;
@@ -467,7 +467,7 @@ ML_METHOD("%", MLStringT, MLParserStringT) {
 	ml_mpc_parser_t *Parser = (ml_mpc_parser_t *)Args[1];
 	mpc_result_t Result[1];
 	if (mpc_parse("", String, Parser->Handle, Result)) {
-		return ml_string(Result->output, -1);
+		return ml_string_unchecked(Result->output, -1);
 	} else {
 		return ml_error("ParseError", "Error parsing string: %s", mpc_err_string(Result->error));
 	}
@@ -478,7 +478,7 @@ ML_METHOD("%", MLFileT, MLParserStringT) {
 	ml_mpc_parser_t *Parser = (ml_mpc_parser_t *)Args[1];
 	mpc_result_t Result[1];
 	if (mpc_parse_file("", File, Parser->Handle, Result)) {
-		return ml_string(Result->output, -1);
+		return ml_string_unchecked(Result->output, -1);
 	} else {
 		return ml_error("ParseError", "Error parsing file: %s", mpc_err_string(Result->error));
 	}

@@ -175,7 +175,7 @@ end
 Root["title"] := fun(Node, Env, Out) do
 	let Buffer := string::buffer()
 	process(Node:content, Env, Buffer)
-	let String := Buffer:read(1):upper + Buffer:rest
+	let String := Buffer:reads(1):upper + Buffer:rest
 	Out and Out:write(String)
 	ret String
 end

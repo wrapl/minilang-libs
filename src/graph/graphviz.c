@@ -2,6 +2,7 @@
 #include <minilang/ml_object.h>
 #include <minilang/ml_stream.h>
 #include <minilang/ml_macros.h>
+#include <minilang/ml_file.h>
 #include <graphviz/cgraph.h>
 
 #undef ML_CATEGORY
@@ -17,18 +18,26 @@ ML_TYPE(ObjectT, (), "graph::object");
 ML_METHOD("get", ObjectT, MLStringT) {
 	object_t *Object = (object_t *)Args[0];
 	char *Value = agget(Object->Handle, (char *)ml_string_value(Args[1]));
-	return Value ? ml_string(Value, -1) : MLNil;
+	return Value ? ml_string_copy(Value, -1) : MLNil;
 }
 
 ML_METHOD("set", ObjectT, MLStringT, MLStringT) {
 	object_t *Object = (object_t *)Args[0];
 	agsafeset(Object->Handle, (char *)ml_string_value(Args[1]), (char *)ml_string_value(Args[2]), ml_string_value(Args[2]));
-	return Args[2];
+	return Args[0];
+}
+
+ML_METHOD("set", ObjectT, ObjectT) {
+	object_t *Target = (object_t *)Args[0];
+	object_t *Source = (object_t *)Args[1];
+	agcopyattr(Source->Handle, Target->Handle);
+	return Args[0];
 }
 
 typedef struct {
 	ml_type_t *Type;
 	Agraph_t *Handle;
+	inthash_t Objects[1];
 } graph_t;
 
 ML_TYPE(GraphT, (ObjectT), "graph");
@@ -79,7 +88,18 @@ ML_METHOD(GraphT, MLStringT, GraphDescT) {
 ML_METHOD(GraphT, MLStringT) {
 	graph_t *Graph = new(graph_t);
 	Graph->Type = GraphT;
-	Graph->Handle = agmemread(ml_string_value(Args[0]));
+	FILE *File = fmemopen((void *)ml_string_value(Args[0]), ml_string_length(Args[0]), "r");
+	Graph->Handle = agread(File, NULL);
+	fclose(File);
+	GC_register_finalizer(Graph, (GC_finalization_proc)graph_finalize, NULL, NULL, NULL);
+	return (ml_value_t *)Graph;
+}
+
+ML_METHOD(GraphT, MLFileT) {
+	graph_t *Graph = new(graph_t);
+	Graph->Type = GraphT;
+	Graph->Handle = agread(ml_file_handle(Args[0]), NULL);
+	GC_register_finalizer(Graph, (GC_finalization_proc)graph_finalize, NULL, NULL, NULL);
 	return (ml_value_t *)Graph;
 }
 
@@ -113,6 +133,7 @@ static ml_value_t *node(graph_t *Graph, Agnode_t *Handle) {
 	record_t *Record = (record_t *)aggetrec(Handle, "minilang", 0);
 	if (!Record) {
 		node_t *Node = new(node_t);
+		inthash_insert(Graph->Objects, (uintptr_t)Node, Node);
 		Node->Type = NodeT;
 		Node->Graph = Graph;
 		Node->Handle = Handle;
@@ -138,7 +159,7 @@ ML_METHOD("append", MLStringBufferT, NodeT) {
 
 ML_METHOD("[]", GraphT, MLStringT) {
 	graph_t *Graph = (graph_t *)Args[0];
-	return node(Graph, agnode(Graph->Handle, (char *)ml_string_value(Args[1]), TRUE));
+	return node(Graph, agnode(Graph->Handle, (char *)ml_string_value(Args[1]), 1));
 }
 
 ML_METHOD("nodes", GraphT) {
@@ -162,6 +183,7 @@ static ml_value_t *edge(graph_t *Graph, Agedge_t *Handle) {
 	record_t *Record = (record_t *)aggetrec(Handle, "minilang", 0);
 	if (!Record) {
 		edge_t *Edge = new(edge_t);
+		inthash_insert(Graph->Objects, (uintptr_t)Edge, Edge);
 		Edge->Type = EdgeT;
 		Edge->Graph = Graph;
 		Edge->Handle = Handle;
@@ -194,7 +216,7 @@ ML_METHOD("---", NodeT, NodeT) {
 	node_t *B = (node_t *)Args[1];
 	graph_t *Graph = A->Graph;
 	if (Graph != B->Graph) return ml_error("GraphError", "Nodes are from different graphs");
-	return edge(Graph, agedge(Graph->Handle, A->Handle, B->Handle, NULL, TRUE));
+	return edge(Graph, agedge(Graph->Handle, B->Handle, A->Handle, NULL, 1));
 }
 
 ML_METHOD("-->", NodeT, NodeT) {
@@ -202,7 +224,7 @@ ML_METHOD("-->", NodeT, NodeT) {
 	node_t *B = (node_t *)Args[1];
 	graph_t *Graph = A->Graph;
 	if (Graph != B->Graph) return ml_error("GraphError", "Nodes are from different graphs");
-	return edge(Graph, agedge(Graph->Handle, A->Handle, B->Handle, NULL, TRUE));
+	return edge(Graph, agedge(Graph->Handle, B->Handle, A->Handle, NULL, 1));
 }
 
 ML_METHOD("out", NodeT) {
@@ -210,7 +232,7 @@ ML_METHOD("out", NodeT) {
 	graph_t *Graph = Node->Graph;
 	ml_value_t *Edges = ml_list();
 	for (Agedge_t *Handle = agfstout(Graph->Handle, Node->Handle); Handle; Handle = agnxtout(Graph->Handle, Handle)) {
-		ml_list_put(Edges, ml_tuplev(2, edge(Graph, Handle), node(Graph, agtail(Handle))));
+		ml_list_put(Edges, ml_tuplev(2, edge(Graph, Handle), node(Graph, aghead(Handle))));
 	}
 	return Edges;
 }
@@ -220,7 +242,7 @@ ML_METHOD("in", NodeT) {
 	graph_t *Graph = Node->Graph;
 	ml_value_t *Edges = ml_list();
 	for (Agedge_t *Handle = agfstin(Graph->Handle, Node->Handle); Handle; Handle = agnxtin(Graph->Handle, Handle)) {
-		ml_list_put(Edges, ml_tuplev(2, edge(Graph, Handle), node(Graph, aghead(Handle))));
+		ml_list_put(Edges, ml_tuplev(2, edge(Graph, Handle), node(Graph, agtail(Handle))));
 	}
 	return Edges;
 }
@@ -230,12 +252,35 @@ ML_METHOD("edges", NodeT) {
 	graph_t *Graph = Node->Graph;
 	ml_value_t *Edges = ml_list();
 	for (Agedge_t *Handle = agfstedge(Graph->Handle, Node->Handle); Handle; Handle = agnxtedge(Graph->Handle, Handle, Node->Handle)) {
-		ml_list_put(Edges, ml_tuplev(3, edge(Graph, Handle), node(Graph, aghead(Handle)), node(Graph, agtail(Handle))));
+		ml_list_put(Edges, ml_tuplev(3, edge(Graph, Handle), node(Graph, agtail(Handle)), node(Graph, aghead(Handle))));
 	}
 	return Edges;
 }
 
+ML_METHOD("attrs", GraphT, MLTypeT) {
+	graph_t *Graph = (graph_t *)Args[0];
+	int Kind;
+	if ((ml_type_t *)Args[1] == GraphT) {
+		Kind = AGRAPH;
+	} else if ((ml_type_t *)Args[1] == NodeT) {
+		Kind = AGNODE;
+	} else if ((ml_type_t *)Args[1] == EdgeT) {
+		Kind = AGEDGE;
+	} else {
+		return ml_error("ValueError", "Expected graph/node/edge not %s", ((ml_type_t *)Args[1])->Name);
+	}
+	ml_value_t *Attrs = ml_list();
+	Agsym_t *Attr = NULL;
+	while ((Attr = agnxtattr(Graph->Handle, Kind, Attr))) {
+		ml_list_put(Attrs, ml_string_copy(Attr->name, -1));
+	}
+	return Attrs;
+}
+
 ML_LIBRARY_ENTRY0(graphviz) {
 #include "graphviz_init.c"
+	stringmap_insert(GraphT->Exports, "node", NodeT);
+	stringmap_insert(GraphT->Exports, "edge", EdgeT);
+	stringmap_insert(GraphT->Exports, "desc", GraphDescT);
 	Slot[0] = (ml_value_t *)GraphT;
 }

@@ -37,7 +37,7 @@ ML_FUNCTION(Encode) {
 		}
 	}
 	*Out = 0;
-	return ml_string(OutChars, OutSize);
+	return ml_string_unchecked(OutChars, OutSize);
 }
 
 ML_FUNCTION(Decode) {
@@ -87,7 +87,7 @@ ML_FUNCTION(Decode) {
 			return ml_error("UrlError", "Invalid character %c in url", C);
 		}
 	}
-	return ml_string(OutChars, OutSize);
+	return ml_string_unchecked(OutChars, OutSize);
 }
 
 ML_LIBRARY_ENTRY0(enc_url) {

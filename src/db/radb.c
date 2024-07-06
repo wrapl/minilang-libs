@@ -163,7 +163,7 @@ ML_METHOD("get", StringStoreT, MLIntegerT) {
 	char *Value = snew(Length + 1);
 	string_store_get(Store->Handle, Index, Value, Length);
 	Value[Length] = 0;
-	return ml_string(Value, Length);
+	return ml_string_unchecked(Value, Length);
 }
 
 ML_METHOD("set", StringStoreT, MLIntegerT, MLStringT) {
@@ -429,7 +429,7 @@ ML_METHOD("get", StringIndexT, MLIntegerT) {
 	size_t Size = string_store_size(Store->Values, Index);
 	char *Value = snew(Size + 1);
 	string_store_get(Store->Values, Index, Value, Size);
-	return ml_string(Value, Size);
+	return ml_string_unchecked(Value, Size);
 }
 
 ML_METHOD("count", StringIndexT) {

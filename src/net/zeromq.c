@@ -70,7 +70,7 @@ ML_METHOD("endpoint", SocketT) {
 	socket_t *Socket = (socket_t *)Args[0];
 	const char *Endpoint = zsock_endpoint(Socket->Handle);
 	if (!Endpoint) return MLNil;
-	return ml_string(Endpoint, -1);
+	return ml_string_unchecked(Endpoint, -1);
 }
 
 ML_METHOD("attach", SocketT, MLStringT, MLBooleanT) {
@@ -293,7 +293,7 @@ ML_METHOD("data", FrameT) {
 	char *Bytes = snew(Length + 1);
 	memcpy(Bytes, zframe_data(Frame->Handle), Length);
 	Bytes[Length] = 0;
-	return ml_string(Bytes, Length);
+	return ml_string_unchecked(Bytes, Length);
 }
 
 ML_METHOD("append", MLStringBufferT, FrameT) {

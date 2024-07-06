@@ -28,7 +28,7 @@ static void field_fn(void *Buffer, size_t Size, csv_t *Csv) {
 	char *Copy = GC_malloc_atomic(Size + 1);
 	memcpy(Copy, Buffer, Size);
 	Copy[Size] = 0;
-	ml_list_append(Csv->Row, ml_string(Copy, Size));
+	ml_list_append(Csv->Row, ml_string_unchecked(Copy, Size));
 }
 
 static void row_fn(int Delim, csv_t *Csv) {

@@ -2,6 +2,7 @@
 #include <minilang/ml_time.h>
 #include <minilang/ml_uuid.h>
 #include <minilang/ml_macros.h>
+#include <minilang/ml_logging.h>
 #include <libpq-fe.h>
 #include <catalog/pg_type_d.h>
 #include <ctype.h>
@@ -243,7 +244,7 @@ static ml_value_t *query_recv_string(const char *Value, int Length) {
 	char *Copy = snew(Length + 1);
 	memcpy(Copy, Value, Length);
 	Copy[Length] = 0;
-	return ml_string(Copy, Length);
+	return ml_string_unchecked(Copy, Length);
 }
 
 static uint8_t hexdigit(char C) {
@@ -264,7 +265,7 @@ static ml_value_t *query_recv_bytes(const char *Value, int Length) {
 		char *Copy = snew(Length + 1);
 		memcpy(Copy, Value, Length);
 		Copy[Length] = 0;
-		return ml_string(Copy, Length);
+		return ml_string_unchecked(Copy, Length);
 	}
 }
 
@@ -374,6 +375,7 @@ static void *connection_thread_fn(connection_t *Connection) {
 		ExecStatusType Status = PQresultStatus(Result);
 		if (!Result) {
 		} else if (should_retry(Status, Result, Conn)) {
+			ML_LOG_WARN(NULL, "Reconnecting to database");
 			PQclear(Result);
 			PQfinish(Conn);
 			Connection->Conn = NULL;
@@ -443,19 +445,20 @@ static void *connection_pipeline_thread_fn(connection_t *Connection) {
 	}
 	for (;;) {
 		while (!Connection->Head) pthread_cond_wait(Connection->Ready, Connection->Lock);
-		pthread_mutex_unlock(Connection->Lock);
 		while (PQisBusy(Conn)) {
+			pthread_mutex_unlock(Connection->Lock);
 			struct pollfd Fds[1] = {{.fd = PQsocket(Conn), .events = POLLIN}};
 			poll(Fds, 1, -1);
+			pthread_mutex_lock(Connection->Lock);
 			if (Fds[0].revents & POLLERR) break;
 			PQconsumeInput(Conn);
 		}
-		pthread_mutex_lock(Connection->Lock);
 		PGresult *Result = PQgetResult(Conn);
 		if (Result) {
 			ExecStatusType Status = PQresultStatus(Result);
 			if (Status == PGRES_PIPELINE_SYNC) {
 			} else if (should_retry(Status, Result, Conn)) {
+				ML_LOG_WARN(NULL, "Reconnecting to database");
 				PQclear(Result);
 				PQfinish(Conn);
 				Connection->Conn = NULL;

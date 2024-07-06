@@ -173,7 +173,7 @@ static void ML_TYPED_FN(ml_iter_value, MLSqliteStmtT, ml_state_t *Caller, ml_sql
 			char *Value = snew(Length + 1);
 			memcpy(Value, sqlite3_column_text(Stmt->Handle, I), Length);
 			Value[Length] = 0;
-			ml_tuple_set(Tuple, I + 1, ml_string(Value, Length));
+			ml_tuple_set(Tuple, I + 1, ml_string_unchecked(Value, Length));
 			break;
 		}
 		case SQLITE_BLOB: {
@@ -181,7 +181,7 @@ static void ML_TYPED_FN(ml_iter_value, MLSqliteStmtT, ml_state_t *Caller, ml_sql
 			char *Value = snew(Length + 1);
 			memcpy(Value, sqlite3_column_blob(Stmt->Handle, I), Length);
 			Value[Length] = 0;
-			ml_tuple_set(Tuple, I + 1, ml_string(Value, Length));
+			ml_tuple_set(Tuple, I + 1, ml_string_unchecked(Value, Length));
 			break;
 		}
 		}

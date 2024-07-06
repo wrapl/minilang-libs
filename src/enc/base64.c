@@ -46,7 +46,7 @@ ML_FUNCTION(Encode) {
 	char *OutChars = snew(OutSize + 1);
 	_encode((unsigned char *)OutChars, (const unsigned char *)ml_address_value(Args[0]), InSize);
 	OutChars[OutSize] = 0;
-	return ml_string(OutChars, OutSize);
+	return ml_string_unchecked(OutChars, OutSize);
 }
 
 size_t _decode(unsigned char *OutChars, const unsigned char *InChars, size_t InLength) {

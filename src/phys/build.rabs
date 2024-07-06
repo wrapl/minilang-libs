@@ -1,0 +1,3 @@
+:>so_module("phys/chipmunk.so", [file("chipmunk.o")], ["-lchipmunk"])
+
+so_module("phys/box2d.so", [file("box2d.o")], ["-lbox2d"])

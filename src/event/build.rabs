@@ -6,7 +6,7 @@ LIBUV := file("lib/libuv_a.a") => fun() do
 	execute("make install")
 end
 
-scope("libuev";) do
+:<scope("libuev";) do
 	let LIBUEV := file("lib/libuev.a") => fun() do
 		let Dir := file("libuev"):rmdir:mkdir:chdir
 		execute("git clone --recursive https://github.com/troglobit/libuev.git .")
@@ -18,7 +18,7 @@ scope("libuev";) do
 	CFLAGS := old + ['-I{file("include")}']
 	PREBUILDS := old + [LIBUEV]
 	so_module("event/uev.so", [file("uev.o"), LIBUEV])
-end
+end>:
 
 scope("libevent";) do
 	LDFLAGS := old + ["-levent"]

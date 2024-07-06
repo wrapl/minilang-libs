@@ -57,6 +57,7 @@ fun module(Name, File, Tags) do
 		end
 		Modules:put((Name:before("."), Installed, []))
 	end
+	File
 end
 
 so_module := fun(Name, Objects, Libraries) do
@@ -76,7 +77,7 @@ so_module := fun(Name, Objects, Libraries) do
 	end
 	Library[Objects, Libraries] => fun(Library) do
 		Library:dir:mkdir
-		execute('cc', '-o', Library, '-shared', '-export-dynamic', Objects, Libraries, LDFLAGS, '-Wl,--dynamic-list={Exports}')
+		execute('cc', '-o', Library, '-shared', '-Wl,--export-dynamic', Objects, Libraries, LDFLAGS, '-Wl,--dynamic-list={Exports}')
 		:>DEBUG or execute("strip", Library)
 	end
 	module(Name, Library, [])

@@ -109,6 +109,8 @@ static Z3_sort ML_TYPED_FN(ml_z3_sort_of, <$mtype>, ml_value_t *Value) {
 }
 >
 
+ML_UNION_TYPE(Z3ValueT, Z3AstT, MLNumberT);
+
 <z3-function "mk_const" "const" "ast" "symbol" "sort">
 <z3-function "mk_true" "true" "ast">
 <z3-function "mk_false" "false" "ast">
@@ -145,7 +147,7 @@ ML_METHOD("append", MLStringBufferT, Z3AstT) {
 void ml_library_entry0(ml_value_t **Slot) {
 #include "z3_init.c"
 	Context = Z3_mk_context(NULL);
-	Slot[0] = ml_module("z3",
-		<for $name $value $exports:<stringify:<$name>>, <$value>,>
+	Slot[0] = ml_module("z3",<for $name $value $exports:
+		<stringify:<$name>>, <$value>,>
 	NULL);
 }

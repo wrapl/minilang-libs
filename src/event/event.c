@@ -247,4 +247,5 @@ ML_LIBRARY_ENTRY(event) {
 		"connect", Connect,
 		"emit", Emit,
 	NULL);
+	ML_RETURN(Slot[0]);
 }

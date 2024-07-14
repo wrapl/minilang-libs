@@ -1306,6 +1306,7 @@ static ml_value_t *_value_to_ml(const GValue *Value, GIBaseInfo *Info) {
 	case G_TYPE_FLOAT: return ml_real(g_value_get_float(Value));
 	case G_TYPE_DOUBLE: return ml_real(g_value_get_double(Value));
 	case G_TYPE_STRING: return ml_string(g_value_get_string(Value), -1);
+	case G_TYPE_PARAM: return ml_gir_instance_get(g_value_get_param(Value), NULL);
 	case G_TYPE_POINTER: return MLNil; //Std$Address$new(g_value_get_pointer(Value));
 	default: {
 		if (G_VALUE_HOLDS(Value, G_TYPE_OBJECT)) {
@@ -1448,22 +1449,30 @@ ML_METHODX("connect", GirObjectInstanceT, MLStringT, MLFunctionT) {
 //>Object
 	instance_t *Instance = (instance_t *)Args[0];
 	const char *Signal = ml_string_value(Args[1]);
-	GISignalInfo *SignalInfo = (GISignalInfo *)stringmap_search(Instance->Type->Signals, Signal);
-	if (!SignalInfo) ML_ERROR("NameError", "Signal %s::%s not found", Instance->Type->Base.Base.Name, Signal);
-	int NumArgs = g_callable_info_get_n_args((GICallableInfo *)SignalInfo);
-	gir_closure_info_t *Info = GC_malloc_uncollectable(sizeof(gir_closure_info_t) + NumArgs * sizeof(GIBaseInfo *));
+	gir_closure_info_t *Info;
+	if (!strncmp(Signal, "notify::", strlen("notify::"))) {
+		Info = GC_malloc_uncollectable(sizeof(gir_closure_info_t) + 2 * sizeof(GIBaseInfo *));
+		Info->NumArgs = 2;
+		Info->Args[0] = NULL;
+		Info->Args[1] = NULL;
+	} else {
+		GISignalInfo *SignalInfo = (GISignalInfo *)stringmap_search(Instance->Type->Signals, Signal);
+		if (!SignalInfo) ML_ERROR("NameError", "Signal %s::%s not found", Instance->Type->Base.Base.Name, Signal);
+		int NumArgs = g_callable_info_get_n_args((GICallableInfo *)SignalInfo);
+		Info = GC_malloc_uncollectable(sizeof(gir_closure_info_t) + NumArgs * sizeof(GIBaseInfo *));
+		Info->NumArgs = NumArgs;
+		for (int I = 0; I < NumArgs; ++I) {
+			GIArgInfo *ArgInfo = g_callable_info_get_arg(SignalInfo, I);
+			GITypeInfo TypeInfo[1];
+			g_arg_info_load_type(ArgInfo, TypeInfo);
+			Info->Args[I] = g_type_info_get_interface(TypeInfo);
+			g_base_info_unref(ArgInfo);
+		}
+	}
 	Info->Instance = Instance;
 	GC_register_disappearing_link((void **)&Info->Instance);
 	Info->Context = Caller->Context;
 	Info->Function = Args[2];
-	Info->NumArgs = NumArgs;
-	for (int I = 0; I < NumArgs; ++I) {
-		GIArgInfo *ArgInfo = g_callable_info_get_arg(SignalInfo, I);
-		GITypeInfo TypeInfo[1];
-		g_arg_info_load_type(ArgInfo, TypeInfo);
-		Info->Args[I] = g_type_info_get_interface(TypeInfo);
-		g_base_info_unref(ArgInfo);
-	}
 	ptrset_insert(Instance->Handlers, Info);
 	GClosure *Closure = g_closure_new_simple(sizeof(GClosure), Info);
 	g_closure_set_marshal(Closure, gir_closure_marshal);

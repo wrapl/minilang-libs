@@ -1281,6 +1281,11 @@ static void typelib_iterate(ml_state_t *Caller, typelib_t *Typelib) {
 	ML_CONTINUE(Caller, Iter);
 }
 
+ML_GIR_TYPELIB(_GObject, "GObject", NULL);
+
+ML_GIR_IMPORT(GObjectT, _GObject, "Object");
+ML_GIR_IMPORT(GParamSpecT, _GObject, "ParamSpec");
+
 static ml_value_t *_value_to_ml(const GValue *Value, GIBaseInfo *Info) {
 	switch (G_VALUE_TYPE(Value)) {
 	case G_TYPE_NONE: return MLNil;
@@ -1306,7 +1311,12 @@ static ml_value_t *_value_to_ml(const GValue *Value, GIBaseInfo *Info) {
 	case G_TYPE_FLOAT: return ml_real(g_value_get_float(Value));
 	case G_TYPE_DOUBLE: return ml_real(g_value_get_double(Value));
 	case G_TYPE_STRING: return ml_string(g_value_get_string(Value), -1);
-	case G_TYPE_PARAM: return ml_gir_instance_get(g_value_get_param(Value), NULL);
+	case G_TYPE_PARAM: {
+		struct_instance_t *Instance = new(struct_instance_t);
+		Instance->Type = (struct_t *)GParamSpecT;
+		Instance->Value = g_value_get_param(Value);
+		return (ml_value_t *)Instance;
+	}
 	case G_TYPE_POINTER: return MLNil; //Std$Address$new(g_value_get_pointer(Value));
 	default: {
 		if (G_VALUE_HOLDS(Value, G_TYPE_OBJECT)) {
@@ -3850,11 +3860,6 @@ typedef struct {
 	GObjectClass Base;
 	class_t *Info;
 } gir_class_t;
-
-ML_GIR_TYPELIB(_GObject, "GObject", NULL);
-
-ML_GIR_IMPORT(GObjectT, _GObject, "Object");
-ML_GIR_IMPORT(GParamSpecT, _GObject, "ParamSpec");
 
 static void object_init(gir_object_t *Object, gir_class_t *Class) {
 	Object->Properties = g_malloc(Class->Info->NumProperties * sizeof(GValue));

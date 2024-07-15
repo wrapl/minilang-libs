@@ -857,13 +857,13 @@ static void method_register(const char *Name, GIFunctionInfo *Info, ml_type_t *O
 	int NArgsIn = 0;
 	for (int I = 0; I < NArgs; ++I) {
 		GIArgInfo *ArgInfo = g_callable_info_get_arg((GICallableInfo *)Info, I);
-		int ClosureArg = g_arg_info_get_closure(ArgInfo);
-		if (ClosureArg >= 0) goto done;
 		GITypeInfo TypeInfo[1];
 		g_arg_info_load_type(ArgInfo, TypeInfo);
 		int LengthIndex = g_type_info_get_array_length(TypeInfo);
 		if (LengthIndex >= 0) goto done;
 		GITypeTag Tag = g_type_info_get_tag(TypeInfo);
+		int ClosureArg = g_arg_info_get_closure(ArgInfo);
+		if (ClosureArg >= 0 && Tag != GI_TYPE_TAG_VOID) goto done;
 		switch (g_arg_info_get_direction(ArgInfo)) {
 		case GI_DIRECTION_IN:
 		case GI_DIRECTION_INOUT:

@@ -556,6 +556,84 @@ static ml_value_t *gir_enum_value(enum_t *Type, int64_t Value) {
 	return (ml_value_t *)Enum;
 }
 
+static gint64 gir_enum_value_value(ml_value_t *Value) {
+	return ((enum_value_t *)Value)->Value;
+}
+
+typedef struct {
+	ml_value_t *Index;
+	gint64 Value;
+} gir_enum_case_t;
+
+typedef struct {
+	ml_type_t *Type;
+	enum_t *Enum;
+	gir_enum_case_t Cases[];
+} gir_enum_switch_t;
+
+static void gir_enum_switch(ml_state_t *Caller, gir_enum_switch_t *Switch, int Count, ml_value_t **Args) {
+	ML_CHECKX_ARG_COUNT(1);
+	ml_value_t *Arg = ml_deref(Args[0]);
+	if (!ml_is(Arg, (ml_type_t *)Switch->Enum)) {
+		ML_ERROR("TypeError", "expected %s for argument 1", Switch->Enum->Base.Base.Name);
+	}
+	gint64 Value = gir_enum_value_value(Arg);
+	for (gir_enum_case_t *Case = Switch->Cases;; ++Case) {
+		if ((Case->Value & Value) == Case->Value) ML_RETURN(Case->Index);
+	}
+	ML_RETURN(MLNil);
+}
+
+ML_TYPE(GirEnumSwitchT, (MLFunctionT), "flags-switch",
+//!internal
+	.call = (void *)gir_enum_switch
+);
+
+static ml_value_t *gir_enum_switch_fn(enum_t *Enum, int Count, ml_value_t **Args) {
+	int Total = 1;
+	for (int I = 0; I < Count; ++I) {
+		ML_CHECK_ARG_TYPE(I, MLListT);
+		Total += ml_list_length(Args[I]);
+	}
+	gir_enum_switch_t *Switch = xnew(gir_enum_switch_t, Total, gir_enum_case_t);
+	Switch->Type = GirEnumSwitchT;
+	Switch->Enum = Enum;
+	gir_enum_case_t *Case = Switch->Cases;
+	for (int I = 0; I < Count; ++I) {
+		ML_LIST_FOREACH(Args[I], Iter) {
+			ml_value_t *Value = Iter->Value;
+			if (ml_is(Value, (ml_type_t *)Enum)) {
+				Case->Value = gir_enum_value_value(Value);
+			} else if (ml_is(Value, MLStringT)) {
+				ml_value_t *EnumValue = stringmap_search(Enum->Base.Base.Exports, ml_string_value(Value));
+				if (!EnumValue) return ml_error("EnumError", "Invalid enum name");
+				Case->Value = gir_enum_value_value(EnumValue);
+			} else if (ml_is(Value, MLTupleT)) {
+				ml_tuple_t *Tuple = (ml_tuple_t *)Value;
+				for (int J = 0; J < Tuple->Size; ++J) {
+					ml_value_t *Value = Tuple->Values[J];
+					if (!ml_is(Value, MLStringT)) return ml_error("ValueError", "Unsupported value in flags case");
+					ml_value_t *EnumValue = stringmap_search(Enum->Base.Base.Exports, ml_string_value(Tuple->Values[J]));
+					if (!EnumValue) return ml_error("EnumError", "Invalid enum name");
+					Case->Value |= gir_enum_value_value(EnumValue);
+				}
+			} else {
+				return ml_error("ValueError", "Unsupported value in flags case");
+			}
+			Case->Index = ml_integer(I);
+			++Case;
+		}
+	}
+	Case->Value = 0;
+	Case->Index = ml_integer(Count);
+	return (ml_value_t *)Switch;
+}
+
+ML_METHOD(MLCompilerSwitch, GirEnumT) {
+//!internal
+	return ml_inline_call_macro(ml_cfunction(Args[0], (ml_callback_t)gir_enum_switch_fn));
+}
+
 static ml_value_t *enum_instance(enum_t *Enum, int Count, ml_value_t **Args) {
 	ML_CHECK_ARG_COUNT(1);
 	for (int I = 0; I < Count; ++I) {
@@ -1345,11 +1423,11 @@ static ml_value_t *_value_to_ml(const GValue *Value, GIBaseInfo *Info) {
 				}
 				case GI_INFO_TYPE_ENUM: {
 					enum_t *Enum = (enum_t *)enum_info_lookup((GIEnumInfo *)InterfaceInfo);
-					return (ml_value_t *)Enum->ByIndex[g_value_get_uint(Value)];
+					return (ml_value_t *)Enum->ByIndex[g_value_get_enum(Value)];
 				}
 				case GI_INFO_TYPE_FLAGS: {
 					enum_t *Enum = (enum_t *)enum_info_lookup((GIEnumInfo *)InterfaceInfo);
-					return gir_enum_value(Enum, g_value_get_uint(Value));
+					return gir_enum_value(Enum, g_value_get_flags(Value));
 				}
 				case GI_INFO_TYPE_OBJECT: {
 					ml_type_t *Type = object_info_lookup(InterfaceInfo);

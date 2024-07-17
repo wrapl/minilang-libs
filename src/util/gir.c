@@ -210,7 +210,7 @@ ml_value_t *ml_gir_instance_get(void *Handle, ml_type_t *Fallback) {
 	} else if (Fallback) {
 		Instance->Type = (interface_t *)Fallback;
 	} else {
-		return ml_error("UnknownType", "Type %s not found", g_type_name(G_OBJECT_TYPE(Handle)));
+		return ml_error("TypeError", "Type %s not found", g_type_name(G_OBJECT_TYPE(Handle)));
 	}
 	return (ml_value_t *)Instance;
 }
@@ -1546,14 +1546,14 @@ ML_METHODX("connect", GirObjectInstanceT, MLStringT, MLFunctionT) {
 	} else {
 		GISignalInfo *SignalInfo = (GISignalInfo *)stringmap_search(Instance->Type->Signals, Signal);
 		if (!SignalInfo) ML_ERROR("NameError", "Signal %s::%s not found", Instance->Type->Base.Base.Name, Signal);
-		int NumArgs = g_callable_info_get_n_args((GICallableInfo *)SignalInfo);
-		Info = GC_malloc_uncollectable(sizeof(gir_closure_info_t) + NumArgs * sizeof(GIBaseInfo *));
+		int NumArgs = g_callable_info_get_n_args(SignalInfo);
+		Info = GC_malloc_uncollectable(sizeof(gir_closure_info_t) + (NumArgs + 1) * sizeof(GIBaseInfo *));
 		Info->NumArgs = NumArgs;
 		for (int I = 0; I < NumArgs; ++I) {
 			GIArgInfo *ArgInfo = g_callable_info_get_arg(SignalInfo, I);
 			GITypeInfo TypeInfo[1];
 			g_arg_info_load_type(ArgInfo, TypeInfo);
-			Info->Args[I] = g_type_info_get_interface(TypeInfo);
+			Info->Args[I + 1] = g_type_info_get_interface(TypeInfo);
 			g_base_info_unref(ArgInfo);
 		}
 	}

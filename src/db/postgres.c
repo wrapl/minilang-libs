@@ -452,6 +452,7 @@ static void *connection_pipeline_thread_fn(connection_t *Connection) {
 			pthread_mutex_lock(Connection->Lock);
 			if (Fds[0].revents & POLLERR) break;
 			PQconsumeInput(Conn);
+			while (PQflush(Conn));
 		}
 		PGresult *Result = PQgetResult(Conn);
 		if (Result) {

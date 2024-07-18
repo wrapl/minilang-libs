@@ -446,13 +446,13 @@ static void *connection_pipeline_thread_fn(connection_t *Connection) {
 	for (;;) {
 		while (!Connection->Head) pthread_cond_wait(Connection->Ready, Connection->Lock);
 		while (PQisBusy(Conn)) {
+			while (PQflush(Conn));
 			pthread_mutex_unlock(Connection->Lock);
 			struct pollfd Fds[1] = {{.fd = PQsocket(Conn), .events = POLLIN}};
 			TEMP_FAILURE_RETRY(poll(Fds, 1, -1));
 			pthread_mutex_lock(Connection->Lock);
 			if (Fds[0].revents & POLLERR) break;
 			PQconsumeInput(Conn);
-			while (PQflush(Conn));
 		}
 		PGresult *Result = PQgetResult(Conn);
 		if (Result) {

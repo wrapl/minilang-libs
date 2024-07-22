@@ -4285,8 +4285,50 @@ ML_METHOD("list", GirFunctionT) {
 	return ml_stringbuffer_to_string(Buffer);
 }
 
+static GLogWriterOutput ml_gir_log_writer(GLogLevelFlags GLevel, const GLogField *Fields, gsize Count, gpointer Data) {
+	static stringmap_t Loggers[1] = {STRINGMAP_INIT};
+	ml_log_level_t Level;
+	switch (GLevel & G_LOG_LEVEL_MASK) {
+	case G_LOG_LEVEL_ERROR: Level = ML_LOG_LEVEL_FATAL; break;
+	case G_LOG_LEVEL_CRITICAL: Level = ML_LOG_LEVEL_ERROR; break;
+	case G_LOG_LEVEL_WARNING: Level = ML_LOG_LEVEL_WARN; break;
+	case G_LOG_LEVEL_MESSAGE: Level = ML_LOG_LEVEL_INFO; break;
+	case G_LOG_LEVEL_INFO: Level = ML_LOG_LEVEL_INFO; break;
+	case G_LOG_LEVEL_DEBUG: Level = ML_LOG_LEVEL_DEBUG; break;
+	default: Level = ML_LOG_LEVEL_DEBUG; break;
+	}
+	ml_logger_t *Logger = MLLoggerDefault;
+	const char *Message = "";
+	int MessageLength = 0;
+	const char *CodeFunc = "?";
+	const char *Source = "";
+	int Line = 0;
+	for (int I = Count; --I >= 0; ++Fields) {
+		if (!strcmp(Fields->key, "MESSAGE")) {
+			Message = Fields->value;
+			MessageLength = Fields->length;
+		} else if (!strcmp(Fields->key, "CODE_FILE")) {
+			Source = Fields->value;
+		} else if (!strcmp(Fields->key, "CODE_LINE")) {
+			Line = atoi(Fields->value);
+		} else if (!strcmp(Fields->key, "GLIB_DOMAIN")) {
+			ml_logger_t **Slot = (ml_logger_t **)stringmap_slot(Loggers, Fields->value);
+			if (!Slot[0]) Slot[0] = ml_logger(GC_strdup(Fields->value));
+			Logger = Slot[0];
+		} else if (!strcmp(Fields->key, "CODE_FUNC")) {
+			CodeFunc = Fields->value;
+		} else {
+			//fprintf(stderr, "Unused log field: %s\n", Fields->key);
+		}
+	}
+	if (!MessageLength) MessageLength = strlen(Message);
+	ml_log(Logger, Level, NULL, Source, Line, "(%s) %.*s", CodeFunc, MessageLength, Message);
+	return G_LOG_WRITER_HANDLED;
+}
+
 ML_LIBRARY_ENTRY(gir) {
 	//g_setenv("G_SLICE", "always-malloc", 1);
+	g_log_set_writer_func(ml_gir_log_writer, NULL, NULL);
 	GError *Error = 0;
 	g_irepository_require(NULL, "GLib", NULL, 0, &Error);
 	g_irepository_require(NULL, "GObject", NULL, 0, &Error);

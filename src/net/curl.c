@@ -24,7 +24,7 @@ ML_FUNCTIONX(Curl) {
 	curl_t *Curl = new(curl_t);
 	Curl->Type = CurlT;
 	Curl->Handle = curl_easy_init();
-	Curl->Scheduler = ml_context_get(Caller->Context, ML_SCHEDULER_INDEX);
+	Curl->Scheduler = ml_context_get_static(Caller->Context, ML_SCHEDULER_INDEX);
 	curl_easy_setopt(Curl->Handle, CURLOPT_PRIVATE, Curl);
 	curl_easy_setopt(Curl->Handle, CURLOPT_XFERINFOFUNCTION, progress_callback);
 	curl_easy_setopt(Curl->Handle, CURLOPT_XFERINFODATA, Curl);

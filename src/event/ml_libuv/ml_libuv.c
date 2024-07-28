@@ -29,7 +29,7 @@ ML_FUNCTIONX(Run) {
 	ML_CHECKX_ARG_COUNT(1);
 	ML_CHECKX_ARG_TYPE(0, MLFunctionT);
 	ml_state_t *State = ml_state(Caller);
-	ml_context_set(State->Context, ML_SCHEDULER_INDEX, ml_uv_scheduler);
+	ml_context_set_static(State->Context, ML_SCHEDULER_INDEX, ml_uv_scheduler);
 	ml_value_t *Function = Args[0];
 	ml_call(State, Function, 0, NULL);
 	uv_run(Loop, UV_RUN_DEFAULT);

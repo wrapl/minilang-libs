@@ -4297,6 +4297,7 @@ static GLogWriterOutput ml_gir_log_writer(GLogLevelFlags GLevel, const GLogField
 	case G_LOG_LEVEL_DEBUG: Level = ML_LOG_LEVEL_DEBUG; break;
 	default: Level = ML_LOG_LEVEL_DEBUG; break;
 	}
+	if (Level > MLLogLevel) return G_LOG_WRITER_HANDLED;
 	ml_logger_t *Logger = MLLoggerDefault;
 	const char *Message = "";
 	int MessageLength = 0;
@@ -4328,6 +4329,7 @@ static GLogWriterOutput ml_gir_log_writer(GLogLevelFlags GLevel, const GLogField
 
 ML_LIBRARY_ENTRY(gir) {
 	//g_setenv("G_SLICE", "always-malloc", 1);
+	g_log_set_debug_enabled(MLLogLevel >= ML_LOG_LEVEL_DEBUG);
 	g_log_set_writer_func(ml_gir_log_writer, NULL, NULL);
 	GError *Error = 0;
 	g_irepository_require(NULL, "GLib", NULL, 0, &Error);

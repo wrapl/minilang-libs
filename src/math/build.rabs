@@ -1,0 +1,5 @@
+scope("dist";) do
+	CFLAGS := old + []
+	LDFLAGS := old + []
+	so_module("math/dist.so", [file("dist.o")])
+end

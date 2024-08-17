@@ -22,13 +22,6 @@ ML_TYPE(DistT, (MLFunctionT), "math::dist");
 
 static random::minstd_rand RNG;
 
-#define RAND_FN(TYPE, NAME) \
-\
-ML_METHOD("random", TYPE) { \
-	NAME ## _t *Dist = (NAME ## _t *)Args[0]; \
-	return ml_real(Dist->Rand(RNG)); \
-}
-
 #define PROP_FN(TYPE, NAME, METHOD, FIELD) \
 \
 ML_METHOD(#METHOD, TYPE) { \
@@ -64,6 +57,13 @@ ML_METHOD(#METHOD, TYPE, MLArrayT) { \
 	return (ml_value_t *)C; \
 }
 
+#define RAND_FN(TYPE, NAME) \
+\
+ML_METHOD("random", TYPE) { \
+	NAME ## _t *Dist = (NAME ## _t *)Args[0]; \
+	return ml_real(Dist->Rand(RNG)); \
+}
+
 #define DIST_FNS(TYPE, NAME) \
 \
 DIST_FN_REAL(pdf, TYPE, NAME, pdf) \
@@ -76,8 +76,8 @@ DIST_FN(kurtosis, TYPE, NAME, kurtosis)
 
 #define DIST_FNS_WITH_RANDOM(TYPE, NAME) \
 \
-RAND_FN(TYPE, NAME) \
-DIST_FNS(TYPE, NAME)
+DIST_FNS(TYPE, NAME) \
+RAND_FN(TYPE, NAME)
 
 #define DIST_PARAMS_0(TYPE, NAME)
 #define DIST_ARGS_0(TYPE, NAME)
@@ -129,6 +129,20 @@ ML_METHOD(TYPE, MLRealT, MLRealT, MLRealT) { \
 #define INITIALIZER(EXPR)
 #endif
 
+#define DIST_TYPE(TYPE, NAME, COUNT) \
+\
+ML_TYPE(TYPE, (DistT), "math::dist::" #NAME); \
+\
+struct NAME ## _t : public gc { \
+	ml_type_t *Type = TYPE; \
+	math::NAME ## _distribution<double> Dist; \
+	NAME ## _t(DIST_PARAMS(COUNT)) : Dist(DIST_ARGS(COUNT)) {} \
+}; \
+\
+DIST_CONSTRUCTOR(COUNT, TYPE, NAME) \
+\
+DIST_FNS(TYPE, NAME)
+
 #define DIST_TYPE_WITH_RANDOM(TYPE, NAME, NAME2, COUNT) \
 \
 struct NAME ## _t; \
@@ -150,20 +164,6 @@ static void NAME ## _call(ml_state_t *Caller, NAME ## _t *Dist, int Count, ml_va
 DIST_CONSTRUCTOR(COUNT, TYPE, NAME) \
 \
 DIST_FNS_WITH_RANDOM(TYPE, NAME)
-
-#define DIST_TYPE(TYPE, NAME, COUNT) \
-\
-ML_TYPE(TYPE, (DistT), "math::dist::" #NAME); \
-\
-struct NAME ## _t : public gc { \
-	ml_type_t *Type = TYPE; \
-	math::NAME ## _distribution<double> Dist; \
-	NAME ## _t(DIST_PARAMS(COUNT)) : Dist(DIST_ARGS(COUNT)) {} \
-}; \
-\
-DIST_CONSTRUCTOR(COUNT, TYPE, NAME) \
-\
-DIST_FNS(TYPE, NAME)
 
 /****************************************************/
 

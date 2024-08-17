@@ -5,6 +5,9 @@
 #include <box2d/box2d.h>
 #include <stdio.h>
 
+#undef ML_CATEGORY
+#define ML_CATEGORY "phys/box2d"
+
 #define BOOL_FIELD(TYPE, CTYPE, FIELD) \
 \
 ML_METHOD(#FIELD, TYPE) { \

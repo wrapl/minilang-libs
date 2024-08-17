@@ -8,11 +8,15 @@
 #define BOOST_MATH_INDETERMINATE_RESULT_ERROR_POLICY errno_on_error
 
 #include <minilang/ml_library.h>
+#include <minilang/ml_array.h>
 #include <boost/random.hpp>
 #include <boost/math/distributions.hpp>
 #include <gc/gc_cpp.h>
 
 using namespace boost;
+
+#undef ML_CATEGORY
+#define ML_CATEGORY "math/dist"
 
 ML_TYPE(DistT, (MLFunctionT), "math::dist");
 
@@ -45,6 +49,19 @@ ML_METHOD(#METHOD, TYPE, MLRealT) { \
 	NAME ## _t *Dist = (NAME ## _t *)Args[0]; \
 	double X = ml_real_value(Args[1]); \
 	return ml_real(math::FN(Dist->Dist, X)); \
+} \
+\
+ML_METHOD(#METHOD, TYPE, MLArrayT) { \
+	NAME ## _t *Dist = (NAME ## _t *)Args[0]; \
+	ml_array_t *A = (ml_array_t *)Args[1]; \
+	if (A->Degree == -1) return (ml_value_t *)A; \
+	if (A->Format == ML_ARRAY_FORMAT_ANY) return ml_error("TypeError", "Invalid types for array operation"); \
+	int Degree = A->Degree; \
+	ml_array_t *C = ml_array_alloc(ML_ARRAY_FORMAT_F64, Degree); \
+	int DataSize = ml_array_copy(C, A); \
+	double *Values = (double *)C->Base.Value; \
+	for (int I = DataSize / sizeof(double); --I >= 0; ++Values) *Values = math::FN(Dist->Dist, *Values); \
+	return (ml_value_t *)C; \
 }
 
 #define DIST_FNS(TYPE, NAME) \
@@ -106,9 +123,19 @@ ML_METHOD(TYPE, MLRealT, MLRealT, MLRealT) { \
 #define DIST_ARGS(COUNT) APPLY(DIST_ARGS_ ## COUNT, TYPE, NAME)
 #define DIST_CONSTRUCTOR(COUNT, TYPE, NAME) APPLY(DIST_CONSTRUCTOR_ ## COUNT, TYPE, NAME)
 
+#ifdef GENERATE_INIT
+#define INITIALIZER(EXPR) INIT_CODE EXPR
+#else
+#define INITIALIZER(EXPR)
+#endif
+
 #define DIST_TYPE_WITH_RANDOM(TYPE, NAME, NAME2, COUNT) \
 \
+struct NAME ## _t; \
+\
 ML_TYPE(TYPE, (DistT), "math::dist::" #NAME); \
+\
+INITIALIZER(TYPE->call = ((void (*)(ml_state_t *, ml_value_t *, int, ml_value_t **))NAME ## _call);) \
 \
 struct NAME ## _t : public gc { \
 	ml_type_t *Type = TYPE; \
@@ -116,6 +143,9 @@ struct NAME ## _t : public gc { \
 	random::NAME2 ## _distribution<double> Rand; \
 	NAME ## _t(DIST_PARAMS(COUNT)) : Dist(DIST_ARGS(COUNT)), Rand(DIST_ARGS(COUNT)) {} \
 }; \
+static void NAME ## _call(ml_state_t *Caller, NAME ## _t *Dist, int Count, ml_value_t **Args) { \
+	ML_RETURN(ml_real(Dist->Rand(RNG))); \
+} \
 \
 DIST_CONSTRUCTOR(COUNT, TYPE, NAME) \
 \

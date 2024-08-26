@@ -151,7 +151,7 @@ static void console_step_in(GtkWidget *Button, gtk_console_t *Console) {
 	ml_parser_t *Parser = Console->Parser;
 	ml_compiler_t *Compiler = Console->Compiler;
 	ml_parser_reset(Parser);
-	ml_parser_input(Parser, "step_in()");
+	ml_parser_input(Parser, "step_in()", 0);
 	ml_command_evaluate((ml_state_t *)Console, Parser, Compiler);
 }
 
@@ -159,7 +159,7 @@ static void console_step_over(GtkWidget *Button, gtk_console_t *Console) {
 	ml_parser_t *Parser = Console->Parser;
 	ml_compiler_t *Compiler = Console->Compiler;
 	ml_parser_reset(Parser);
-	ml_parser_input(Parser, "step_over()");
+	ml_parser_input(Parser, "step_over()", 0);
 	ml_command_evaluate((ml_state_t *)Console, Parser, Compiler);
 }
 
@@ -167,7 +167,7 @@ static void console_step_out(GtkWidget *Button, gtk_console_t *Console) {
 	ml_parser_t *Parser = Console->Parser;
 	ml_compiler_t *Compiler = Console->Compiler;
 	ml_parser_reset(Parser);
-	ml_parser_input(Parser, "step_out()");
+	ml_parser_input(Parser, "step_out()", 0);
 	ml_command_evaluate((ml_state_t *)Console, Parser, Compiler);
 }
 
@@ -175,7 +175,7 @@ static void console_continue(GtkWidget *Button, gtk_console_t *Console) {
 	ml_parser_t *Parser = Console->Parser;
 	ml_compiler_t *Compiler = Console->Compiler;
 	ml_parser_reset(Parser);
-	ml_parser_input(Parser, "continue()");
+	ml_parser_input(Parser, "continue()", 0);
 	ml_command_evaluate((ml_state_t *)Console, Parser, Compiler);
 }
 
@@ -183,7 +183,7 @@ static void console_continue_all(GtkWidget *Button, gtk_console_t *Console) {
 	ml_parser_t *Parser = Console->Parser;
 	ml_compiler_t *Compiler = Console->Compiler;
 	ml_parser_reset(Parser);
-	ml_parser_input(Parser, "continue_all()");
+	ml_parser_input(Parser, "continue_all()", 0);
 	ml_command_evaluate((ml_state_t *)Console, Parser, Compiler);
 }
 
@@ -191,7 +191,7 @@ void gtk_console_evaluate(gtk_console_t *Console, const char *Text) {
 	ml_parser_t *Parser = Console->Parser;
 	ml_compiler_t *Compiler = Console->Compiler;
 	ml_parser_reset(Parser);
-	ml_parser_input(Parser, Text);
+	ml_parser_input(Parser, Text, 1);
 	ml_command_evaluate((ml_state_t *)Console, Parser, Compiler);
 }
 

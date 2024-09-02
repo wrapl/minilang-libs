@@ -4118,7 +4118,8 @@ static const char *GIBInstNames[] = {
 	[GIB_OUTPUT_VALUE] = "output_value",
 	[GIB_OUTPUT_ARRAY] = "output_array",
 	[GIB_OUTPUT_ARRAY_LENGTH] = "output_array_length",
-	[GIB_OUTPUT_STRUCT] = "output_struct"
+	[GIB_OUTPUT_STRUCT] = "output_struct",
+	[GIB_FREE] = "free"
 };
 
 static void type_list(ml_stringbuffer_t *Buffer, gi_inst_t **Inst, void **Aux) {

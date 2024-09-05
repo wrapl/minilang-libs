@@ -12,7 +12,7 @@ so_module("fmt/csv.so", [file("csv.o"), file("libcsv.o")])
 	so_module("fmt/html.so", [file("html.o")], [LEXBOR])
 end>:
 
-let Html := so_module("fmt/html.so", [file("html.o")], ["-lgumbo"])
+let Html := so_module("fmt/html.so", [file("html.o")], [pkgconfig("--libs gumbo")])
 
 scope("md4c";) do
 	let MD4C := file("md4c/src/md4c.c") => fun() do

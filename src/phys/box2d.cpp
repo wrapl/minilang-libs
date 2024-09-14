@@ -141,7 +141,7 @@ ML_METHOD("create", WorldT, BodyDefT) {
 	body_t *Body = new (GC) body_t;
 	Body->Type = BodyT;
 	Body->Handle = World->Handle->CreateBody(&BodyDef->Value);
-	Body->Handle->SetUserData(Body);
+	Body->Handle->GetUserData().pointer = (uintptr_t)Body;
 	return (ml_value_t *)Body;
 }
 

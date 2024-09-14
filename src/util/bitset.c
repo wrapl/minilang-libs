@@ -59,7 +59,7 @@ ML_METHOD("append", MLStringBufferT, MLBitsetT) {
 	roaring_uint32_iterator_t Iter[1];
 	roaring_init_iterator(Bitset->Value, Iter);
 	if (!Iter->has_value) {
-		ml_stringbuffer_write(Buffer, "{}", 8);
+		ml_stringbuffer_write(Buffer, "{}", 2);
 		return MLSome;
 	}
 	ml_stringbuffer_write(Buffer, "<bitset", 7);

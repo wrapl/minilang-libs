@@ -942,8 +942,8 @@ gtk_console_t *gtk_console(ml_state_t *Caller, ml_getter_t GlobalGet, void *Glob
 	gtk_window_set_icon_name(GTK_WINDOW(Console->Window), "face-smile");
 
 	GtkWidget *ReplBox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 2);
-	gtk_box_pack_start(GTK_BOX(ReplBox), Console->LogScrolled, TRUE, TRUE, 2);
 	gtk_box_pack_start(GTK_BOX(ReplBox), InputFrame, FALSE, TRUE, 2);
+	gtk_box_pack_start(GTK_BOX(ReplBox), Console->LogScrolled, TRUE, TRUE, 2);
 
 	gtk_paned_add1(GTK_PANED(Console->Paned), OutputPane);
 	gtk_paned_add2(GTK_PANED(Console->Paned), ReplBox);

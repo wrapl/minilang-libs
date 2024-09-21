@@ -126,10 +126,15 @@ ML_TYPE(GirModuleT, (), "gir::module");
 ML_VALUE(GirModule, GirModuleT);
 
 ML_METHOD("::", GirModuleT, MLStringT) {
-	char *Name = GC_strdup(ml_string_value(Args[1]));
-	char *Version = strchr(Name, '@');
-	if (Version) *Version++ = 0;
-	return ml_gir_typelib(Name, Version);
+	static stringmap_t Cache[1] = {STRINGMAP_INIT};
+	ml_value_t **Slot = (ml_value_t **)stringmap_slot(Cache, ml_string_value(Args[1]));
+	if (!Slot[0]) {
+		char *Name = GC_strdup(ml_string_value(Args[1]));
+		char *Version = strchr(Name, '@');
+		if (Version) *Version++ = 0;
+		Slot[0] = ml_gir_typelib(Name, Version);
+	}
+	return Slot[0];
 }
 
 //typedef struct { ml_value_t *Getter, *Setter; } property_t;
@@ -4337,7 +4342,6 @@ ML_LIBRARY_ENTRY(gir) {
 	g_irepository_require(NULL, "GObject", NULL, 0, &Error);
 	DestroyNotifyInfo = g_irepository_find_by_name(NULL, "GLib", "DestroyNotify");
 	GValueInfo = g_irepository_find_by_name(NULL, "GObject", "Value");
-	stringmap_insert(MLGirTypelibT->Exports, "class", GirClassT);
 	ml_typed_fn_set(MLGirTypelibT, ml_iterate, typelib_iterate);
 	ml_typed_fn_set(TypelibIterT, ml_iter_next, typelib_iter_next);
 	ml_typed_fn_set(TypelibIterT, ml_iter_value, typelib_iter_value);
@@ -4348,8 +4352,9 @@ ML_LIBRARY_ENTRY(gir) {
 #include "gir_init.c"
 	ml_type_add_parent((ml_type_t *)GInputStreamT, MLStreamT);
 	ml_type_add_parent((ml_type_t *)GOutputStreamT, MLStreamT);
-	stringmap_insert(MLGirTypelibT->Exports, "sleep", MLSleep);
-	stringmap_insert(MLGirTypelibT->Exports, "install", GirInstall);
+	stringmap_insert(GirModuleT->Exports, "class", GirClassT);
+	stringmap_insert(GirModuleT->Exports, "sleep", MLSleep);
+	stringmap_insert(GirModuleT->Exports, "install", GirInstall);
 	//stringmap_insert(Globals, "gir", MLGirTypelibT);
 	gir_scheduler(Caller->Context);
 	Slot[0] = GirModule;

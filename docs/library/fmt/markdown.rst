@@ -9,7 +9,7 @@ fmt/markdown
 
 .. rst-class:: mini-api
 
-:mini:`type Flag < flags`
+:mini:`type flag < flags`
    * :mini:`::CollapseWhitespace`
    * :mini:`::PermissiveATXHeaders`
    * :mini:`::PermissiveURLAutoLinks`
@@ -27,7 +27,11 @@ fmt/markdown
    * :mini:`::HardSoftBreaks`
 
 
-:mini:`fun parse(Markdown: string, Arg₂: Flag): xml`
+:mini:`meth (Markdown: string):Parse: xml`
+   *TBD*
+
+
+:mini:`meth (Markdown: string):Parse(Flags: flag): xml`
    *TBD*
 
 

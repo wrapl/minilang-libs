@@ -13,11 +13,27 @@ general
    *TBD*
 
 
+:mini:`fun eventbasenew()`
+   *TBD*
+
+
 :mini:`fun eventsleep()`
    *TBD*
 
 
+:mini:`fun getallplugins()`
+   *TBD*
+
+
+:mini:`fun raschema()`
+   *TBD*
+
+
 :mini:`meth :FDBDatabaseT()`
+   *TBD*
+
+
+:mini:`meth :UevT()`
    *TBD*
 
 
@@ -45,11 +61,23 @@ general
    *TBD*
 
 
+:mini:`type event`
+   *TBD*
+
+
+:mini:`type eventbase`
+   *TBD*
+
+
 :mini:`meth (Arg₁: eventbase):dispatch`
    *TBD*
 
 
 :mini:`meth (Arg₁: eventbase):http`
+   *TBD*
+
+
+:mini:`meth (Arg₁: eventbase):new(Arg₂: file)`
    *TBD*
 
 
@@ -74,10 +102,6 @@ general
 
 
 :mini:`meth (Arg₁: fdbtransaction):get(Arg₂: address)`
-   *TBD*
-
-
-:mini:`meth (Arg₁: eventbase):new(Arg₂: file)`
    *TBD*
 
 
@@ -109,15 +133,15 @@ general
    *TBD*
 
 
+:mini:`type pluginclass`
+   *TBD*
+
+
 :mini:`type port`
    *TBD*
 
 
-:mini:`type prolog`
-   *TBD*
-
-
-:mini:`meth (Arg₁: prolog) :: (Arg₂: string)`
+:mini:`type rainstance`
    *TBD*
 
 
@@ -129,19 +153,23 @@ general
    *TBD*
 
 
+:mini:`type ralistener`
+   *TBD*
+
+
 :mini:`meth (Arg₁: ralistener):delete`
    *TBD*
 
 
+:mini:`type raschema`
+   *TBD*
+
+
+:mini:`type raschemaindex`
+   *TBD*
+
+
 :mini:`meth (Arg₁: string):FDBDatabaseT`
-   *TBD*
-
-
-:mini:`type term < sequence`
-   *TBD*
-
-
-:mini:`meth (Arg₁: term) . (Arg₂: term)`
    *TBD*
 
 
@@ -173,38 +201,6 @@ general
    *TBD*
 
 
-:mini:`type event`
-   *TBD*
-
-
-:mini:`type eventbase`
-   *TBD*
-
-
-:mini:`type ralistener`
-   *TBD*
-
-
-:mini:`type raschema`
-   *TBD*
-
-
-:mini:`type query`
-   *TBD*
-
-
-:mini:`type rainstance`
-   *TBD*
-
-
-:mini:`type raschemaindex`
-   *TBD*
-
-
-:mini:`meth (Arg₁: string::buffer):append(Arg₂: atom)`
-   *TBD*
-
-
 :mini:`meth (Arg₁: uev):timer(Arg₂: integer, Arg₃: function)`
    *TBD*
 
@@ -221,22 +217,6 @@ general
    *TBD*
 
 
-:mini:`type atom`
-   *TBD*
-
-
-:mini:`type pluginclass`
-   *TBD*
-
-
-:mini:`fun raschema()`
-   *TBD*
-
-
-:mini:`meth :UevT()`
-   *TBD*
-
-
 :mini:`meth (Arg₁: uevevent):stop`
    *TBD*
 
@@ -250,21 +230,5 @@ general
    * :mini:`::RdHup`
    * :mini:`::Edge`
    * :mini:`::Once`
-
-
-:mini:`fun eventbasenew()`
-   *TBD*
-
-
-:mini:`fun getallplugins()`
-   *TBD*
-
-
-:mini:`type variable`
-   *TBD*
-
-
-:mini:`def Prolog: prolog`
-   *TBD*
 
 

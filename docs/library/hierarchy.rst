@@ -125,7 +125,7 @@ hierarchy
       "any":e -> "context":w;
       "any":e -> "geometry":w;
       "any":e -> "tree":w;
-      "flags":e -> "Flag":w;
+      "flags":e -> "flag":w;
       "any":e -> "node":w;
       "sequence":e -> "nodelist":w;
       "any":e -> "nodeiter":w;

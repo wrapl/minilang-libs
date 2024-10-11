@@ -802,7 +802,7 @@ gtk_console_t *gtk_console(ml_state_t *Caller, ml_getter_t GlobalGet, void *Glob
 	Console->HistoryIndex = 0;
 	Console->HistoryEnd = 0;
 	Console->Parser = ml_parser(NULL, NULL);
-	Console->Compiler = ml_compiler((ml_getter_t)console_global_get, Console);
+	Console->Compiler = ml_compiler2((ml_getter_t)console_global_get, Console, 1);
 	ml_parser_source(Console->Parser, (ml_source_t){Console->Name, 0});
 	Console->Notebook = GTK_NOTEBOOK(gtk_notebook_new());
 

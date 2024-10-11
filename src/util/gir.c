@@ -10,42 +10,36 @@
 
 typedef struct {
 	void **Ptrs;
-	int Size;
+	int Space, Size;
 } ptrset_t;
 
-#define PTRSET_INIT {NULL, 0}
+#define PTRSET_INIT {NULL, 0, 0}
 #define PTRSET_INITIAL_SIZE 4
 
 static void ptrset_insert(ptrset_t *Set, void *Ptr) {
-	if (!Set->Size) {
-		void **Ptrs = anew(void *, PTRSET_INITIAL_SIZE);
-		Ptrs[PTRSET_INITIAL_SIZE - 1] = Ptr;
+	if (!Set->Space) {
+		int Size = Set->Size + PTRSET_INITIAL_SIZE;
+		void **Ptrs = anew(void *, Size);
+		memcpy(Ptrs, Set->Ptrs, Set->Size * sizeof(void *));
+		Ptrs[Set->Size] = Ptr;
 		Set->Ptrs = Ptrs;
-		Set->Size = PTRSET_INITIAL_SIZE;
+		Set->Size = Size;
+		Set->Space += PTRSET_INITIAL_SIZE - 1;
 		return;
 	}
-	void **Slot = Set->Ptrs, **Space = NULL;
-	for (int I = Set->Size; --I >= 0; ++Slot) {
-		if (*Slot == Ptr) return;
-		if (!*Slot) Space = Slot;
-	}
-	if (Space) {
-		*Space = Ptr;
-		return;
-	}
-	int Size = Set->Size + PTRSET_INITIAL_SIZE;
-	void **Ptrs = anew(void *, Size);
-	memcpy(Ptrs, Set->Ptrs, Set->Size * sizeof(void *));
-	Ptrs[Set->Size] = Ptr;
-	Set->Ptrs = Ptrs;
-	Set->Size = Size;
+	void **Slot = Set->Ptrs;
+	while (Slot[0]) ++Slot;
+	Slot[0] = Ptr;
+	--Set->Space;
 }
 
 static void ptrset_remove(ptrset_t *Set, void *Ptr) {
-	void **Slot = Set->Ptrs;
-	for (int I = Set->Size; --I >= 0; ++Slot) if (*Slot == Ptr) {
-		*Slot = NULL;
-		return;
+	for (void **Slot = Set->Ptrs, **Limit = Set->Ptrs + Set->Size; Slot < Limit; ++Slot) {
+		if (Slot[0] == Ptr) {
+			Slot[0] = NULL;
+			++Set->Space;
+			return;
+		}
 	}
 }
 

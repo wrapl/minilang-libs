@@ -2,3 +2,5 @@ CFLAGS := old + [pkgconfig("--cflags lilv-0")]
 LDFLAGS := old + [pkgconfig("--libs lilv-0")]
 
 so_module("snd/lilv.so", [file("lilv.o")])
+
+so_module("snd/sndfile.so", [file("sndfile.o")])

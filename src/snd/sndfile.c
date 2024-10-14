@@ -160,7 +160,48 @@ ML_METHODV(SndFileT, MLStreamT, MLStringT, MLNamesT) {
 		return (ml_value_t *)SndFile;
 	} else {
 		return ml_error("SndFileError", "%s", sf_strerror(0));
+	}
+}
+
+ML_METHODV(SndFileT, MLStreamT, MLStringT) {
+	ML_NAMES_CHECK_ARG_COUNT(2);
+	ml_value_t *Stream = Args[0];
+	sndfile_t *SndFile = new(sndfile_t);
+	SndFile->Base.Type = SndFileT;
+	SndFile->Stream = Stream;
+	SndFile->read = ml_typed_fn_get(Stream->Type, ml_stream_read) ?: ml_stream_read_method;
+	SndFile->write = ml_typed_fn_get(Stream->Type, ml_stream_write) ?: ml_stream_write_method;
+	SndFile->seek = ml_typed_fn_get(Stream->Type, ml_stream_seek) ?: ml_stream_seek_method;
+	SndFile->tell = ml_typed_fn_get(Stream->Type, ml_stream_tell) ?: ml_stream_tell_method;
+	SF_VIRTUAL_IO VirtualIO = {
+		(void *)sndfile_get_filelen,
+		(void *)sndfile_seek,
+		(void *)sndfile_read,
+		(void *)sndfile_write,
+		(void *)sndfile_tell
 	};
+	int Mode = 0;
+	for (const char *M = ml_string_value(Args[1]); *M; ++M) {
+		if (*M == 'r') Mode |= SFM_READ;
+		if (*M == 'w') Mode |= SFM_WRITE;
+	}
+	SF_INFO Info = {0,};
+	if ((SndFile->Handle = sf_open_virtual(&VirtualIO, Mode, &Info, SndFile))) {
+		SndFile->SampleRate = ml_integer(Info.samplerate);
+		SndFile->Channels = ml_integer(Info.channels);
+		SndFile->Format = ml_flags_value(SndFileFormatT, Info.format);
+		return (ml_value_t *)SndFile;
+	} else {
+		return ml_error("SndFileError", "%s", sf_strerror(0));
+	}
+}
+
+static void ML_TYPED_FN(ml_stream_read, SndFileT, ml_state_t *Caller, sndfile_t *SndFile, void *Buffer, int Count) {
+
+}
+
+static void ML_TYPED_FN(ml_stream_write, SndFileT, ml_state_t *Caller, sndfile_t *SndFile, const void *Buffer, int Count) {
+
 }
 
 ML_LIBRARY_ENTRY0(snd_sndfile) {

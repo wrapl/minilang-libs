@@ -4,7 +4,7 @@
 #include <ctype.h>
 
 #undef ML_CATEGORY
-#define ML_CATEGORY "prolog"
+#define ML_CATEGORY "solver/swi-prolog"
 
 typedef struct {
 	void **Ptrs;

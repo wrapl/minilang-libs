@@ -60,6 +60,12 @@ hierarchy
       "any":e -> "kiwiexpression":w;
       "any":e -> "kiwiconstraint":w;
       "any":e -> "kiwisolver":w;
+      "any":e -> "signalinfo":w;
+      "any":e -> "format":w;
+      "any":e -> "sox":w;
+      "any":e -> "effect":w;
+      "effect":e -> "effect":w;
+      "flags":e -> "effectflag":w;
       "stream":e -> "sndfile":w;
       "flags":e -> "sndfile::format":w;
       "enum":e -> "sndfile::string":w;

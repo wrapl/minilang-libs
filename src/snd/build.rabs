@@ -1,6 +1,17 @@
-CFLAGS := old + [pkgconfig("--cflags lilv-0")]
-LDFLAGS := old + [pkgconfig("--libs lilv-0")]
+scope("lilv";) do
+	CFLAGS := old + [pkgconfig("--cflags lilv-0")]
+	LDFLAGS := old + [pkgconfig("--libs lilv-0")]
+	so_module("snd/lilv.so", [file("lilv.o")])
+end
 
-so_module("snd/lilv.so", [file("lilv.o")])
+scope("sndfile";) do
+	so_module("snd/sndfile.so", [file("sndfile.o")])
+end
 
-so_module("snd/sndfile.so", [file("sndfile.o")])
+scope("fluidsynth";) do
+	so_module("snd/fluidsynth.so", [file("fluidsynth.o")])
+end
+
+scope("sox";) do
+	so_module("snd/sox.so", [file("sox.o")])
+end

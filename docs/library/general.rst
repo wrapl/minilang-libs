@@ -21,19 +21,7 @@ general
    *TBD*
 
 
-:mini:`fun getallplugins()`
-   *TBD*
-
-
 :mini:`fun raschema()`
-   *TBD*
-
-
-:mini:`meth :FDBDatabaseT()`
-   *TBD*
-
-
-:mini:`meth :UevT()`
    *TBD*
 
 
@@ -89,6 +77,10 @@ general
    *TBD*
 
 
+:mini:`meth fdbdatabase()`
+   *TBD*
+
+
 :mini:`meth (Arg₁: fdbdatabase):transaction`
    *TBD*
 
@@ -113,31 +105,7 @@ general
    *TBD*
 
 
-:mini:`type instance`
-   *TBD*
-
-
 :mini:`fun mldqlite(Arg₁: integer, Arg₂: string, Arg₃: string)`
-   *TBD*
-
-
-:mini:`type plugin`
-   *TBD*
-
-
-:mini:`meth (Arg₁: plugin):name`
-   *TBD*
-
-
-:mini:`meth (Arg₁: plugin):uri`
-   *TBD*
-
-
-:mini:`type pluginclass`
-   *TBD*
-
-
-:mini:`type port`
    *TBD*
 
 
@@ -169,7 +137,7 @@ general
    *TBD*
 
 
-:mini:`meth (Arg₁: string):FDBDatabaseT`
+:mini:`meth fdbdatabase(Arg₁: string)`
    *TBD*
 
 
@@ -182,6 +150,10 @@ general
 
 
 :mini:`type uev`
+   *TBD*
+
+
+:mini:`meth uev()`
    *TBD*
 
 

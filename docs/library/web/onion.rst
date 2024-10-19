@@ -13,19 +13,19 @@ web/onion
    *TBD*
 
 
-:mini:`meth :OnionT()`
+:mini:`meth onionhandler(Arg₁: function)`
    *TBD*
 
 
-:mini:`meth (Arg₁: function):OnionHandlerT`
-   *TBD*
-
-
-:mini:`meth (Arg₁: integer):OnionHandlerT(Arg₂: string)`
+:mini:`meth onionhandler(Arg₁: integer, Arg₂: string)`
    *TBD*
 
 
 :mini:`type onion`
+   *TBD*
+
+
+:mini:`meth onion()`
    *TBD*
 
 
@@ -77,7 +77,7 @@ web/onion
    *TBD*
 
 
-:mini:`meth (Arg₁: onionmode):OnionT`
+:mini:`meth onion(Arg₁: onionmode)`
    *TBD*
 
 
@@ -185,7 +185,7 @@ web/onion
    *TBD*
 
 
-:mini:`meth (Arg₁: string):OnionHandlerT`
+:mini:`meth onionhandler(Arg₁: string)`
    *TBD*
 
 

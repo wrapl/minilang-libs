@@ -13,12 +13,12 @@ gir
    *TBD*
 
 
-:mini:`meth :GirClassT()...`
-   *TBD*
-
-
 :mini:`type gir < sequence`
    A gobject-introspection typelib.
+
+
+:mini:`meth (Typelib: gir) :: (Name: string): any | error`
+   *TBD*
 
 
 :mini:`type gir::baseinfo < type`
@@ -181,16 +181,16 @@ gir
    A gobject-introspection struct instance.
 
 
-:mini:`meth (Typelib: gir::typelib) :: (Name: string): any | error`
-   *TBD*
-
-
 :mini:`type gir::union < gir::baseinfo`
    A gobject-introspection struct type.
 
 
 :mini:`type gir::unioninstance`
    A gobject-introspection struct instance.
+
+
+:mini:`meth girclass()...`
+   *TBD*
 
 
 :mini:`meth integer(Value: gir::enumvalue): integer`

@@ -2,6 +2,9 @@
 #include <minilang/ml_macros.h>
 #include <lilv/lilv.h>
 
+#undef ML_CATEGORY
+#define ML_CATEGORY "snd/lilv"
+
 static LilvWorld *World;
 
 typedef struct {

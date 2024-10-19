@@ -4,6 +4,9 @@
 #include <minilang/ml_object.h>
 #include <sndfile.h>
 
+#undef ML_CATEGORY
+#define ML_CATEGORY "snd/sndfile"
+
 typedef struct {
 	ml_state_t Base;
 	SNDFILE *Handle;
@@ -58,6 +61,7 @@ static sf_count_t sndfile_get_filelen(sndfile_t *SndFile) {
 }
 
 ML_FLAGS2(SndFileFormatT, "sndfile::format",
+//@sndfile::format
 	"WAV", SF_FORMAT_WAV,
 	"AIFF", SF_FORMAT_AIFF,
 	"AU", SF_FORMAT_AU,
@@ -116,6 +120,7 @@ static void sndfile_run(sndfile_t *SndFile, ml_value_t *Value) {
 }
 
 ML_METHODV(SndFileT, MLStreamT, MLStringT, MLNamesT) {
+//>sndfile
 	ML_NAMES_CHECK_ARG_COUNT(2);
 	ml_value_t *Stream = Args[0];
 	sndfile_t *SndFile = new(sndfile_t);
@@ -164,6 +169,7 @@ ML_METHODV(SndFileT, MLStreamT, MLStringT, MLNamesT) {
 }
 
 ML_METHODV(SndFileT, MLStreamT, MLStringT) {
+//>sndfile
 	ML_NAMES_CHECK_ARG_COUNT(2);
 	ml_value_t *Stream = Args[0];
 	sndfile_t *SndFile = new(sndfile_t);
@@ -196,12 +202,77 @@ ML_METHODV(SndFileT, MLStreamT, MLStringT) {
 	}
 }
 
-static void ML_TYPED_FN(ml_stream_read, SndFileT, ml_state_t *Caller, sndfile_t *SndFile, void *Buffer, int Count) {
+ML_METHOD("rate", SndFileT) {
+	sndfile_t *SndFile = (sndfile_t *)Args[0];
+	return SndFile->SampleRate;
+}
 
+ML_METHOD("channels", SndFileT) {
+	sndfile_t *SndFile = (sndfile_t *)Args[0];
+	return SndFile->Channels;
+}
+
+ML_METHOD("format", SndFileT) {
+	sndfile_t *SndFile = (sndfile_t *)Args[0];
+	return SndFile->Format;
+}
+
+ML_METHOD("strerror", SndFileT) {
+	sndfile_t *SndFile = (sndfile_t *)Args[0];
+	return ml_string_copy(sf_strerror(SndFile->Handle), -1);
+}
+
+static void ML_TYPED_FN(ml_stream_read, SndFileT, ml_state_t *Caller, sndfile_t *SndFile, void *Buffer, int Count) {
+	ML_RETURN(ml_integer(sf_read_raw(SndFile->Handle, Buffer, Count)));
 }
 
 static void ML_TYPED_FN(ml_stream_write, SndFileT, ml_state_t *Caller, sndfile_t *SndFile, const void *Buffer, int Count) {
+	ML_RETURN(ml_integer(sf_write_raw(SndFile->Handle, Buffer, Count)));
+}
 
+static void ML_TYPED_FN(ml_stream_flush, SndFileT, ml_state_t *Caller, sndfile_t *SndFile) {
+	sf_write_sync(SndFile->Handle);
+	ML_RETURN(MLNil);
+}
+
+static void ML_TYPED_FN(ml_stream_close, SndFileT, ml_state_t *Caller, sndfile_t *SndFile) {
+	if (sf_close(SndFile->Handle)) ML_ERROR("SndFileError", "%s", sf_strerror(SndFile->Handle));
+	ML_RETURN(MLNil);
+}
+
+ML_ENUM2(SndFileStringT, "sndfile::string",
+//@sndfile::string
+	"Title", SF_STR_TITLE,
+	"Copyright", SF_STR_COPYRIGHT,
+	"Software", SF_STR_SOFTWARE,
+	"Artist", SF_STR_ARTIST,
+	"Comment", SF_STR_COMMENT,
+	"Date", SF_STR_DATE,
+	"Album", SF_STR_ALBUM,
+	"License", SF_STR_LICENSE,
+	"TrackNumber", SF_STR_TRACKNUMBER,
+	"Genre", SF_STR_GENRE
+);
+
+ML_METHOD("get", SndFileT, SndFileStringT) {
+//<SndFile
+//<Name
+//>string
+	sndfile_t *SndFile = (sndfile_t *)Args[0];
+	const char *Value = sf_get_string(SndFile->Handle, ml_enum_value_value(Args[1]));
+	if (Value) return ml_string_copy(Value, -1);
+	return ml_error("SndFileError", "Unknown attribute %s", ml_enum_value_name(Args[1]));
+}
+
+ML_METHOD("set", SndFileT, SndFileStringT, MLStringT) {
+//<SndFile
+//<Name
+//<Value
+	sndfile_t *SndFile = (sndfile_t *)Args[0];
+	if (!sf_set_string(SndFile->Handle, ml_enum_value_value(Args[1]), ml_string_value(Args[2]))) {
+		return Args[0];
+	}
+	return ml_error("SndFileError", "Unknown attribute %s", ml_enum_value_name(Args[1]));
 }
 
 ML_LIBRARY_ENTRY0(snd_sndfile) {

@@ -9,20 +9,12 @@ net/zeromq
 
 .. rst-class:: mini-api
 
-:mini:`meth :MessageT(): message`
-   Returns a new empty message.
-
-
-:mini:`meth (Bytes: address):FrameT: frame`
-   Returns a new frame with the contents of :mini:`Bytes`.
-
-
-:mini:`meth (Frame₁: any):MessageT(...): message`
-   Returns a new message with the specified content. :mini:`Frameᵢ` can be bytes (address / string),  a frame,  another message or :mini:`nil` to add an empty frame.
-
-
 :mini:`type frame`
    ZeroMQ frame.
+
+
+:mini:`meth frame(Bytes: address): frame`
+   Returns a new frame with the contents of :mini:`Bytes`.
 
 
 :mini:`meth (Frame: frame):data: string`
@@ -33,12 +25,28 @@ net/zeromq
    *TBD*
 
 
-:mini:`meth (Signal: integer):MessageT: message`
+:mini:`type message < sequence`
+   ZeroMQ message.
+
+
+:mini:`meth message(): message`
+   Returns a new empty message.
+
+
+:mini:`meth message(Frame₁: any, ...): message`
+   Returns a new message with the specified content. :mini:`Frameᵢ` can be bytes (address / string),  a frame,  another message or :mini:`nil` to add an empty frame.
+
+
+:mini:`meth message(Signal: integer): message`
    Returns a new signal message with specified value.
 
 
-:mini:`type message < sequence`
-   ZeroMQ message.
+:mini:`meth message(Socket: socket): message | nil`
+   Returns the next message read from :mini:`Socket`,  blocking until a message is available.
+
+
+:mini:`meth message(Socket: socket, Block: boolean): message | nil`
+   Returns the next message read from :mini:`Socket`; if :mini:`Block = true` then blocks until a message is available.
 
 
 :mini:`meth (Message: message):pop: frame | nil`
@@ -81,12 +89,8 @@ net/zeromq
    ZeroMQ socket.
 
 
-:mini:`meth (Socket: socket):MessageT: message | nil`
-   Returns the next message read from :mini:`Socket`,  blocking until a message is available.
-
-
-:mini:`meth (Socket: socket):MessageT(Block: boolean): message | nil`
-   Returns the next message read from :mini:`Socket`; if :mini:`Block = true` then blocks until a message is available.
+:mini:`meth socket(Type: sockettype): socket`
+   Returns a new socket of the specified type.
 
 
 :mini:`meth (Socket: socket):affinity: integer`
@@ -635,9 +639,5 @@ net/zeromq
    * :mini:`::XPub`
    * :mini:`::XSub`
    * :mini:`::Stream`
-
-
-:mini:`meth (Type: sockettype):SocketT: socket`
-   Returns a new socket of the specified type.
 
 

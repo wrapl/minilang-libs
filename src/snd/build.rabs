@@ -5,13 +5,19 @@ scope("lilv";) do
 end
 
 scope("sndfile";) do
+	CFLAGS := old + [pkgconfig("--cflags sndfile")]
+	LDFLAGS := old + [pkgconfig("--libs sndfile")]
 	so_module("snd/sndfile.so", [file("sndfile.o")])
 end
 
 scope("fluidsynth";) do
+	CFLAGS := old + [pkgconfig("--cflags fluidsynth")]
+	LDFLAGS := old + [pkgconfig("--libs fluidsynth")]
 	so_module("snd/fluidsynth.so", [file("fluidsynth.o")])
 end
 
 scope("sox";) do
+	CFLAGS := old + [pkgconfig("--cflags sox")]
+	LDFLAGS := old + [pkgconfig("--libs sox")]
 	so_module("snd/sox.so", [file("sox.o")])
 end

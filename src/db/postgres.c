@@ -318,7 +318,7 @@ static int connection_prepare(const char *Name, const char *SQL, connection_t *C
 
 static PGconn *connection_connect(connection_t *Connection) {
 	for (;;) {
-		printf("Connecting to Postgres database\n");
+		ML_LOG_INFO(NULL, "%s", "Connecting to Postgres database");
 		stringmap_foreach(Connection->Statements, Connection, (void *)connection_prepare);
 		PGconn *Conn = PQconnectdbParams(Connection->Keywords, Connection->Values, 0);
 		if (PQstatus(Conn) == CONNECTION_OK) {
@@ -361,26 +361,32 @@ static void *connection_thread_fn(connection_t *Connection) {
 		pthread_mutex_lock(Connection->Lock);
 		while (!Connection->Head) pthread_cond_wait(Connection->Ready, Connection->Lock);
 		query_t *Query = Connection->Head;
+		query_t *Next = Query->Next;
+		Connection->Head = Next;
+		if (!Next) Connection->Tail = NULL;
 		pthread_mutex_unlock(Connection->Lock);
+		PGresult *Result;
+	retry:
 		if (Query->SQL) {
 			if (Query->Name) {
-				PQsendPrepare(Connection->Conn, Query->Name, Query->SQL, 0, NULL);
+				Result = PQprepare(Connection->Conn, Query->Name, Query->SQL, 0, NULL);
 			} else {
-				PQsendQueryParams(Connection->Conn, Query->SQL, Query->NumParams, NULL, Query->Values, Query->Lengths, Query->Formats, 0);
+				Result = PQexecParams(Connection->Conn, Query->SQL, Query->NumParams, NULL, Query->Values, Query->Lengths, Query->Formats, 0);
 			}
 		} else {
-			PQsendQueryPrepared(Connection->Conn, Query->Name, Query->NumParams, Query->Values, Query->Lengths, Query->Formats, 0);
+			Result = PQexecPrepared(Connection->Conn, Query->Name, Query->NumParams, Query->Values, Query->Lengths, Query->Formats, 0);
 		}
-		PGresult *Result = PQgetResult(Conn);
+		//PGresult *Result = PQgetResult(Conn);
 		ExecStatusType Status = PQresultStatus(Result);
-		if (!Result) {
-		} else if (should_retry(Status, Result, Conn)) {
-			ML_LOG_WARN(NULL, "Reconnecting to database");
+		if (should_retry(Status, Result, Conn)) {
+			ML_LOG_WARN(NULL, "Connection error");
 			PQclear(Result);
 			PQfinish(Conn);
 			Connection->Conn = NULL;
 			if (!Connection->Reconnect) return NULL;
 			Conn = connection_connect(Connection);
+			if (!Conn) return NULL;
+			goto retry;
 		} else {
 			ml_value_t *Value = MLNil;
 			if (Query->SQL && Query->Name) {
@@ -426,9 +432,6 @@ static void *connection_thread_fn(connection_t *Connection) {
 				}
 			}
 			PQclear(Result);
-			query_t *Next = Query->Next;
-			Connection->Head = Next;
-			if (!Next) Connection->Tail = NULL;
 			if (Query->Caller) ml_state_schedule(Query->Caller, Value);
 		}
 	}

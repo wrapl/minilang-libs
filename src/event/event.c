@@ -144,8 +144,7 @@ found:;
 		Events->Type = EventsT;
 		Object->Fields[Index].Value = (ml_value_t *)Events;
 	}
-	connection_t *Connection = connection_new(Events, ml_string_value(Args[0]), Args[Count - 1], Count - 3, Args + 2);
-	return (ml_value_t *)Connection;
+	return (ml_value_t *)connection_new(Events, ml_string_value(Args[0]), Args[Count - 1], Count - 3, Args + 2);
 }
 
 ML_METHODV(Connect, MLStringT, MLClassT, MLAnyT) {
@@ -160,8 +159,7 @@ ML_METHODV(Connect, MLStringT, MLClassT, MLAnyT) {
 		Events->Class = Class;
 		ml_typed_fn_set(Class, EventsT, Events);
 	}
-	connection_t *Connection = connection_new(Events, ml_string_value(Args[0]), Args[Count - 1], Count - 3, Args + 2);
-	return (ml_value_t *)Connection;
+	return (ml_value_t *)connection_new(Events, ml_string_value(Args[0]), Args[Count - 1], Count - 3, Args + 2);
 }
 
 ML_METHOD_ANON(Emit, "event::emit");

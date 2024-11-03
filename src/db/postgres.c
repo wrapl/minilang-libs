@@ -3,6 +3,7 @@
 #include <minilang/ml_uuid.h>
 #include <minilang/ml_macros.h>
 #include <minilang/ml_logging.h>
+#include <minilang/ml_array.h>
 #include <libpq-fe.h>
 #include <catalog/pg_type_d.h>
 #include <ctype.h>
@@ -47,53 +48,69 @@ struct statement_t {
 	int NumFields;
 };
 
-static ml_value_t *query_param(ml_value_t *Param, const char **Value, int *Length, int *Format) {
+struct query_t {
+	query_t *Next;
+	ml_state_t *Caller;
+	const char *Name, *SQL;
+	recv_fn *RecvFns;
+	const char **Values;
+	int *Types, *Lengths, *Formats;
+	int NumParams, NumFields;
+};
+
+static ml_value_t *query_param(ml_value_t *Param, query_t *Query, int Index) {
 	typeof(query_param) *function = ml_typed_fn_get(ml_typeof(Param), query_param);
 	if (!function) return ml_error("TypeError", "Unable to use %s in query", ml_typeof(Param)->Name);
-	return function(Param, Value, Length, Format);
+	return function(Param, Query, Index);
 }
 
-static ml_value_t *ML_TYPED_FN(query_param, MLNilT, ml_value_t *Param, const char **Value, int *Length, int *Format) {
-	*Value = NULL;
-	*Length = 0;
-	*Format = 0;
+static ml_value_t *ML_TYPED_FN(query_param, MLNilT, ml_value_t *Param, query_t *Query, int Index) {
+	Query->Values[Index] = NULL;
+	Query->Types[Index] = 0;
+	Query->Lengths[Index] = 0;
+	Query->Formats[Index] = 0;
 	return NULL;
 }
 
-static ml_value_t *ML_TYPED_FN(query_param, MLIntegerT, ml_value_t *Param, const char **Value, int *Length, int *Format) {
-	*Length = GC_asprintf((char **)Value, "%ld", ml_integer_value(Param));
-	*Format = 0;
+static ml_value_t *ML_TYPED_FN(query_param, MLIntegerT, ml_value_t *Param, query_t *Query, int Index) {
+	Query->Lengths[Index] = GC_asprintf((char **)(Query->Values + Index), "%ld", ml_integer_value(Param));
+	Query->Types[Index] = 0;
+	Query->Formats[Index] = 0;
 	return NULL;
 }
 
-static ml_value_t *ML_TYPED_FN(query_param, MLRealT, ml_value_t *Param, const char **Value, int *Length, int *Format) {
-	*Length = GC_asprintf((char **)Value, "0x%a", ml_real_value(Param));
-	*Format = 0;
+static ml_value_t *ML_TYPED_FN(query_param, MLRealT, ml_value_t *Param, query_t *Query, int Index) {
+	Query->Lengths[Index] = GC_asprintf((char **)(Query->Values + Index), "0x%a", ml_real_value(Param));
+	Query->Types[Index] = 0;
+	Query->Formats[Index] = 0;
 	return NULL;
 }
 
-static ml_value_t *ML_TYPED_FN(query_param, MLAddressT, ml_value_t *Param, const char **Value, int *Length, int *Format) {
-	*Value = ml_address_value(Param);
-	*Length = ml_address_length(Param);
-	*Format = 1;
+static ml_value_t *ML_TYPED_FN(query_param, MLAddressT, ml_value_t *Param, query_t *Query, int Index) {
+	Query->Values[Index] = ml_address_value(Param);
+	Query->Types[Index] = 0;
+	Query->Lengths[Index] = ml_address_length(Param);
+	Query->Formats[Index] = 1;
 	return NULL;
 }
 
-static ml_value_t *ML_TYPED_FN(query_param, MLStringT, ml_value_t *Param, const char **Value, int *Length, int *Format) {
-	*Value = ml_string_value(Param);
-	*Length = ml_string_length(Param);
-	*Format = 0;
+static ml_value_t *ML_TYPED_FN(query_param, MLStringT, ml_value_t *Param, query_t *Query, int Index) {
+	Query->Values[Index] = ml_string_value(Param);
+	Query->Types[Index] = 0;
+	Query->Lengths[Index] = ml_string_length(Param);
+	Query->Formats[Index] = 0;
 	return NULL;
 }
 
-static ml_value_t *ML_TYPED_FN(query_param, MLUUIDT, ml_value_t *Param, const char **Value, int *Length, int *Format) {
-	*Value = (const char *)ml_uuid_value(Param);
-	*Length = sizeof(uuid_t);
-	*Format = 1;
+static ml_value_t *ML_TYPED_FN(query_param, MLUUIDT, ml_value_t *Param, query_t *Query, int Index) {
+	Query->Values[Index] = (char *)ml_uuid_value(Param);
+	Query->Types[Index] = 0;
+	Query->Lengths[Index] = sizeof(uuid_t);
+	Query->Formats[Index] = 1;
 	return NULL;
 }
 
-static ml_value_t *ML_TYPED_FN(query_param, MLTimeT, ml_value_t *Param, const char **Value, int *Length, int *Format) {
+static ml_value_t *ML_TYPED_FN(query_param, MLTimeT, ml_value_t *Param, query_t *Query, int Index) {
 	struct timespec Time[1];
 	ml_time_value(Param, Time);
 	struct tm TM = {0,};
@@ -112,29 +129,104 @@ static ml_value_t *ML_TYPED_FN(query_param, MLTimeT, ml_value_t *Param, const ch
 	} else {
 		Actual = strftime(Temp, 60, "%FT%TZ", &TM);
 	}
-	*Value = Temp;
-	*Length = Actual;
-	*Format = 0;
+	Query->Values[Index] = Temp;
+	Query->Types[Index] = 0;
+	Query->Lengths[Index] = Actual;
+	Query->Formats[Index] = 0;
 	return NULL;
 }
 
-struct query_t {
-	query_t *Next;
-	ml_state_t *Caller;
-	const char *Name, *SQL;
-	recv_fn *RecvFns;
-	const char **Values;
-	int *Lengths, *Formats;
-	int NumParams, NumFields;
-};
+#define ARRAY_PARAM(SUFFIX, CTYPE, PRINTF) \
+\
+static void append_array_ ## CTYPE(ml_stringbuffer_t *Buffer, int Degree, ml_array_dimension_t *Dimension, char *Address) { \
+	if (!Dimension->Size) { \
+		ml_stringbuffer_write(Buffer, "{}", 2); \
+		return; \
+	} \
+	ml_stringbuffer_write(Buffer, "{", 1); \
+	int Stride = Dimension->Stride; \
+	if (Degree == 1) { \
+		const int *Indices = Dimension->Indices; \
+		if (Dimension->Indices) { \
+			ml_stringbuffer_printf(Buffer, PRINTF, *(CTYPE *)(Address + (Indices[0]) * Dimension->Stride)); \
+			for (int I = 1; I < Dimension->Size; ++I) { \
+				ml_stringbuffer_put(Buffer, ','); \
+				ml_stringbuffer_printf(Buffer, PRINTF, *(CTYPE *)(Address + (Indices[I]) * Stride)); \
+			} \
+		} else { \
+			ml_stringbuffer_printf(Buffer, PRINTF, *(CTYPE *)Address); \
+			for (int I = Dimension->Size; --I > 0;) { \
+				ml_stringbuffer_put(Buffer, ','); \
+				Address += Stride; \
+				ml_stringbuffer_printf(Buffer, PRINTF, *(CTYPE *)Address); \
+			} \
+		} \
+	} else { \
+		const int *Indices = Dimension->Indices; \
+		if (Dimension->Indices) { \
+			append_array_ ## CTYPE(Buffer, Degree - 1, Dimension + 1, Address + (Indices[0]) * Dimension->Stride); \
+			for (int I = 1; I < Dimension->Size; ++I) { \
+				ml_stringbuffer_put(Buffer, ','); \
+				append_array_ ## CTYPE(Buffer, Degree - 1, Dimension + 1, Address + (Indices[I]) * Dimension->Stride); \
+			} \
+		} else { \
+			append_array_ ## CTYPE(Buffer, Degree - 1, Dimension + 1, Address); \
+			for (int I = Dimension->Size; --I > 0;) { \
+				ml_stringbuffer_put(Buffer, ','); \
+				Address += Stride; \
+				append_array_ ## CTYPE(Buffer, Degree - 1, Dimension + 1, Address); \
+			} \
+		} \
+	} \
+	ml_stringbuffer_write(Buffer, "}", 1); \
+} \
+\
+static ml_value_t *ML_TYPED_FN(query_param, MLArray ## SUFFIX, ml_value_t *Param, query_t *Query, int Index) { \
+	ml_stringbuffer_t Buffer[1] = {ML_STRINGBUFFER_INIT}; \
+	ml_array_t *Array = (ml_array_t *)Param; \
+	if (Array->Degree == 0) { \
+		ml_stringbuffer_printf(Buffer, PRINTF, *(CTYPE *)Array->Base.Value); \
+	} else { \
+		append_array_ ## CTYPE(Buffer, Array->Degree, Array->Dimensions, Array->Base.Value); \
+	} \
+	Query->Lengths[Index] = Buffer->Length; \
+	Query->Values[Index] = ml_stringbuffer_get_string(Buffer); \
+	Query->Types[Index] = 0; \
+	Query->Formats[Index] = 0; \
+	return NULL; \
+}
+
+extern ml_type_t MLArrayUInt8T[];
+extern ml_type_t MLArrayInt8T[];
+extern ml_type_t MLArrayUInt16T[];
+extern ml_type_t MLArrayInt16T[];
+extern ml_type_t MLArrayUInt32T[];
+extern ml_type_t MLArrayInt32T[];
+extern ml_type_t MLArrayUInt64T[];
+extern ml_type_t MLArrayInt64T[];
+extern ml_type_t MLArrayFloat32T[];
+extern ml_type_t MLArrayFloat64T[];
+
+ARRAY_PARAM(UInt8T, uint8_t, "%u");
+ARRAY_PARAM(Int8T, int8_t, "%d");
+ARRAY_PARAM(UInt16T, uint16_t, "%u");
+ARRAY_PARAM(Int16T, int16_t, "%d");
+ARRAY_PARAM(UInt32T, uint32_t, "%u");
+ARRAY_PARAM(Int32T, int32_t, "%d");
+ARRAY_PARAM(UInt64T, uint64_t, "%lu");
+ARRAY_PARAM(Int64T, int64_t, "%ld");
+ARRAY_PARAM(Float32T, float, "%g");
+ARRAY_PARAM(Float64T, double, "%g");
+
 
 static ml_value_t *query_params(query_t *Query, int Count, ml_value_t **Args) {
 	Query->NumParams = Count;
-	const char **Values = Query->Values = anew(const char *, Count);
-	int *Lengths = Query->Lengths = anew(int, Count);
-	int *Formats = Query->Formats = anew(int, Count);
+	Query->Values = anew(const char *, Count);
+	Query->Types = asnew(int, Count * 3);
+	Query->Lengths = Query->Types + Count;
+	Query->Formats = Query->Lengths + Count;
 	for (int I = 0; I < Count; ++I) {
-		ml_value_t *Error = query_param(ml_deref(Args[I]), Values + I, Lengths + I, Formats + I);
+		ml_value_t *Error = query_param(ml_deref(Args[I]), Query, I);
 		if (Error) return Error;
 	}
 	return NULL;

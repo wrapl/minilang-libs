@@ -244,6 +244,7 @@ ML_LIBRARY_ENTRY(event) {
 		"source", SourceT,
 		"connect", Connect,
 		"emit", Emit,
+		"watch", ml_watched_field(Emit),
 	NULL);
 	ML_RETURN(Slot[0]);
 }

@@ -110,7 +110,6 @@ hierarchy
       "any":e -> "frame":w;
       "sequence":e -> "message":w;
       "any":e -> "curl":w;
-      "enum":e -> "curloption":w;
       "function":e -> "dist":w;
       "dist":e -> "bernoulli":w;
       "dist":e -> "binomial":w;

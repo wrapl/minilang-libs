@@ -1,10 +1,10 @@
 let CurlHeader := expr("curl_header";) do
-	var Lines := shell(CC, '-c', CFLAGS, '-M -MG', file("curl_dummy.c"))
+	var Lines := shell(CC, '-c', CFLAGS, '-M -MG', file("curl.c"))
 	Lines := Lines:replace("\\\n ", "")
 	Lines := Lines[Lines:find(": ") + 2, 0]:trim
 	var Files := list(Lines / r"[^\\]( +)" -> _:replace("\\ ", " "))
 	ret first(Files ->? _:ends("/curl.h"))
-end 
+end
 
 file("curl_options.c")[CurlHeader] => fun(Target) do
 	print('CurlHeader = {CurlHeader}\n')

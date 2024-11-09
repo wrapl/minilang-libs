@@ -1853,12 +1853,12 @@ typedef enum {
 } gi_opcode_t;
 
 #define VALUE_CONVERTOR(GTYPE, MLTYPE) \
-static ml_value_t *GTYPE ## _to_array(ml_value_t *Value, void *Ptr) { \
+static ml_value_t *GTYPE ## _to_array(ml_value_t *Value, void *Ptr, ml_type_t *Type) { \
 	*(g ## GTYPE *)Ptr = ml_ ## MLTYPE ## _value(Value); \
 	return NULL; \
 } \
 \
-static ml_value_t *GTYPE ## _to_glist(ml_value_t *Value, void **Ptr) { \
+static ml_value_t *GTYPE ## _to_glist(ml_value_t *Value, void **Ptr, ml_type_t *Type) { \
 	*Ptr = (void *)(uintptr_t)ml_ ## MLTYPE ## _value(Value); \
 	return NULL; \
 } \
@@ -1879,7 +1879,7 @@ VALUE_CONVERTOR(uint64, integer)
 VALUE_CONVERTOR(float, real);
 VALUE_CONVERTOR(double, real);
 
-static ml_value_t *string_to_array(ml_value_t *Value, void *Ptr) {
+static ml_value_t *string_to_array(ml_value_t *Value, void *Ptr, ml_type_t *Type) {
 	if (Value == MLNil) {
 		*(gchararray *)Ptr = NULL;
 	} else if (ml_is(Value, MLAddressT)) {
@@ -1890,7 +1890,7 @@ static ml_value_t *string_to_array(ml_value_t *Value, void *Ptr) {
 	return NULL;
 }
 
-static ml_value_t *string_to_glist(ml_value_t *Value, void **Ptr) {
+static ml_value_t *string_to_glist(ml_value_t *Value, void **Ptr, ml_type_t *Type) {
 	if (Value == MLNil) {
 		*Ptr = NULL;
 	} else if (ml_is(Value, MLAddressT)) {
@@ -1905,7 +1905,7 @@ static ml_value_t *string_to_value(void *Ptr, void *Aux) {
 	return ml_string_copy(Ptr, -1);
 }
 
-static ml_value_t *gtype_to_array(ml_value_t *Value, void *Ptr) {
+static ml_value_t *gtype_to_array(ml_value_t *Value, void *Ptr, ml_type_t *Type) {
 	if (ml_is(Value, GirBaseInfoT)) {
 		baseinfo_t *Base = (baseinfo_t *)Value;
 		*(GType *)Ptr = Base->Type;
@@ -1929,7 +1929,7 @@ static ml_value_t *gtype_to_array(ml_value_t *Value, void *Ptr) {
 	return NULL;
 }
 
-static ml_value_t *gtype_to_glist(ml_value_t *Value, void **Ptr) {
+static ml_value_t *gtype_to_glist(ml_value_t *Value, void **Ptr, ml_type_t *Type) {
 	if (ml_is(Value, GirBaseInfoT)) {
 		baseinfo_t *Base = (baseinfo_t *)Value;
 		*Ptr = (void *)(uintptr_t)Base->Type;
@@ -1955,6 +1955,28 @@ static ml_value_t *gtype_to_glist(ml_value_t *Value, void **Ptr) {
 
 static ml_value_t *gtype_to_value(void *Ptr, void *Aux) {
 	return ml_string(g_type_name((GType)Ptr), -1);
+}
+
+static ml_value_t *struct_to_glist(ml_value_t *Value, void **Ptr, ml_type_t *Type) {
+	if (Value == MLNil) {
+		*Ptr = NULL;
+	} else if (ml_is(Value, Type)) {
+		*Ptr = ((struct_instance_t *)Value)->Value;
+	} else {
+		return ml_error("TypeError", "Expected %s not %s", Type->Name, ml_typeof(Value)->Name);
+	}
+	return NULL;
+}
+
+static ml_value_t *object_to_glist(ml_value_t *Value, void **Ptr, ml_type_t *Type) {
+	if (Value == MLNil) {
+		*Ptr = NULL;
+	} else if (ml_is(Value, Type)) {
+		*Ptr = ((instance_t *)Value)->Handle;
+	} else {
+		return ml_error("TypeError", "Expected %s not %s", Type->Name, ml_typeof(Value)->Name);
+	}
+	return NULL;
 }
 
 /*static ml_value_t *bytes_to_array(ml_value_t *Value, void *Ptr) {
@@ -2898,7 +2920,8 @@ static void gir_function_call(ml_state_t *Caller, gir_function_t *Function, int 
 	case GIB_ARRAY:
 	case GIB_ARRAY_ZERO: {
 		ml_value_t *Value = *Arg++;
-		ml_value_t *(*to_array)(ml_value_t *, void *);
+		ml_value_t *(*to_array)(ml_value_t *, void *, ml_type_t *);
+		ml_type_t *Type = NULL;
 		int Size;
 		switch ((Inst++)->Opcode) {
 		case GIB_BOOLEAN: to_array = boolean_to_array; Size = sizeof(gboolean); break;
@@ -2925,7 +2948,7 @@ static void gir_function_call(ml_state_t *Caller, gir_function_t *Function, int 
 			Array = snew((Length + 1) * Size);
 			void *Ptr = Array;
 			ML_LIST_FOREACH(Value, Iter) {
-				ml_value_t *Error = to_array(Iter->Value, Ptr);
+				ml_value_t *Error = to_array(Iter->Value, Ptr, Type);
 				if (Error) ML_RETURN(Error);
 				Ptr += Size;
 			}
@@ -2940,7 +2963,8 @@ static void gir_function_call(ml_state_t *Caller, gir_function_t *Function, int 
 	case GIB_ARRAY_LENGTH: {
 		ml_value_t *Value = *Arg++;
 		int Aux = (Inst++)->Aux;
-		ml_value_t *(*to_array)(ml_value_t *, void *);
+		ml_value_t *(*to_array)(ml_value_t *, void *, ml_type_t *);
+		ml_type_t *Type = NULL;
 		int Size;
 		switch ((Inst++)->Opcode) {
 		case GIB_BOOLEAN: to_array = boolean_to_array; Size = sizeof(gboolean); break;
@@ -2969,7 +2993,7 @@ static void gir_function_call(ml_state_t *Caller, gir_function_t *Function, int 
 			Array = snew((Length + 1) * Size);
 			void *Ptr = Array;
 			ML_LIST_FOREACH(Value, Iter) {
-				ml_value_t *Error = to_array(Iter->Value, Ptr);
+				ml_value_t *Error = to_array(Iter->Value, Ptr, Type);
 				if (Error) ML_RETURN(Error);
 				Ptr += Size;
 			}
@@ -3054,7 +3078,8 @@ static void gir_function_call(ml_state_t *Caller, gir_function_t *Function, int 
 	}
 	case GIB_LIST: {
 		ml_value_t *Value = *Arg++;
-		ml_value_t *(*to_list)(ml_value_t *, void **);
+		ml_value_t *(*to_list)(ml_value_t *, void **, ml_type_t *);
+		ml_type_t *Type = NULL;
 		switch ((Inst++)->Opcode) {
 		case GIB_BOOLEAN: to_list = boolean_to_glist; break;
 		case GIB_INT8: to_list = int8_to_glist; break;
@@ -3070,13 +3095,23 @@ static void gir_function_call(ml_state_t *Caller, gir_function_t *Function, int 
 		case GIB_STRING: to_list = string_to_glist; break;
 		case GIB_GTYPE: to_list = gtype_to_glist; break;
 		//case GIB_BYTES: to_list = bytes_to_glist; break;
+		case GIB_STRUCT: {
+			Type = (ml_type_t *)Function->Aux[(Inst++)->Aux];
+			to_list = struct_to_glist;
+			break;
+		}
+		case GIB_OBJECT: {
+			Type = (ml_type_t *)Function->Aux[(Inst++)->Aux];
+			to_list = object_to_glist;
+			break;
+		}
 		default: ML_ERROR("TypeError", "Unsupported list type");
 		}
 		GList *List = NULL, **Slot = &List, *Prev = NULL;
 		if (ml_is(Value, MLListT)) {
 			ML_LIST_FOREACH(Value, Iter) {
 				GList *Node = Slot[0] = g_list_alloc();
-				ml_value_t *Error = to_list(Iter->Value, &Node->data);
+				ml_value_t *Error = to_list(Iter->Value, &Node->data, Type);
 				if (Error) ML_RETURN(Error);
 				Slot = &Node->next;
 				Node->prev = Prev;
@@ -3088,7 +3123,8 @@ static void gir_function_call(ml_state_t *Caller, gir_function_t *Function, int 
 	}
 	case GIB_SLIST: {
 		ml_value_t *Value = *Arg++;
-		ml_value_t *(*to_list)(ml_value_t *, void **);
+		ml_value_t *(*to_list)(ml_value_t *, void **, ml_type_t *);
+		ml_type_t *Type = NULL;
 		switch ((Inst++)->Opcode) {
 		case GIB_BOOLEAN: to_list = boolean_to_glist; break;
 		case GIB_INT8: to_list = int8_to_glist; break;
@@ -3104,13 +3140,23 @@ static void gir_function_call(ml_state_t *Caller, gir_function_t *Function, int 
 		case GIB_STRING: to_list = string_to_glist; break;
 		case GIB_GTYPE: to_list = gtype_to_glist; break;
 		//case GIB_BYTES: to_list = bytes_to_glist; break;
+		case GIB_STRUCT: {
+			Type = (ml_type_t *)Function->Aux[(Inst++)->Aux];
+			to_list = struct_to_glist;
+			break;
+		}
+		case GIB_OBJECT: {
+			Type = (ml_type_t *)Function->Aux[(Inst++)->Aux];
+			to_list = object_to_glist;
+			break;
+		}
 		default: ML_ERROR("TypeError", "Unsupported list type");
 		}
 		GSList *List = NULL, **Slot = &List;
 		if (ml_is(Value, MLListT)) {
 			ML_LIST_FOREACH(Value, Iter) {
 				GSList *Node = Slot[0] = g_slist_alloc();
-				ml_value_t *Error = to_list(Iter->Value, &Node->data);
+				ml_value_t *Error = to_list(Iter->Value, &Node->data, Type);
 				if (Error) ML_RETURN(Error);
 				Slot = &Node->next;
 			}

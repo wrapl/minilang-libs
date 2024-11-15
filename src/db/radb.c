@@ -222,6 +222,30 @@ ML_METHOD("read", StringStoreT, MLIntegerT) {
 	return (ml_value_t *)Reader;
 }
 
+ML_METHOD("search", StringStoreT, MLIntegerT, MLIntegerT) {
+	ml_string_store_t *Store = (ml_string_store_t *)Args[0];
+	CHECK_HANDLE(Store);
+	size_t Index = ml_integer_value_fast(Args[1]);
+	uint32_t Value = ml_integer_value_fast(Args[2]);
+	return string_store_value_search_uint32(Store->Handle, Index, Value) ? MLSome : MLNil;
+}
+
+ML_METHOD("insert", StringStoreT, MLIntegerT, MLIntegerT) {
+	ml_string_store_t *Store = (ml_string_store_t *)Args[0];
+	CHECK_HANDLE(Store);
+	size_t Index = ml_integer_value_fast(Args[1]);
+	uint32_t Value = ml_integer_value_fast(Args[2]);
+	return string_store_value_insert_uint32(Store->Handle, Index, Value) ? MLSome : MLNil;
+}
+
+ML_METHOD("remove", StringStoreT, MLIntegerT, MLIntegerT) {
+	ml_string_store_t *Store = (ml_string_store_t *)Args[0];
+	CHECK_HANDLE(Store);
+	size_t Index = ml_integer_value_fast(Args[1]);
+	uint32_t Value = ml_integer_value_fast(Args[2]);
+	return string_store_value_remove_uint32(Store->Handle, Index, Value) ? MLSome : MLNil;
+}
+
 ML_TYPE(CborStoreT, (), "cbor-store");
 
 ML_FUNCTION(CborStoreOpen) {

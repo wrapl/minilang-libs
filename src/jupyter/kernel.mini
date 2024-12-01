@@ -116,6 +116,44 @@ Compiler:def("print", Stdout:write(_))
 listen("Heartbeat", Heartbeat; Ids, Signature, Header, Parent, Metadata, Content) do
 end
 
+method: display()
+
+meth display(V: any) := string
+meth display(V: nil) "nil"
+meth display(S: string) '\"{S:escape}\"'
+meth display(A: address) with B := string::buffer() do
+	B:write('<{A:size}:')
+	for I in 0 .. (A:size - 1) do
+		B:write(string((A + I):getu8, "%02X"))
+	end
+	B:write(">")
+	B:rest
+end
+meth display(A: array) := string
+meth display(L: list) '[{list(L, display), ", "}]'
+meth display(M: map) with B := string::buffer() do
+	def some := not nil
+	B:write("{")
+	if M:count > 0 then
+		let (K, V) := first2(M)
+		B:write(display(K))
+		if V != some then
+			B:write(" is ", display(V))
+		end
+		for K, V in M skip 1 do
+			B:write(", ", display(K))
+			if V != some then
+				B:write(" is ", display(V))
+			end
+		end
+	end
+	B:write("}")
+	B:rest
+end
+meth display(E: error) 'error(\"{E:type}\", \"{E:message}\")'
+
+let DebugLog := file("/tmp/minikernel.log", "w+")
+
 listen("Shell", Shell; Ids, Signature, Header, Parent, Metadata, Content) do
 	switch Header["msg_type"]: string
 	case "kernel_info_request" do
@@ -152,10 +190,11 @@ listen("Shell", Shell; Ids, Signature, Header, Parent, Metadata, Content) do
 		do
 			loop
 				let Result := Parser:evaluate(Compiler)
-				until Result = compiler::EOI
+				until type(Result) = any and Result = compiler::EOI
+				let Data := {"text/plain" is display(Result)}
 				send("IOPub", IOPub, ["<IDS|MSG>"], "execute_result", Header, {}, {
 					"execution_count" is Counter,
-					"data" is {"text/plain" is string(Result)},
+					"data" is Data,
 					"metadata" is {}
 				})
 			end

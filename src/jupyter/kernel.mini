@@ -118,20 +118,75 @@ end
 
 method: display()
 
-meth display(V: any) := string
-meth display(V: nil) "nil"
-meth display(S: string) '\"{S:escape}\"'
-meth display(A: address) with B := string::buffer() do
+meth display(D: map, V: any) D:insert("text/plain", string(V))
+meth display(D: map, V: nil) D:insert("text/plain", "nil")
+meth display(D: map, S: string) '\"{S:escape}\"'
+meth display(D: map, A: address) with B := string::buffer() do
 	B:write('<{A:size}:')
 	for I in 0 .. (A:size - 1) do
 		B:write(string((A + I):getu8, "%02X"))
 	end
 	B:write(">")
-	B:rest
+	D:insert("text/plain", B:rest)
 end
-meth display(A: array) := string
-meth display(L: list) '[{list(L, display), ", "}]'
-meth display(M: map) with B := string::buffer() do
+meth display(D: map, A: array) D:insert("text/plain", string(A))
+meth display(D: map, A: vector) do
+	D:insert("text/plain", string(A))
+	let C := A:shape[1]
+	with Buffer := string::buffer() do
+		Buffer:write("\\begin{pmatrix}\n")
+		Buffer:write(A[1])
+		for J in 2 .. C do
+			Buffer:write("&", A[J])
+		end
+		Buffer:write("\n\\end{pmatrix}")
+		D:insert("text/latex", Buffer:rest)
+	end
+	with Buffer := string::buffer() do
+		Buffer:write("<table>")
+		Buffer:write("<tr>")
+		for J in 1 .. C do
+			Buffer:write('<td>{A[J]}</td>')
+		end
+		Buffer:write("</tr>")
+		Buffer:write("</table>")
+		D:insert("text/html", Buffer:rest)
+	end
+end
+meth display(D: map, A: matrix) do
+	D:insert("text/plain", string(A))
+	let (R, C) := A:shape
+	with Buffer := string::buffer() do
+		Buffer:write("\\begin{pmatrix}\n")
+		for I in 1 ..< R do
+			Buffer:write(A[I, 1])
+			for J in 2 .. C do
+				Buffer:write("&", A[I, J])
+			end
+			Buffer:write("\\\\\n")
+		end
+		Buffer:write(A[R, 1])
+		for J in 2 .. C do
+			Buffer:write("&", A[R, J])
+		end
+		Buffer:write("\n\\end{pmatrix}")
+		D:insert("text/latex", Buffer:rest)
+	end
+	with Buffer := string::buffer() do
+		Buffer:write("<table>")
+		for I in 1 .. R do
+			Buffer:write("<tr>")
+			for J in 1 .. C do
+				Buffer:write('<td>{A[I, J]}</td>')
+			end
+			Buffer:write("</tr>")
+		end
+		Buffer:write("</table>")
+		D:insert("text/html", Buffer:rest)
+	end
+end
+meth display(D: map, L: list) '[{list(L, display), ", "}]'
+meth display(D: map, M: map) with B := string::buffer() do
 	def some := not nil
 	B:write("{")
 	if M:count > 0 then
@@ -150,7 +205,7 @@ meth display(M: map) with B := string::buffer() do
 	B:write("}")
 	B:rest
 end
-meth display(E: error) 'error(\"{E:type}\", \"{E:message}\")'
+meth display(D: map, E: error) 'error(\"{E:type}\", \"{E:message}\")'
 
 let DebugLog := file("/tmp/minikernel.log", "w+")
 
@@ -191,7 +246,8 @@ listen("Shell", Shell; Ids, Signature, Header, Parent, Metadata, Content) do
 			loop
 				let Result := Parser:evaluate(Compiler)
 				until type(Result) = any and Result = compiler::EOI
-				let Data := {"text/plain" is display(Result)}
+				let Data := {}
+				display(Data, Result)
 				send("IOPub", IOPub, ["<IDS|MSG>"], "execute_result", Header, {}, {
 					"execution_count" is Counter,
 					"data" is Data,

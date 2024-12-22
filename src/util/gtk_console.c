@@ -1086,6 +1086,16 @@ ML_METHOD("load", ConsoleT, MLStringT, MLListT) {
 	return (ml_value_t *)Console;
 }
 
+ML_METHOD("parser", ConsoleT) {
+	gtk_console_t *Console = (gtk_console_t *)Args[0];
+	return (ml_value_t *)Console->Parser;
+}
+
+ML_METHOD("compiler", ConsoleT) {
+	gtk_console_t *Console = (gtk_console_t *)Args[0];
+	return (ml_value_t *)Console->Compiler;
+}
+
 typedef struct {
 	ml_state_t Base;
 	ml_value_t **Slot;

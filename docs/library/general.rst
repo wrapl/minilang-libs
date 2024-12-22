@@ -137,6 +137,10 @@ general
    *TBD*
 
 
+:mini:`meth (Arg₁: string):SqlParse`
+   *TBD*
+
+
 :mini:`meth fdbdatabase(Arg₁: string)`
    *TBD*
 

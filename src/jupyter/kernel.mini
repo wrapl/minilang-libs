@@ -156,7 +156,7 @@ method: display()
 
 meth display(D: map, V: any) D:insert("text/plain", string(V))
 meth display(D: map, V: nil) D:insert("text/plain", "nil")
-meth display(D: map, S: string) '\"{S:escape}\"'
+meth display(D: map, S: string) D:insert("text/plain", '\"{S:escape}\"')
 meth display(D: map, A: address) with B := string::buffer() do
 	B:write('<{A:size}:')
 	for I in 0 .. (A:size - 1) do
@@ -266,9 +266,13 @@ listen("Shell", Shell; Ids, Signature, Header, Parent, Metadata, Content) do
 	case "execute_request" do
 		Content["store_history"] = true and Counter:inc
 		Compiler:def("print"; [Args]) do
+			let Buffer := string::buffer()
+			for Arg in Args do
+				Buffer:write(Arg)
+			end
 			send("IOPub", IOPub, ["<IDS|MSG>"], "stream", Header, {}, {
 				"name" is "stdout",
-				"text" is Args -> string join ""
+				"text" is Buffer:rest
 			})
 			ret nil
 		end

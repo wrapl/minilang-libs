@@ -55,6 +55,7 @@ struct gtk_console_t {
 	char Chars[32];
 	int NumChars;
 	int DisplayOutput;
+	guint StatusTimeout;
 };
 
 #ifdef MINGW
@@ -520,6 +521,7 @@ static void console_size_allocate(GtkWindow *Window, GdkRectangle *Allocation, g
 }
 
 static gboolean console_quit(GtkWindow *Window, GdkEvent *Event, gtk_console_t *Console) {
+	g_source_remove(Console->StatusTimeout);
 	ml_state_schedule(Console->Base.Caller, MLNil);
 	return FALSE;
 }
@@ -1046,7 +1048,7 @@ gtk_console_t *gtk_console(ml_state_t *Caller, ml_getter_t GlobalGet, void *Glob
 	gtk_source_view_set_tab_width(GTK_SOURCE_VIEW(Console->InputView), 4);
 	gtk_source_view_set_show_line_numbers(GTK_SOURCE_VIEW(Console->InputView), TRUE);
 
-	g_timeout_add(1000, (GSourceFunc)console_update_status, Console);
+	Console->StatusTimeout = g_timeout_add(1000, (GSourceFunc)console_update_status, Console);
 
 	GError *Error = 0;
 	g_irepository_require(NULL, "Gtk", "3.0", 0, &Error);

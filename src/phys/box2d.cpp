@@ -5,6 +5,9 @@
 #include <box2d/box2d.h>
 #include <stdio.h>
 
+#undef ML_CATEGORY
+#define ML_CATEGORY "phys/box2d"
+
 #define BOOL_FIELD(TYPE, CTYPE, FIELD) \
 \
 ML_METHOD(#FIELD, TYPE) { \
@@ -68,27 +71,28 @@ ML_METHOD(#FIELD, TYPE, ETYPE) { \
 	ml_array_t *Array = (ml_array_t *)VALUE; \
 	if (Array->Degree != 1) return ml_error("ShapeError", "Invalid " #USE); \
 	if (Array->Dimensions[0].Size != 2) return ml_error("ShapeError", "Invalid " #USE); \
-	b2Vec2(ml_array_get_float(Array, 0), ml_array_get_float(Array, 1)); \
+	(b2Vec2){ml_array_get_float(Array, 0), ml_array_get_float(Array, 1)}; \
 })
 
 ML_TYPE(WorldT, (), "box2d::world");
 
 struct world_t {
 	ml_type_t *Type;
-	b2World *Handle;
+	b2WorldId Handle;
 };
 
 static void world_finalize(void *Ptr, void *Data) {
-	delete ((world_t *)Ptr)->Handle;
+	b2DestroyWorld(((world_t *)Ptr)->Handle);
 }
 
 ML_FUNCTION(World) {
 	ML_CHECK_ARG_COUNT(1);
 	ML_CHECK_ARG_TYPE(0, MLArrayT);
-	b2Vec2 Gravity = ML_ARRAY_TO_B2VEC2(Args[0], gravity);
+	b2WorldDef Def = b2DefaultWorldDef();
+	Def.gravity = ML_ARRAY_TO_B2VEC2(Args[0], gravity);
 	world_t *World = new (GC) world_t;
 	World->Type = WorldT;
-	World->Handle = new b2World(Gravity);
+	World->Handle = b2CreateWorld(&Def);
 	GC_register_finalizer(World, world_finalize, NULL, NULL, NULL);
 	return (ml_value_t *)World;
 }
@@ -138,7 +142,7 @@ ML_METHOD("create", WorldT, BodyDefT) {
 	body_t *Body = new (GC) body_t;
 	Body->Type = BodyT;
 	Body->Handle = World->Handle->CreateBody(&BodyDef->Value);
-	Body->Handle->SetUserData(Body);
+	Body->Handle->GetUserData().pointer = (uintptr_t)Body;
 	return (ml_value_t *)Body;
 }
 

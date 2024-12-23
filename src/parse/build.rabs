@@ -20,3 +20,13 @@ end
 	LDFLAGS := old + ["-lpcre2-8"]
 	so_module("parse/cleri.so", Objects)
 end>:
+
+scope("sql";) do
+	let Lib := file("libpg_query/libpg_query.a") => fun() do
+		file("libpg_query"):rmdir:mkdir:chdir
+		execute("wget https://github.com/pganalyze/libpg_query/archive/refs/tags/17-6.0.0.tar.gz -O- | tar xvzP --strip-components=1")
+		execute("make -j8")
+	end
+	PREBUILDS := old + [Lib]
+	so_module("parse/sql.so", [file("sql.o")], [Lib])
+end

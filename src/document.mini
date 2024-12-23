@@ -56,9 +56,14 @@ fun write_overview(Category, Description) do
 	emit(Category, tuple(), Description:join)
 end
 
+let TypeAliases := {}
+
 fun type_name(var Type) do
 	Type or ret "any"
 	Type := Type:replace(" ## ", "")
+	if let Alias := TypeAliases[Type] then
+		ret Alias
+	end
 	let Name := if let Match := Type % r"^ML(.*)T$" then
 		if let Match2 := Match[2] % r"([A-Z]{1,2}[a-z]+)([A-Z]{1,2}[a-z0-9]+)([A-Z]{1,2}[a-z0-9]+)" then
 			'{Match2[2]:lower}::{Match2[3]:lower}::{Match2[4]:lower}'
@@ -172,6 +177,8 @@ fun write_method(Category, Kind, Method0, Params, Return, Description, Examples,
 	var Skip := 1
 	Buffer:write(':mini:`meth ')
 	let Method := if let Match := Method0 % r"ML(\w+)T" then
+		Match[2]:lower
+	elseif let Match := Method0 % r"(\w+)T" then
 		Match[2]:lower
 	elseif Method0[1] = "\"" then
 		if is_symbol(Method0) or Method0:find("::") then
@@ -716,7 +723,7 @@ fun process(FileName) do
 					let Line := while File:read
 					LineNo := old + 1
 					if Line % r"^/[/*]@" then
-						Name := Line[4, 0]:trim
+						TypeAliases[Name] := (Name := Line[4, 0]:trim)
 					elseif Line % r"^/[/*]!" then
 						Category := Line[4, 0]:trim
 					elseif Line % r"^/[/*] " then
@@ -758,7 +765,7 @@ fun process(FileName) do
 					let Line := while File:read
 					LineNo := old + 1
 					if Line % r"^/[/*]@" then
-						Name := Line[4, 0]:trim
+						TypeAliases[Name] := (Name := Line[4, 0]:trim)
 					elseif Line % r"^/[/*]!" then
 						Category := Line[4, 0]:trim
 					elseif Line % r"^/[/*] " then
@@ -919,3 +926,5 @@ hierarchy
 ')
 	File:close
 end
+
+print(TypeAliases)

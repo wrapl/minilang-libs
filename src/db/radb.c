@@ -166,7 +166,7 @@ ML_METHOD("get", StringStoreT, MLIntegerT) {
 	return ml_string_unchecked(Value, Length);
 }
 
-ML_METHOD("set", StringStoreT, MLIntegerT, MLStringT) {
+ML_METHOD("set", StringStoreT, MLIntegerT, MLAddressT) {
 //<Store
 //<Index
 //<Value
@@ -175,7 +175,7 @@ ML_METHOD("set", StringStoreT, MLIntegerT, MLStringT) {
 	ml_string_store_t *Store = (ml_string_store_t *)Args[0];
 	CHECK_HANDLE(Store);
 	size_t Index = ml_integer_value_fast(Args[1]);
-	string_store_set(Store->Handle, Index, ml_string_value(Args[2]), ml_string_length(Args[2]));
+	string_store_set(Store->Handle, Index, ml_address_value(Args[2]), ml_address_length(Args[2]));
 	return Args[2];
 }
 
@@ -220,6 +220,30 @@ ML_METHOD("read", StringStoreT, MLIntegerT) {
 	Reader->Type = StringStoreReaderT;
 	string_store_reader_open(Reader->Handle, Store->Handle, ml_integer_value_fast(Args[1]));
 	return (ml_value_t *)Reader;
+}
+
+ML_METHOD("search", StringStoreT, MLIntegerT, MLIntegerT) {
+	ml_string_store_t *Store = (ml_string_store_t *)Args[0];
+	CHECK_HANDLE(Store);
+	size_t Index = ml_integer_value_fast(Args[1]);
+	uint32_t Value = ml_integer_value_fast(Args[2]);
+	return string_store_value_search_uint32(Store->Handle, Index, Value) ? MLSome : MLNil;
+}
+
+ML_METHOD("insert", StringStoreT, MLIntegerT, MLIntegerT) {
+	ml_string_store_t *Store = (ml_string_store_t *)Args[0];
+	CHECK_HANDLE(Store);
+	size_t Index = ml_integer_value_fast(Args[1]);
+	uint32_t Value = ml_integer_value_fast(Args[2]);
+	return string_store_value_insert_uint32(Store->Handle, Index, Value) ? MLSome : MLNil;
+}
+
+ML_METHOD("remove", StringStoreT, MLIntegerT, MLIntegerT) {
+	ml_string_store_t *Store = (ml_string_store_t *)Args[0];
+	CHECK_HANDLE(Store);
+	size_t Index = ml_integer_value_fast(Args[1]);
+	uint32_t Value = ml_integer_value_fast(Args[2]);
+	return string_store_value_remove_uint32(Store->Handle, Index, Value) ? MLSome : MLNil;
 }
 
 ML_TYPE(CborStoreT, (), "cbor-store");
@@ -368,10 +392,10 @@ static uint32_t string_hash(const char *String, size_t Length) {
 	return Hash;
 }
 
-ML_METHOD("search", StringIndexT, MLStringT) {
+ML_METHOD("search", StringIndexT, MLAddressT) {
 	ml_string_index_t *Store = (ml_string_index_t *)Args[0];
 	CHECK_HANDLE(Store);
-	ml_string_key_t Full = {ml_string_value(Args[1]), ml_string_length(Args[1])};
+	ml_string_key_t Full = {ml_address_value(Args[1]), ml_address_length(Args[1])};
 	linear_key_t Key = {0,};
 	if (Full.Length < 16) {
 		memcpy(Key, Full.String, Full.Length);
@@ -385,10 +409,10 @@ ML_METHOD("search", StringIndexT, MLStringT) {
 	return ml_integer(Index);
 }
 
-ML_METHOD("insert", StringIndexT, MLStringT) {
+ML_METHOD("insert", StringIndexT, MLAddressT) {
 	ml_string_index_t *Store = (ml_string_index_t *)Args[0];
 	CHECK_HANDLE(Store);
-	ml_string_key_t Full = {ml_string_value(Args[1]), ml_string_length(Args[1])};
+	ml_string_key_t Full = {ml_address_value(Args[1]), ml_address_length(Args[1])};
 	linear_key_t Key = {0,};
 	if (Full.Length < 16) {
 		memcpy(Key, Full.String, Full.Length);
@@ -401,10 +425,10 @@ ML_METHOD("insert", StringIndexT, MLStringT) {
 	return ml_integer(Index);
 }
 
-ML_METHOD("delete", StringIndexT, MLStringT) {
+ML_METHOD("delete", StringIndexT, MLAddressT) {
 	ml_string_index_t *Store = (ml_string_index_t *)Args[0];
 	CHECK_HANDLE(Store);
-	ml_string_key_t Full = {ml_string_value(Args[1]), ml_string_length(Args[1])};
+	ml_string_key_t Full = {ml_address_value(Args[1]), ml_address_length(Args[1])};
 	linear_key_t Key = {0,};
 	if (Full.Length < 16) {
 		memcpy(Key, Full.String, Full.Length);

@@ -13,11 +13,15 @@ general
    *TBD*
 
 
+:mini:`fun eventbasenew()`
+   *TBD*
+
+
 :mini:`fun eventsleep()`
    *TBD*
 
 
-:mini:`meth :FDBDatabaseT()`
+:mini:`fun raschema()`
    *TBD*
 
 
@@ -45,6 +49,14 @@ general
    *TBD*
 
 
+:mini:`type event`
+   *TBD*
+
+
+:mini:`type eventbase`
+   *TBD*
+
+
 :mini:`meth (Arg₁: eventbase):dispatch`
    *TBD*
 
@@ -53,11 +65,19 @@ general
    *TBD*
 
 
+:mini:`meth (Arg₁: eventbase):new(Arg₂: file)`
+   *TBD*
+
+
 :mini:`type eventhttp`
    *TBD*
 
 
 :mini:`type fdbdatabase`
+   *TBD*
+
+
+:mini:`meth fdbdatabase()`
    *TBD*
 
 
@@ -77,10 +97,6 @@ general
    *TBD*
 
 
-:mini:`meth (Arg₁: eventbase):new(Arg₂: file)`
-   *TBD*
-
-
 :mini:`meth (Arg₁: fdbtransaction):set(Arg₂: address, Arg₃: address)`
    *TBD*
 
@@ -89,35 +105,11 @@ general
    *TBD*
 
 
-:mini:`type instance`
-   *TBD*
-
-
 :mini:`fun mldqlite(Arg₁: integer, Arg₂: string, Arg₃: string)`
    *TBD*
 
 
-:mini:`type plugin`
-   *TBD*
-
-
-:mini:`meth (Arg₁: plugin):name`
-   *TBD*
-
-
-:mini:`meth (Arg₁: plugin):uri`
-   *TBD*
-
-
-:mini:`type port`
-   *TBD*
-
-
-:mini:`type prolog`
-   *TBD*
-
-
-:mini:`meth (Arg₁: prolog) :: (Arg₂: string)`
+:mini:`type rainstance`
    *TBD*
 
 
@@ -129,19 +121,27 @@ general
    *TBD*
 
 
+:mini:`type ralistener`
+   *TBD*
+
+
 :mini:`meth (Arg₁: ralistener):delete`
    *TBD*
 
 
-:mini:`meth (Arg₁: string):FDBDatabaseT`
+:mini:`type raschema`
    *TBD*
 
 
-:mini:`type term < sequence`
+:mini:`type raschemaindex`
    *TBD*
 
 
-:mini:`meth (Arg₁: term) . (Arg₂: term)`
+:mini:`meth (Arg₁: string):SqlParse`
+   *TBD*
+
+
+:mini:`meth fdbdatabase(Arg₁: string)`
    *TBD*
 
 
@@ -154,6 +154,10 @@ general
 
 
 :mini:`type uev`
+   *TBD*
+
+
+:mini:`meth uev()`
    *TBD*
 
 
@@ -173,38 +177,6 @@ general
    *TBD*
 
 
-:mini:`type event`
-   *TBD*
-
-
-:mini:`type eventbase`
-   *TBD*
-
-
-:mini:`type ralistener`
-   *TBD*
-
-
-:mini:`type raschema`
-   *TBD*
-
-
-:mini:`type query`
-   *TBD*
-
-
-:mini:`type rainstance`
-   *TBD*
-
-
-:mini:`type raschemaindex`
-   *TBD*
-
-
-:mini:`meth (Arg₁: string::buffer):append(Arg₂: atom)`
-   *TBD*
-
-
 :mini:`meth (Arg₁: uev):timer(Arg₂: integer, Arg₃: function)`
    *TBD*
 
@@ -221,22 +193,6 @@ general
    *TBD*
 
 
-:mini:`type atom`
-   *TBD*
-
-
-:mini:`type pluginclass`
-   *TBD*
-
-
-:mini:`fun raschema()`
-   *TBD*
-
-
-:mini:`meth :UevT()`
-   *TBD*
-
-
 :mini:`meth (Arg₁: uevevent):stop`
    *TBD*
 
@@ -250,21 +206,5 @@ general
    * :mini:`::RdHup`
    * :mini:`::Edge`
    * :mini:`::Once`
-
-
-:mini:`fun eventbasenew()`
-   *TBD*
-
-
-:mini:`fun getallplugins()`
-   *TBD*
-
-
-:mini:`type variable`
-   *TBD*
-
-
-:mini:`def Prolog: prolog`
-   *TBD*
 
 

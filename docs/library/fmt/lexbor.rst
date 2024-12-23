@@ -93,11 +93,11 @@ fmt/lexbor
    *TBD*
 
 
-:mini:`meth (Arg₁: string):CSSSelectorsT`
+:mini:`meth cssselectors(Arg₁: string)`
    *TBD*
 
 
-:mini:`meth (Arg₁: string):DocumentT`
+:mini:`meth document(Arg₁: string)`
    *TBD*
 
 

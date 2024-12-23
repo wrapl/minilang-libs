@@ -2,6 +2,9 @@
 #include "kiwi/kiwi.h"
 #include <gc/gc_cpp.h>
 
+#undef ML_CATEGORY
+#define ML_CATEGORY "solver/kiwi"
+
 ML_TYPE(KiwiVariableT, (), "kiwi-variable");
 
 struct kiwi_variable_t : public gc {

@@ -247,7 +247,7 @@ static int text(MD_TEXTTYPE Type, const MD_CHAR *Text, MD_SIZE Size, xml_builder
 	return 0;
 }
 
-ML_FLAGS2(Flag, "markdown::flag",
+ML_FLAGS2(FlagT, "markdown::flag",
 	"CollapseWhitespace", MD_FLAG_COLLAPSEWHITESPACE,
 	"PermissiveATXHeaders", MD_FLAG_PERMISSIVEATXHEADERS,
 	"PermissiveURLAutoLinks", MD_FLAG_PERMISSIVEURLAUTOLINKS,
@@ -265,14 +265,32 @@ ML_FLAGS2(Flag, "markdown::flag",
 	"HardSoftBreaks", MD_FLAG_HARD_SOFT_BREAKS
 );
 
-ML_FUNCTION(Parse) {
+ML_METHOD_ANON(Parse, "markdown::parse");
+
+ML_METHOD(Parse, MLStringT, FlagT) {
 //<Markdown
+//<Flags
 //>xml
-	ML_CHECK_ARG_COUNT(2);
-	ML_CHECK_ARG_TYPE(0, MLStringT);
-	ML_CHECK_ARG_TYPE(1, Flag);
 	MD_PARSER Parser[1] = {0,};
 	Parser->flags = ml_flags_value_value(Args[1]);
+	Parser->enter_block = (void *)enter_block;
+	Parser->leave_block = (void *)leave_block;
+	Parser->enter_span = (void *)enter_span;
+	Parser->leave_span = (void *)leave_span;
+	Parser->text = (void *)text;
+	ml_xml_element_t *Root = ml_xml_element("html");
+	xml_builder_t Builder[1] = {Root, {ML_STRINGBUFFER_INIT}};
+	if (md_parse(ml_string_value(Args[0]), ml_string_length(Args[0]), Parser, &Builder)) {
+		return ml_error("MarkdownError", "Error parsing markdown");
+	}
+	return (ml_value_t *)Root;
+}
+
+ML_METHOD(Parse, MLStringT) {
+//<Markdown
+//>xml
+	MD_PARSER Parser[1] = {0,};
+	Parser->flags = MD_FLAG_NOHTML;
 	Parser->enter_block = (void *)enter_block;
 	Parser->leave_block = (void *)leave_block;
 	Parser->enter_span = (void *)enter_span;
@@ -290,6 +308,6 @@ ML_LIBRARY_ENTRY0(fmt_markdown) {
 #include "markdown_init.c"
 	Slot[0] = ml_module("markdown",
 		"parse", Parse,
-		"flag", Flag,
+		"flag", FlagT,
 	NULL);
 }

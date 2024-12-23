@@ -41,11 +41,11 @@ parse/cleri
    *TBD*
 
 
-:mini:`meth (Arg₁: cleri):CleriGrammarT`
+:mini:`meth clerigrammar(Arg₁: cleri)`
    *TBD*
 
 
-:mini:`meth (Arg₁: cleri):CleriGrammarT(Arg₂: string)`
+:mini:`meth clerigrammar(Arg₁: cleri, Arg₂: string)`
    *TBD*
 
 

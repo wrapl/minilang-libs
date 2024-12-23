@@ -116,6 +116,135 @@ Compiler:def("print", Stdout:write(_))
 listen("Heartbeat", Heartbeat; Ids, Signature, Header, Parent, Metadata, Content) do
 end
 
+method: image()
+
+meth image(V: any) := string
+meth image(V: nil) "nil"
+meth image(S: string) '\"{S:escape}\"'
+meth image(A: address) with B := string::buffer() do
+	B:write('<{A:size}:')
+	for I in 0 .. (A:size - 1) do
+		B:write(string((A + I):getu8, "%02X"))
+	end
+	B:write(">")
+	B:rest
+end
+meth image(A: array) := string
+meth image(L: list) '[{list(L, image), ", "}]'
+meth image(M: map) with B := string::buffer() do
+	def some := not nil
+	B:write("{")
+	if M:count > 0 then
+		let (K, V) := first2(M)
+		B:write(image(K))
+		if V != some then
+			B:write(" is ", image(V))
+		end
+		for K, V in M skip 1 do
+			B:write(", ", image(K))
+			if V != some then
+				B:write(" is ", image(V))
+			end
+		end
+	end
+	B:write("}")
+	B:rest
+end
+meth image(E: error) 'error(\"{E:type}\", \"{E:message}\")'
+
+method: display()
+
+meth display(D: map, V: any) D:insert("text/plain", string(V))
+meth display(D: map, V: nil) D:insert("text/plain", "nil")
+meth display(D: map, S: string) D:insert("text/plain", '\"{S:escape}\"')
+meth display(D: map, A: address) with B := string::buffer() do
+	B:write('<{A:size}:')
+	for I in 0 .. (A:size - 1) do
+		B:write(string((A + I):getu8, "%02X"))
+	end
+	B:write(">")
+	D:insert("text/plain", B:rest)
+end
+meth display(D: map, A: array) D:insert("text/plain", string(A))
+meth display(D: map, A: vector) do
+	D:insert("text/plain", string(A))
+	let C := A:shape[1]
+	with Buffer := string::buffer() do
+		Buffer:write("\\begin{pmatrix}\n")
+		Buffer:write(A[1])
+		for J in 2 .. C do
+			Buffer:write("&", A[J])
+		end
+		Buffer:write("\n\\end{pmatrix}")
+		D:insert("text/latex", Buffer:rest)
+	end
+	with Buffer := string::buffer() do
+		Buffer:write("<table>")
+		Buffer:write("<tr>")
+		for J in 1 .. C do
+			Buffer:write('<td>{A[J]}</td>')
+		end
+		Buffer:write("</tr>")
+		Buffer:write("</table>")
+		D:insert("text/html", Buffer:rest)
+	end
+end
+meth display(D: map, A: matrix) do
+	D:insert("text/plain", string(A))
+	let (R, C) := A:shape
+	with Buffer := string::buffer() do
+		Buffer:write("\\begin{pmatrix}\n")
+		for I in 1 ..< R do
+			Buffer:write(A[I, 1])
+			for J in 2 .. C do
+				Buffer:write("&", A[I, J])
+			end
+			Buffer:write("\\\\\n")
+		end
+		Buffer:write(A[R, 1])
+		for J in 2 .. C do
+			Buffer:write("&", A[R, J])
+		end
+		Buffer:write("\n\\end{pmatrix}")
+		D:insert("text/latex", Buffer:rest)
+	end
+	with Buffer := string::buffer() do
+		Buffer:write("<table>")
+		for I in 1 .. R do
+			Buffer:write("<tr>")
+			for J in 1 .. C do
+				Buffer:write('<td>{A[I, J]}</td>')
+			end
+			Buffer:write("</tr>")
+		end
+		Buffer:write("</table>")
+		D:insert("text/html", Buffer:rest)
+	end
+end
+meth display(D: map, L: list) D:insert("text/plain", '[{list(L, image), ", "}]')
+meth display(D: map, M: map) with B := string::buffer() do
+	def some := not nil
+	B:write("{")
+	if M:count > 0 then
+		let (K, V) := first2(M)
+		B:write(image(K))
+		if V != some then
+			B:write(" is ", image(V))
+		end
+		for K, V in M skip 1 do
+			B:write(", ", image(K))
+			if V != some then
+				B:write(" is ", image(V))
+			end
+		end
+	end
+	B:write("}")
+	D:insert("text/plain", B:rest)
+end
+meth display(D: map, E: error) D:insert("text/plain", 'error(\"{E:type}\", \"{E:message}\")')
+
+let DebugLog := file("/tmp/minikernel.log", "w+")
+
 listen("Shell", Shell; Ids, Signature, Header, Parent, Metadata, Content) do
 	switch Header["msg_type"]: string
 	case "kernel_info_request" do
@@ -137,9 +266,13 @@ listen("Shell", Shell; Ids, Signature, Header, Parent, Metadata, Content) do
 	case "execute_request" do
 		Content["store_history"] = true and Counter:inc
 		Compiler:def("print"; [Args]) do
+			let Buffer := string::buffer()
+			for Arg in Args do
+				Buffer:write(Arg)
+			end
 			send("IOPub", IOPub, ["<IDS|MSG>"], "stream", Header, {}, {
 				"name" is "stdout",
-				"text" is Args -> string join ""
+				"text" is Buffer:rest
 			})
 			ret nil
 		end
@@ -152,10 +285,12 @@ listen("Shell", Shell; Ids, Signature, Header, Parent, Metadata, Content) do
 		do
 			loop
 				let Result := Parser:evaluate(Compiler)
-				until Result = compiler::EOI
+				until type(Result) = any and Result = compiler::EOI
+				let Data := {}
+				display(Data, Result)
 				send("IOPub", IOPub, ["<IDS|MSG>"], "execute_result", Header, {}, {
 					"execution_count" is Counter,
-					"data" is {"text/plain" is string(Result)},
+					"data" is Data,
 					"metadata" is {}
 				})
 			end

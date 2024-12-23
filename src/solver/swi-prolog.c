@@ -3,6 +3,44 @@
 #include <SWI-Prolog.h>
 #include <ctype.h>
 
+#undef ML_CATEGORY
+#define ML_CATEGORY "solver/swi-prolog"
+
+typedef struct {
+	void **Ptrs;
+	int Space, Size;
+} ptrset_t;
+
+#define PTRSET_INIT {NULL, 0, 0}
+#define PTRSET_INITIAL_SIZE 4
+
+static void ptrset_insert(ptrset_t *Set, void *Ptr) {
+	if (!Set->Space) {
+		int Size = Set->Size + PTRSET_INITIAL_SIZE;
+		void **Ptrs = anew(void *, Size);
+		memcpy(Ptrs, Set->Ptrs, Set->Size * sizeof(void *));
+		Ptrs[Set->Size] = Ptr;
+		Set->Ptrs = Ptrs;
+		Set->Size = Size;
+		Set->Space += PTRSET_INITIAL_SIZE - 1;
+		return;
+	}
+	void **Slot = Set->Ptrs;
+	while (Slot[0]) ++Slot;
+	Slot[0] = Ptr;
+	--Set->Space;
+}
+
+static void ptrset_remove(ptrset_t *Set, void *Ptr) {
+	for (void **Slot = Set->Ptrs, **Limit = Set->Ptrs + Set->Size; Slot < Limit; ++Slot) {
+		if (Slot[0] == Ptr) {
+			Slot[0] = NULL;
+			++Set->Space;
+			return;
+		}
+	}
+}
+
 typedef struct {
 	ml_type_t *Type;
 	atom_t Value;
@@ -296,7 +334,7 @@ ML_LIBRARY_ENTRY0(swi_prolog) {
 		}
 		PathSize += 32;
 	}
-	char *Args[1] = {Path};
+	char *Args[2] = {Path, NULL};
 	PL_initialise(1, Args);
 	CommaFunctor = PL_new_functor(PL_new_atom(","), 2);
 	Slot[0] = Prolog;

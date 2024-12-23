@@ -21,7 +21,7 @@ graph/graphviz
    *TBD*
 
 
-:mini:`meth (Arg₁: file):GraphT`
+:mini:`meth graph(Arg₁: file)`
    *TBD*
 
 
@@ -100,11 +100,11 @@ graph/graphviz
    *TBD*
 
 
-:mini:`meth (Arg₁: string):GraphT`
+:mini:`meth graph(Arg₁: string)`
    *TBD*
 
 
-:mini:`meth (Arg₁: string):GraphT(Arg₂: graphdesc)`
+:mini:`meth graph(Arg₁: string, Arg₂: graphdesc)`
    *TBD*
 
 

@@ -1,2 +1,85 @@
+let CurlHeader := expr("curl_header";) do
+	var Lines := shell(CC, '-c', CFLAGS, '-M -MG', file("curl.c"))
+	Lines := Lines:replace("\\\n ", "")
+	Lines := Lines[Lines:find(": ") + 2, 0]:trim
+	var Files := list(Lines / r"[^\\]( +)" -> _:replace("\\ ", " "))
+	ret first(Files ->? _:ends("/curl.h"))
+end
+
+file("curl_options.c")[CurlHeader] => fun(Target) do
+	print('CurlHeader = {CurlHeader}\n')
+	let Input := open(CurlHeader, "r")
+	let Options := {}, Infos := {}
+	loop
+		let Line := while Input:read
+		if let (_, Value, Type) := Line % r"CURLOPT\(CURLOPT_([A-Z_]+), CURLOPTTYPE_([A-Z_]+), [0-9]+\)" then
+			Options[Type, /list]:put(Value)
+		elseif let (_, Value, Type) := Line % r"CURLINFO_([A-Z_]+)\s+=\s+CURLINFO_([A-Z_]+)\s+\+\s+[0-9]+" then
+			Infos[Type, /list]:put(Value)
+		end
+	end
+	Input:close
+	let Output := Target:open("w")
+	Output:write('ML_ENUM2(CurlOptionT, "curl::option"')
+	for Type, Values in Options do
+		for Value in Values do
+			let Name := Value:replace("_", " "):lower:title:replace(" ", "")
+			Output:write(',\n\t"{Name}", CURLOPT_{Value}')
+		end
+	end
+	Output:write('\n);\n\nML_SUB_ENUM(CurlOptionIntegerT, "curl::integer::option", CurlOptionT')
+	for Value in Options["LONG"] & Options["OFF_T"] do
+		let Name := Value:replace("_", " "):lower:title:replace(" ", "")
+		Output:write(',\n\t"{Name}"')
+	end
+	Output:write('\n);\n\nML_SUB_ENUM(CurlOptionStringT, "curl::string::option", CurlOptionT')
+	for Value in Options["STRINGPOINT"] do
+		let Name := Value:replace("_", " "):lower:title:replace(" ", "")
+		Output:write(',\n\t"{Name}"')
+	end
+	Output:write('\n);\n\nML_SUB_ENUM(CurlOptionSetT, "curl::set::option", CurlOptionT')
+	for Value in Options["SLISTPOINT"] do
+		let Name := Value:replace("_", " "):lower:title:replace(" ", "")
+		Output:write(',\n\t"{Name}"')
+	end
+	Output:write('\n);\n\nML_SUB_ENUM(CurlOptionFunctionT, "curl::set::function", CurlOptionT')
+	for Value in Options["FUNCTIONPOINT"] do
+		let Name := Value:replace("_", " "):lower:title:replace(" ", "")
+		Output:write(',\n\t"{Name}"')
+	end
+	Output:write('\n);\n\n')
+	Output:write('ML_ENUM2(CurlInfoT, "curl::info"')
+	for Type, Values in Infos do
+		for Value in Values do
+			let Name := Value:replace("_", " "):lower:title:replace(" ", "")
+			Output:write(',\n\t"{Name}", CURLINFO_{Value}')
+		end
+	end
+	Output:write('\n);\n\nML_SUB_ENUM(CurlInfoIntegerT, "curl::integer::info", CurlInfoT')
+	for Value in Infos["LONG"] & Infos["OFF_T"] do
+		let Name := Value:replace("_", " "):lower:title:replace(" ", "")
+		Output:write(',\n\t"{Name}"')
+	end
+	Output:write('\n);\n\nML_SUB_ENUM(CurlInfoRealT, "curl::real::info", CurlInfoT')
+	for Value in Infos["DOUBLE"] do
+		let Name := Value:replace("_", " "):lower:title:replace(" ", "")
+		Output:write(',\n\t"{Name}"')
+	end
+	Output:write('\n);\n\nML_SUB_ENUM(CurlInfoStringT, "curl::string::info", CurlInfoT')
+	for Value in Infos["STRING"] do
+		let Name := Value:replace("_", " "):lower:title:replace(" ", "")
+		Output:write(',\n\t"{Name}"')
+	end
+	Output:write('\n);\n\nML_SUB_ENUM(CurlInfoSetT, "curl::set::info", CurlInfoT')
+	for Value in Infos["SLIST"] do
+		let Name := Value:replace("_", " "):lower:title:replace(" ", "")
+		Output:write(',\n\t"{Name}"')
+	end
+	Output:write('\n);\n\n')
+	Output:close
+	print("Option types = ", list(key(Options)), "\n")
+	print("Info types = ", list(key(Infos)), "\n")
+end
+
 so_module("net/curl.so", [file("curl.o")], ["-lcurl"])
 so_module("net/zeromq.so", [file("zeromq.o")], ["-lczmq"])

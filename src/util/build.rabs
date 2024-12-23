@@ -1,6 +1,6 @@
 so_module("util/bitset.so", [file("bitset.o"), file("roaring.o")])
 
-:<GIR := scope("gir";) do
+GIR := scope("gir";) do
 	CFLAGS := old + [
 		pkgconfig("--cflags gobject-introspection-1.0")
 	]
@@ -9,7 +9,7 @@ so_module("util/bitset.so", [file("bitset.o"), file("roaring.o")])
 	]
 
 	so_module("gir.so", [file("gir.o")])
-end>:
+end
 
 scope("gtk_console";) do
 	CFLAGS := old + [
@@ -18,8 +18,11 @@ scope("gtk_console";) do
 	]
 	LDFLAGS := old + [
 		pkgconfig("--libs gobject-introspection-1.0 gio-2.0"),
-		pkgconfig("--libs gtk+-3.0 gdk-pixbuf-2.0 gtksourceview-4")
+		pkgconfig("--libs gtk+-3.0 gdk-pixbuf-2.0 gtksourceview-4"),
+		"-Wl,-R,'$ORIGIN'"
 	]
-	:>PREBUILDS := old + [GIR]
-	so_module("util/gtk_console.so", [file("gtk_console.o"), file("gtk_console_completion.o")])
+	PREBUILDS := old + [GIR]
+	so_module("gtk_console.so", [file("gtk_console.o"), file("gtk_console_completion.o")], [GIR]; Library) do
+		execute("patchelf", Library, "--replace-needed", GIR, "gir.so")
+	end
 end

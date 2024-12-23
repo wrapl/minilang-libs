@@ -101,7 +101,7 @@ db/radb
    *TBD*
 
 
-:mini:`meth (Arg₁: stringindex):delete(Arg₂: string)`
+:mini:`meth (Arg₁: stringindex):delete(Arg₂: address)`
    *TBD*
 
 
@@ -109,11 +109,11 @@ db/radb
    *TBD*
 
 
-:mini:`meth (Arg₁: stringindex):insert(Arg₂: string)`
+:mini:`meth (Arg₁: stringindex):insert(Arg₂: address)`
    *TBD*
 
 
-:mini:`meth (Arg₁: stringindex):search(Arg₂: string)`
+:mini:`meth (Arg₁: stringindex):search(Arg₂: address)`
    *TBD*
 
 
@@ -133,11 +133,23 @@ db/radb
    Returns the entry at :mini:`Index` in :mini:`Store`.
 
 
+:mini:`meth (Arg₁: stringstore):insert(Arg₂: integer, Arg₃: integer)`
+   *TBD*
+
+
 :mini:`meth (Arg₁: stringstore):read(Arg₂: integer)`
    *TBD*
 
 
-:mini:`meth (Store: stringstore):set(Index: integer, Value: string): string`
+:mini:`meth (Arg₁: stringstore):remove(Arg₂: integer, Arg₃: integer)`
+   *TBD*
+
+
+:mini:`meth (Arg₁: stringstore):search(Arg₂: integer, Arg₃: integer)`
+   *TBD*
+
+
+:mini:`meth (Store: stringstore):set(Index: integer, Value: address): string`
    Stores :mini:`Value` as the entry at :mini:`Index` in :mini:`Store` and returns :mini:`Value`.
 
 

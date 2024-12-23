@@ -12,7 +12,7 @@
 #include <minilang/ml_macros.h>
 #include <sys/stat.h>
 
-#include <minilang/ml_gir.h>
+#include "gir.h"
 #include <minilang/ml_debugger.h>
 #include <minilang/ml_object.h>
 #include "gtk_console_completion.h"

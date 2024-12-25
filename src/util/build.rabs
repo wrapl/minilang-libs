@@ -25,4 +25,7 @@ scope("gtk_console";) do
 	so_module("gtk_console.so", [file("gtk_console.o"), file("gtk_console_completion.o")], [GIR]; Library) do
 		execute("patchelf", Library, "--replace-needed", GIR, "gir.so")
 	end
+	share_file("gtksourceview-4/language-specs", "minilang.lang")
 end
+
+meta("gtk_console")[meta("gir"), meta("minilang.lang")]

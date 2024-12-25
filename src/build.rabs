@@ -6,6 +6,7 @@ end
 MODULE_DIR := old or (LIB_DIR/"minilang"):mkdir
 
 let InstallModules := PREFIX / "lib/minilang"
+let InstallShare := PREFIX / "share"
 
 let SourceTypes := {
 	"c" is [c_includes, c_compile],
@@ -94,6 +95,19 @@ mini_module := fun(Name) do
 	module(Name, Library, [])
 end
 
+share_file := fun(Path, Name) do
+	let File := file(Name)
+	if defined("INSTALL") then
+		let Installed := (InstallShare / Path / Name)[File] => fun(Target) do
+			print(File, " -> ", Target, "\n")
+			Target:dir:mkdir
+			File:copy(Target)
+		end
+		Modules:put((Name, Installed, []))
+	end
+	File
+end
+
 CFLAGS := old + [
 	"-march=native",
 	"-std=gnu11", :>'--save-temps',
@@ -138,7 +152,7 @@ context():parent:in(;) do
 		:>print('Found module: {Name} -> {File}\n')
 		let Meta := meta(Name)[File]
 		All[Meta]
-		:>print('\tMeta = {Meta:id}\n')
+		print('\tMeta = {Meta:id}[{list(Meta:depends)}]\n')
 		for Tag in Tags do
 			ByTag[Tag, meta][File]
 		end

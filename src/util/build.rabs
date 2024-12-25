@@ -28,4 +28,4 @@ scope("gtk_console";) do
 	share_file("gtksourceview-4/language-specs", "minilang.lang")
 end
 
-meta("gtk_console")[meta("gir"), meta("minilang.lang")]
+context(""):in(;) meta("gtk_console")[meta("gir"), meta("minilang.lang")]

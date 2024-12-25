@@ -145,14 +145,14 @@ for Path in file(""):ls do
 	end
 end
 
-context():parent:in(;) do
+context(""):in(;) do
 	let All := meta("all")
 	let ByTag := {}
 	for (Name, File, Tags) in Modules do
 		:>print('Found module: {Name} -> {File}\n')
 		let Meta := meta(Name)[File]
 		All[Meta]
-		print('\tMeta = {Meta:id}[{list(Meta:depends)}]\n')
+		:>print('\tMeta = {Meta:id}[{list(Meta:depends)}]\n')
 		for Tag in Tags do
 			ByTag[Tag, meta][File]
 		end

@@ -26,8 +26,8 @@ INIT_HEADERS := meta("MINILANG"):scan("INCLUDES") => fun() do
 end
 
 fun generate_init_file(Source) do
-	let InitFile := Source:basename:replace(".c", "_init.c")
-	let Target := file(InitFile)[Source, PREBUILDS, INIT_HEADERS] => fun() do
+	let Target := Source:dir / Source:basename:replace(".c", "_init.c")
+	Target[Source, PREBUILDS, INIT_HEADERS] => fun() do
 		Target:open("w"):close
 		let Init := shell(CC, CFLAGS, "-E -P -DGENERATE_INIT", Source)
 		let Out := Target:open("w")

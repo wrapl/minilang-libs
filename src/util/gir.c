@@ -1687,10 +1687,15 @@ void ml_gir_queue_run(gir_scheduler_t *Scheduler) {
 	if (QueuedState.State) QueuedState.State->run(QueuedState.State, QueuedState.Value);
 }
 
+int ml_gir_queue_fill(gir_scheduler_t *Scheduler) {
+	return ml_scheduler_queue_fill(Scheduler->Queue);
+}
+
 static gir_scheduler_t *gir_scheduler(ml_context_t *Context) {
 	gir_scheduler_t *Scheduler = new(gir_scheduler_t);
 	Scheduler->Base.add = (ml_scheduler_add_fn)ml_gir_queue_add;
 	Scheduler->Base.run = (ml_scheduler_run_fn)ml_gir_queue_run;
+	Scheduler->Base.fill = (ml_scheduler_fill_fn)ml_gir_queue_fill;
 	Scheduler->Queue = ml_default_queue_init(Context, 256);
 	Scheduler->MainContext = g_main_context_default();
 	ml_context_set_static(Context, ML_SCHEDULER_INDEX, Scheduler);

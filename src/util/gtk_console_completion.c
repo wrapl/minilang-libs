@@ -1,5 +1,5 @@
 #include "gtk_console_completion.h"
-#include <minilang/ml_gir.h>
+#include "gir.h"
 
 struct _ConsoleCompletionProvider {
 	GObject parent_instance;

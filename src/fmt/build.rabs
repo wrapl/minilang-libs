@@ -1,4 +1,4 @@
-so_module("fmt/csv.so", [file("csv.o"), file("libcsv.o")])
+so_module("fmt/csv.so", [file("csv.o"), file("libcsv.o")], Tags is ["standard"])
 
 :<scope("html";) do
 	let LEXBOR := file("lib/liblexbor_static.a") => fun() do
@@ -12,7 +12,7 @@ so_module("fmt/csv.so", [file("csv.o"), file("libcsv.o")])
 	so_module("fmt/html.so", [file("html.o")], [LEXBOR])
 end>:
 
-let Html := so_module("fmt/html.so", [file("html.o")], [pkgconfig("--libs gumbo")])
+let Html := so_module("fmt/html.so", [file("html.o")], [pkgconfig("--libs gumbo")], Tags is ["standard"])
 
 scope("md4c";) do
 	let MD4C := file("md4c/src/md4c.c") => fun() do

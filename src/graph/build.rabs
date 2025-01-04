@@ -14,4 +14,4 @@ scope("graphviz";) do
 	so_module("graph/graphviz.so", [file("graphviz.o")], [])
 end>:
 
-so_module("graph/graphviz.so", [file("graphviz.o")], ["-lcdt", "-lcgraph"])
+so_module("graph/graphviz.so", [file("graphviz.o")], ["-lcdt", "-lcgraph"], Tags is ["standard"])

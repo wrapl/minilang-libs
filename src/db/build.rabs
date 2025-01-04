@@ -1,4 +1,4 @@
-so_module("db/sqlite.so", [file("sqlite.o")])
+so_module("db/sqlite.so", [file("sqlite.o")], Tags is ["standard"])
 
 scope("dqlite";) do
 	let RaftDir := file("raft")
@@ -47,7 +47,7 @@ scope("radb";) do
 		execute('make libradb.a RADB_MEM=GC CFLAGS=-fpic', DEBUG and "DEBUG=1")
 	end
 	PREBUILDS := old + [Lib]
-	so_module("db/radb.so", [file("radb.o")], [Lib])
+	so_module("db/radb.so", [file("radb.o")], [Lib], Tags is ["standard"])
 end
 
 scope("ravs";) do
@@ -83,7 +83,7 @@ scope("postgres";) do
 		"-lpq"
 	]
 	file("postgres.o")[PGVERSION]
-	so_module("db/postgres.so", [file("postgres.o")])
+	so_module("db/postgres.so", [file("postgres.o")], Tags is ["postgres"])
 end
 
 

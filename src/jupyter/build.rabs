@@ -1,1 +1,2 @@
-mini_module("jupyter/kernel.mini")
+mini_module("jupyter/kernel.mini", Tags is ["jupyter"])
+share_file("jupyter/kernels/minilang", "kernel.json", Tags is ["jupyter"])

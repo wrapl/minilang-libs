@@ -1,4 +1,4 @@
-#include <minilang/ml_gir.h>
+#include "../util/gir.h"
 #include <minilang/ml_library.h>
 #include <cairo.h>
 

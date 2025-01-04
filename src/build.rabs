@@ -48,20 +48,20 @@ end
 let Exports := file("exports.lst")
 let Modules := []
 
-fun module(Name, File, Tags) do
-	Modules:put((Name:before("."), File, []))
+fun module(Name, File, Tags := []) do
+	Modules:put((Name:before("."), File, Tags))
 	if defined("INSTALL") then
 		let Installed := (InstallModules / Name)[File] => fun(Target) do
 			print(File, " -> ", Target, "\n")
 			Target:dir:mkdir
 			File:copy(Target)
 		end
-		Modules:put((Name:before("."), Installed, []))
+		Modules:put((Name:before("."), Installed, Tags))
 	end
 	File
 end
 
-so_module := fun(Name, Objects, Libraries, Extra) do
+so_module := fun(Name, Objects, Libraries, Extra, Tags := []) do
 	let Library := MODULE_DIR / Name
 	let Sources := []
 	for Object in Objects or [] do
@@ -82,20 +82,20 @@ so_module := fun(Name, Objects, Libraries, Extra) do
 		Extra and Extra(Library)
 		:>DEBUG or execute("strip", Library)
 	end
-	module(Name, Library, [])
+	module(Name, Library, Tags)
 end
 
-mini_module := fun(Name) do
+mini_module := fun(Name, Tags := []) do
 	let Library := MODULE_DIR / Name
 	let Source := file((Name / "/")[-1])
 	Library[Source] => fun(Target) do
 		Target:dir:mkdir
 		Source:copy(Target)
 	end
-	module(Name, Library, [])
+	module(Name, Library, Tags)
 end
 
-share_file := fun(Path, Name) do
+share_file := fun(Path, Name, Tags) do
 	let File := file(Name)
 	if defined("INSTALL") then
 		let Installed := (InstallShare / Path / Name)[File] => fun(Target) do
@@ -103,7 +103,7 @@ share_file := fun(Path, Name) do
 			Target:dir:mkdir
 			File:copy(Target)
 		end
-		Modules:put((Name, Installed, []))
+		Modules:put((Name, Installed, Tags))
 	end
 	File
 end

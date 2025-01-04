@@ -25,4 +25,4 @@ scope("libevent";) do
 	so_module("event/libevent.so", [file("libevent.o")])
 end
 
-so_module("event.so", [file("event.o")])
+so_module("event.so", [file("event.o")], Tags is ["standard"])

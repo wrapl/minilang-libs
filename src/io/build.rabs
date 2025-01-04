@@ -1,1 +1,1 @@
-so_module("io/terminal.so", [file("terminal.o")])
+so_module("io/terminal.so", [file("terminal.o")], Tags is ["standard"])

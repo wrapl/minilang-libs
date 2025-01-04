@@ -1,3 +1,3 @@
 so_module("enc/base16.so", [file("base16.o")], [])
 so_module("enc/base64.so", [file("base64.o")], [])
-so_module("enc/url.so", [file("url.o")], [])
+so_module("enc/url.so", [file("url.o")], [], Tags is ["standard"])

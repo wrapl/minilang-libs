@@ -82,4 +82,4 @@ file("curl_options.c")[CurlHeader] => fun(Target) do
 end
 
 so_module("net/curl.so", [file("curl.o")], ["-lcurl"], Tags is ["standard"])
-so_module("net/zeromq.so", [file("zeromq.o")], ["-lczmq"])
+so_module("net/zeromq.so", [file("zeromq.o")], ["-lczmq"], Tags is ["zeromq", "jupyter"])

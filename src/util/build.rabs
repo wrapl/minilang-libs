@@ -22,7 +22,7 @@ scope("gtk_console";) do
 		"-Wl,-R,'$ORIGIN'"
 	]
 	PREBUILDS := old + [GIR]
-	so_module("gtk_console.so", [file("gtk_console.o"), file("gtk_console_completion.o")], [GIR], Tags is ["gir"], Extra is; Library) do
+	so_module("gtk_console.so", [file("gtk_console.o"), file("gtk_console_completion.o")], [GIR], Tags is ["gtk"], Extra is; Library) do
 		execute("patchelf", Library, "--replace-needed", GIR, "gir.so")
 	end
 	share_file("gtksourceview-4/language-specs", "minilang.lang", Tags is ["gtk"])

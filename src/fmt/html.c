@@ -67,7 +67,7 @@ ML_FUNCTION(Parse) {
 
 ML_LIBRARY_ENTRY0(fmt_html) {
 #include "html_init.c"
-	Slot[0] = ml_module("html",
+	Slot[0] = ml_callable_module("html", (ml_value_t *)Parse,
 		"parse", Parse,
 	NULL);
 }

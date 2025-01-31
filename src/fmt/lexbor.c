@@ -288,8 +288,8 @@ ml_value_t *node(void *Handle) {
 	return (ml_value_t *)Node;
 }
 
-ML_LIBRARY_ENTRY0 {
-#include "html_init.c"
+ML_LIBRARY_ENTRY0(fmt_html) {
+#include "lexbor_init.c"
 	Slot[0] = ml_module("html",
 		"node", NodeT,
 		"css_selectors", CSSSelectorsT,

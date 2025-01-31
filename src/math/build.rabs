@@ -1,2 +1,2 @@
 so_module("math/dist.so", [file("dist.o")])
-so_module("math/stat.so", [file("stat.o")])
+:>so_module("math/stat.so", [file("stat.o")])

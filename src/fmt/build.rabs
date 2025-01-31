@@ -1,6 +1,6 @@
 so_module("fmt/csv.so", [file("csv.o"), file("libcsv.o")], Tags is ["standard"])
 
-scope("html";) do
+:<scope("html";) do
 	let LEXBOR := file("lib/liblexbor_static.a") => fun() do
 		file("lexbor"):rmdir:mkdir:chdir
 		execute("wget -nv https://github.com/lexbor/lexbor/archive/refs/tags/v2.4.0.tar.gz -O- | tar xvzP --strip-components=1")
@@ -10,9 +10,9 @@ scope("html";) do
 	PREBUILDS := old + [LEXBOR]
 	CFLAGS := old + ['-I', PATH / "include"]
 	so_module("fmt/html.so", [file("lexbor.o")], [LEXBOR], Tags is ["standard"])
-end
+end>:
 
-:>let Html := so_module("fmt/html.so", [file("html.o")], [pkgconfig("--libs gumbo")], Tags is ["standard"])
+let Html := so_module("fmt/html.so", [file("html.o")], [pkgconfig("--libs gumbo")], Tags is ["standard"])
 
 scope("md4c";) do
 	let MD4C := file("md4c/src/md4c.c") => fun() do

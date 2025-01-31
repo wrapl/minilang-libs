@@ -1,6 +1,7 @@
 #include <minilang/ml_library.h>
 #include <minilang/ml_macros.h>
 #include <minilang/ml_xml.h>
+#include <minilang/ml_stream.h>
 #include <gumbo.h>
 
 #undef ML_CATEGORY
@@ -50,24 +51,41 @@ static void convert_to_xml(ml_xml_element_t *Parent, GumboNode *Node) {
 	}
 }
 
-ML_FUNCTION(Parse) {
+ML_METHOD_ANON(Parse, "html::parse");
+
+static GumboOptions Options = kGumboDefaultOptions;
+
+ML_METHOD(Parse, MLStringT) {
 //<Html
 //>xml
 // Parses :mini:`Html` as a html string and returns an :mini:`xml` version of the same content.
-	ML_CHECK_ARG_COUNT(1);
-	ML_CHECK_ARG_TYPE(0, MLStringT);
-	GumboOutput *Output = gumbo_parse(ml_string_value(Args[0]));
+	GumboOutput *Output = gumbo_parse_with_options(&Options, ml_string_value(Args[0]), ml_string_length(Args[0]));
 	ml_xml_element_t *Xml = ml_xml_element("html");
 	for (int I = 0; I < Output->root->v.element.children.length; ++I) {
 		convert_to_xml(Xml, (GumboNode *)Output->root->v.element.children.data[I]);
 	}
-	gumbo_destroy_output(&kGumboDefaultOptions, Output);
+	gumbo_destroy_output(&Options, Output);
 	return (ml_value_t *)Xml;
 }
 
+ML_METHOD(Parse, MLStreamT) {
+//<Stream
+//>xml
+// Parses the content of :mini:`Stream` as a html string and returns an :mini:`xml` version of the same content.
+
+}
+
+static void *allocator(void *Data, size_t Size) {
+	return GC_malloc(Size);
+}
+
+static void deallocator(void *Data, void *Ptr) {}
+
 ML_LIBRARY_ENTRY0(fmt_html) {
 #include "html_init.c"
-	Slot[0] = ml_callable_module("html", (ml_value_t *)Parse,
+	Options.allocator = allocator;
+	Options.deallocator = deallocator;
+	Slot[0] = ml_callable_module("html", Parse,
 		"parse", Parse,
 	NULL);
 }

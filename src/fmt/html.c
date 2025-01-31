@@ -53,7 +53,7 @@ static void convert_to_xml(ml_xml_element_t *Parent, GumboNode *Node) {
 
 ML_METHOD_ANON(Parse, "html::parse");
 
-static GumboOptions Options = kGumboDefaultOptions;
+static GumboOptions Options;
 
 ML_METHOD(Parse, MLStringT) {
 //<Html
@@ -68,13 +68,6 @@ ML_METHOD(Parse, MLStringT) {
 	return (ml_value_t *)Xml;
 }
 
-ML_METHOD(Parse, MLStreamT) {
-//<Stream
-//>xml
-// Parses the content of :mini:`Stream` as a html string and returns an :mini:`xml` version of the same content.
-
-}
-
 static void *allocator(void *Data, size_t Size) {
 	return GC_malloc(Size);
 }
@@ -83,6 +76,7 @@ static void deallocator(void *Data, void *Ptr) {}
 
 ML_LIBRARY_ENTRY0(fmt_html) {
 #include "html_init.c"
+	Options = kGumboDefaultOptions;
 	Options.allocator = allocator;
 	Options.deallocator = deallocator;
 	Slot[0] = ml_callable_module("html", Parse,

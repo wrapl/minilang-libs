@@ -142,15 +142,6 @@ hierarchy
       "any":e -> "geometry":w;
       "any":e -> "tree":w;
       "flags":e -> "flag":w;
-      "any":e -> "node":w;
-      "sequence":e -> "nodelist":w;
-      "any":e -> "nodeiter":w;
-      "any":e -> "cssselectors":w;
-      "node":e -> "element":w;
-      "any":e -> "attribute":w;
-      "sequence":e -> "attrlist":w;
-      "any":e -> "attriter":w;
-      "node":e -> "document":w;
       "any":e -> "csv":w;
       "any":e -> "uev":w;
       "flags":e -> "uevflags":w;

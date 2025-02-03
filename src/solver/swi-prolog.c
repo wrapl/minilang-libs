@@ -266,7 +266,8 @@ static void ML_TYPED_FN(ml_iter_key, QueryT, ml_state_t *Caller, pl_query_t *Que
 }
 
 static ml_value_t *ml_from_term(term_t Term) {
-	switch (PL_term_type(Term)) {
+	int Type = PL_term_type(Term);
+	switch (Type) {
 	case PL_VARIABLE: return MLNil;
 	case PL_ATOM: {
 		pl_atom_t *Atom = new(pl_atom_t);
@@ -307,6 +308,7 @@ static ml_value_t *ml_from_term(term_t Term) {
 	}
 	case PL_DICT:
 		return MLNil;
+	default: return ml_error("PrologError", "Unsupported prolog term: %d", Type);
 	}
 }
 

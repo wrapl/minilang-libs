@@ -1,5 +1,2 @@
-scope("dist";) do
-	CFLAGS := old + []
-	LDFLAGS := old + []
-	so_module("math/dist.so", [file("dist.o")])
-end
+so_module("math/dist.so", [file("dist.o")])
+:>so_module("math/stat.so", [file("stat.o")])

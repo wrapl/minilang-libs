@@ -8,7 +8,7 @@ GIR := scope("gir";) do
 		pkgconfig("--libs gobject-introspection-1.0 gio-2.0")
 	]
 
-	so_module("gir.so", [file("gir.o")])
+	so_module("gir.so", [file("gir.o")], Tags is ["gtk"])
 end
 
 scope("gtk_console";) do
@@ -22,10 +22,10 @@ scope("gtk_console";) do
 		"-Wl,-R,'$ORIGIN'"
 	]
 	PREBUILDS := old + [GIR]
-	so_module("gtk_console.so", [file("gtk_console.o"), file("gtk_console_completion.o")], [GIR], Tags is ["gir"], Extra is; Library) do
+	so_module("gtk_console.so", [file("gtk_console.o"), file("gtk_console_completion.o")], [GIR], Tags is ["gtk"], Extra is; Library) do
 		execute("patchelf", Library, "--replace-needed", GIR, "gir.so")
 	end
-	share_file("gtksourceview-4/language-specs", "minilang.lang", Tags is ["gir"])
+	share_file("gtksourceview-4/language-specs", "minilang.lang", Tags is ["gtk"])
 end
 
 context(""):in(;) meta("gtk_console")[meta("gir"), meta("minilang.lang")]

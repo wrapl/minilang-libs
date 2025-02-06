@@ -36,7 +36,7 @@ end
 	so_module("sqlite.so", [file("ml_sqlite.o"), file("sqlite/sqlite3.o")])
 end>:
 
-scope("radb";) do
+let RADB := scope("radb";) do
 	let Dir := file("radb")
 	let Lib := Dir / "libradb.a" => fun() do
 		Dir:rmdir
@@ -59,7 +59,7 @@ scope("ravs";) do
 		execute("make clean")
 		execute("make libravs.a RADB_MEM=GC CFLAGS=-fpic")
 	end
-	PREBUILDS := old + [Lib]
+	PREBUILDS := old + [Lib, RADB]
 	so_module("db/ravs.so", [file("ravs.o")], [Lib])
 end
 

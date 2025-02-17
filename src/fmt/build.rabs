@@ -17,10 +17,24 @@ scope("gumbo";) do
 		file("gumbo"):rmdir:mkdir:chdir
 		execute("wget -nv https://codeberg.org/grisha/gumbo-parser/archive/0.13.0.tar.gz -O- | tar xvzP --strip-components=1")
 	end
-	PREBUILDS := old + [GUMBO]
 	CFLAGS := old + ["-I", GUMBO:dir]
-	let Objects := list(GUMBO:dir:ls(".*\\.c"), _ % "o")
-	so_module("fmt/html.so", [file("html.o")] + Objects, [], Tags is ["standard"])
+	let Objects := [
+		file("gumbo/src/attribute.o"),
+		file("gumbo/src/parser.o"),
+		file("gumbo/src/tag.o"),
+		file("gumbo/src/util.o"),
+		file("gumbo/src/char_ref.o"),
+		file("gumbo/src/string_buffer.o"),
+		file("gumbo/src/tokenizer.o"),
+		file("gumbo/src/vector.o"),
+		file("gumbo/src/error.o"),
+		file("gumbo/src/string_piece.o"),
+		file("gumbo/src/utf8.o")
+	]
+	for Object in Objects do
+		(Object % "c")[GUMBO] => fun() nil
+	end
+	so_module("fmt/html.so", [file("html.o")]:grow(Objects), [], Tags is ["standard"])
 end
 
 scope("md4c";) do

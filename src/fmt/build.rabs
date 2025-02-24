@@ -12,7 +12,30 @@ so_module("fmt/csv.so", [file("csv.o"), file("libcsv.o")], Tags is ["standard"])
 	so_module("fmt/html.so", [file("lexbor.o")], [LEXBOR], Tags is ["standard"])
 end>:
 
-let Html := so_module("fmt/html.so", [file("html.o")], [pkgconfig("--libs gumbo")], Tags is ["standard"])
+scope("gumbo";) do
+	let GUMBO := file("gumbo/src/gumbo.h") => fun() do
+		file("gumbo"):rmdir:mkdir:chdir
+		execute("wget -nv https://codeberg.org/grisha/gumbo-parser/archive/0.13.0.tar.gz -O- | tar xvzP --strip-components=1")
+	end
+	CFLAGS := old + ["-I", GUMBO:dir]
+	let Objects := [
+		file("gumbo/src/attribute.o"),
+		file("gumbo/src/parser.o"),
+		file("gumbo/src/tag.o"),
+		file("gumbo/src/util.o"),
+		file("gumbo/src/char_ref.o"),
+		file("gumbo/src/string_buffer.o"),
+		file("gumbo/src/tokenizer.o"),
+		file("gumbo/src/vector.o"),
+		file("gumbo/src/error.o"),
+		file("gumbo/src/string_piece.o"),
+		file("gumbo/src/utf8.o")
+	]
+	for Object in Objects do
+		(Object % "c")[GUMBO] => fun() nil
+	end
+	so_module("fmt/html.so", [file("html.o")]:grow(Objects), [], Tags is ["standard"])
+end
 
 scope("md4c";) do
 	let MD4C := file("md4c/src/md4c.c") => fun() do

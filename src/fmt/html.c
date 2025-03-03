@@ -2,7 +2,7 @@
 #include <minilang/ml_macros.h>
 #include <minilang/ml_xml.h>
 #include <minilang/ml_stream.h>
-#include <gumbo.h>
+#include "gumbo.h"
 
 #undef ML_CATEGORY
 #define ML_CATEGORY "fmt/html"

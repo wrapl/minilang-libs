@@ -736,6 +736,22 @@ ML_METHOD("close", MLConnectionT) {
 	return MLNil;
 }
 
+#define STRING_INFO_METHOD(NAME) \
+\
+ML_METHOD(#NAME, MLConnectionT) { \
+	connection_t *Connection = (connection_t *)Args[0]; \
+	const char *Value = PQ ## NAME(Connection->Conn); \
+	return Value ? ml_string_copy(Value, -1) : MLNil; \
+}
+
+STRING_INFO_METHOD(db)
+STRING_INFO_METHOD(user)
+STRING_INFO_METHOD(pass)
+STRING_INFO_METHOD(host)
+STRING_INFO_METHOD(hostaddr)
+STRING_INFO_METHOD(port)
+STRING_INFO_METHOD(options)
+
 ML_LIBRARY_ENTRY0(db_postgres) {
 #include "postgres_init.c"
 	Slot[0] = (ml_value_t *)MLConnectionT;

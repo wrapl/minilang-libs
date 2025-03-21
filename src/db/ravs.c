@@ -64,7 +64,7 @@ ML_METHOD("changes", VersionStoreT, MLIntegerT) {
 	ml_version_store_t *Store = (ml_version_store_t *)Args[0];
 	CHECK_HANDLE(Store);
 	ml_value_t *Changes = ml_list();
-	version_store_change_list(Store->Handle, ml_integer_value_fast(Args[1]), (void *)changes_fn, Changes);
+	version_store_change_list(Store->Handle, ml_integer_value(Args[1]), (void *)changes_fn, Changes);
 	return Changes;
 }
 
@@ -80,7 +80,7 @@ ML_METHOD("add", VersionStoreT, MLAnyT) {
 ML_METHOD("set", VersionStoreT, MLIntegerT, MLAnyT) {
 	ml_version_store_t *Store = (ml_version_store_t *)Args[0];
 	CHECK_HANDLE(Store);
-	size_t Index = ml_integer_value_fast(Args[1]);
+	size_t Index = ml_integer_value(Args[1]);
 	ml_cbor_t Cbor = ml_to_cbor(Args[2]);
 	if (!Cbor.Length) return Cbor.Error;
 	version_store_value_update(Store->Handle, Index, Cbor.Data, Cbor.Length);
@@ -90,7 +90,7 @@ ML_METHOD("set", VersionStoreT, MLIntegerT, MLAnyT) {
 ML_METHOD("get", VersionStoreT, MLIntegerT) {
 	ml_version_store_t *Store = (ml_version_store_t *)Args[0];
 	CHECK_HANDLE(Store);
-	size_t Index = ml_integer_value_fast(Args[1]);
+	size_t Index = ml_integer_value(Args[1]);
 	size_t Length = version_store_value_size(Store->Handle, Index);
 	void *Buffer = GC_malloc_atomic(Length);
 	version_store_value_get(Store->Handle, Index, Buffer, Length);
@@ -111,7 +111,7 @@ static int history_fn(ml_value_t *History, uint32_t Change, time_t Time, uint32_
 ML_METHOD("history", VersionStoreT, MLIntegerT) {
 	ml_version_store_t *Store = (ml_version_store_t *)Args[0];
 	CHECK_HANDLE(Store);
-	size_t Index = ml_integer_value_fast(Args[1]);
+	size_t Index = ml_integer_value(Args[1]);
 	ml_value_t *History = ml_list();
 	version_store_value_history(Store->Handle, Index, (void *)history_fn, History);
 	return History;
@@ -120,8 +120,8 @@ ML_METHOD("history", VersionStoreT, MLIntegerT) {
 ML_METHOD("get", VersionStoreT, MLIntegerT, MLIntegerT) {
 	ml_version_store_t *Store = (ml_version_store_t *)Args[0];
 	CHECK_HANDLE(Store);
-	size_t Index = ml_integer_value_fast(Args[1]);
-	size_t Change = ml_integer_value_fast(Args[2]);
+	size_t Index = ml_integer_value(Args[1]);
+	size_t Change = ml_integer_value(Args[2]);
 	size_t Length = version_store_value_revision_size(Store->Handle, Index, Change);
 	void *Buffer = GC_malloc_atomic(Length);
 	version_store_value_revision_get(Store->Handle, Index, Change, Buffer, Length);

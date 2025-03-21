@@ -21,3 +21,15 @@ scope("swi-prolog";) do
 	LDFLAGS := old + [pkgconfig("--libs swipl")]
 	so_module("solver/swi-prolog.so", [file("swi-prolog.o")])
 end
+
+scope("minpack";) do
+	let Lib := file("lib/libcminpack_s.a") => fun(Dir) do
+		file("minpack"):rmdir:mkdir:chdir
+		execute("wget -nv https://github.com/devernay/cminpack/archive/v1.3.11.tar.gz -O- | tar xvzP --strip-components=1")
+		execute('cmake -DCMAKE_INSTALL_PREFIX={PATH} -DCMAKE_BUILD_TYPE=Release .')
+		execute('make -j4 install')
+	end
+	PREBUILDS := old + [Lib]
+	CFLAGS := old + ["-I", file("include/cminpack-1")]
+	so_module("solver/minpack.so", [file("minpack.o")], [Lib])
+end

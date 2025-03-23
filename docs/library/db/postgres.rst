@@ -29,6 +29,30 @@ db/postgres
    *TBD*
 
 
+:mini:`meth (Arg₁: connection):db`
+   *TBD*
+
+
+:mini:`meth (Arg₁: connection):host`
+   *TBD*
+
+
+:mini:`meth (Arg₁: connection):hostaddr`
+   *TBD*
+
+
+:mini:`meth (Arg₁: connection):options`
+   *TBD*
+
+
+:mini:`meth (Arg₁: connection):pass`
+   *TBD*
+
+
+:mini:`meth (Arg₁: connection):port`
+   *TBD*
+
+
 :mini:`meth (Connection: connection):prepare(SQL: string): statement`
    Creates a prepared statement on :mini:`Connection`.
 
@@ -39,6 +63,10 @@ db/postgres
 
 
 :mini:`meth (Arg₁: connection):reconnect(Arg₂: number)`
+   *TBD*
+
+
+:mini:`meth (Arg₁: connection):user`
    *TBD*
 
 

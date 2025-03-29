@@ -4,6 +4,7 @@
 #include <symengine/expression.h>
 #include <symengine/simplify.h>
 #include <symengine/solve.h>
+#include <symengine/parser.h>
 
 using namespace SymEngine;
 
@@ -11,23 +12,73 @@ ML_TYPE(BasicT, (), "basic");
 
 ML_TYPE(BasicSetT, (BasicT, MLSequenceT), "basic::set");
 
+static void basic_symbol_call(ml_state_t *Caller, ml_value_t *Value, int Count, ml_value_t **Args);
+
+ML_TYPE(BasicSymbolT, (BasicT, MLFunctionT), "basic::symbol");
+
 struct basic_t : gc {
 	ml_type_t *Type;
 	RCP<const Basic> Value;
 
 	basic_t(RCP<const Basic> Value) : Value(Value) {
-		if (is_a_Set(*Value.get())) {
+		const Basic &B = *Value.get();
+		if (is_a_Set(B)) {
 			Type = BasicSetT;
+		} else if (is_a<Symbol>(B)) {
+			Type = BasicSymbolT;
 		} else {
 			Type = BasicT;
 		}
 	}
 };
 
+static RCP<const Basic> ml_basic_of(ml_value_t *Value) {
+	typeof(ml_basic_of) *fn = ml_typed_fn_get(ml_typeof(Value), ml_basic_of);
+	if (fn) return fn(Value);
+	return symbol("<invalid>");
+}
+
+static RCP<const Basic> ML_TYPED_FN(ml_basic_of, MLIntegerT, ml_value_t *Value) {
+	return integer(ml_integer_value(Value));
+}
+
+static RCP<const Basic> ML_TYPED_FN(ml_basic_of, MLRealT, ml_value_t *Value) {
+	return number(ml_real_value(Value));
+}
+
+ML_METHOD(MLRealT, BasicT) {
+	basic_t *A = (basic_t *)Args[0];
+	return ml_real(eval_double(*A->Value.get()));
+}
+
+#ifdef ML_COMPLEX
+
+#include <ccomplex>
+#undef I
+
+static RCP<const Basic> ML_TYPED_FN(ml_basic_of, MLComplexT, ml_value_t *Value) {
+	return number(ml_complex_value(Value));
+}
+
+ML_METHOD(MLComplexT, BasicT) {
+	basic_t *A = (basic_t *)Args[0];
+	std::complex<double> Value = eval_complex_double(*A->Value.get());
+	return ml_complex(Value.__rep());
+}
+
+#endif
+
+static void basic_symbol_call(ml_state_t *Caller, ml_value_t *Value, int Count, ml_value_t **Args) {
+	basic_t *Basic = (basic_t *)Value;
+	const Symbol *Sym = static_cast<const Symbol *>(Basic->Value.get());
+	vec_basic Arg;
+	for (int I = 0; I < Count; ++I) Arg.push_back(ml_basic_of(Args[I]));
+	ML_RETURN(new basic_t(function_symbol(Sym->get_name(), Arg)));
+}
+
 ML_METHOD(BasicT, MLStringT) {
 	try {
-		Expression Expr(ml_string_value(Args[0]));
-		return (ml_value_t *)(new basic_t(Expr.get_basic()));
+		return (ml_value_t *)new basic_t(parse(ml_string_value(Args[0])));
 	} catch (std::exception &E) {
 		return ml_error("SymengineError", "%s", E.what());
 	}
@@ -164,6 +215,7 @@ static void ML_TYPED_FN(ml_iter_value, BasicIteratorT, ml_state_t *Caller, basic
 }
 
 ML_LIBRARY_ENTRY0(math_symengine) {
+	BasicSymbolT->call = basic_symbol_call;
 #include "symengine_init.cpp"
 	Slot[0] = (ml_value_t *)BasicT;
 }

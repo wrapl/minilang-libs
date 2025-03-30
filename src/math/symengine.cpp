@@ -10,24 +10,24 @@ using namespace SymEngine;
 
 ML_TYPE(BasicT, (), "basic");
 
-ML_TYPE(BasicSetT, (BasicT, MLSequenceT), "basic::set");
-
-static void basic_symbol_call(ml_state_t *Caller, ml_value_t *Value, int Count, ml_value_t **Args);
-
-ML_TYPE(BasicSymbolT, (BasicT, MLFunctionT), "basic::symbol");
+#define SYMENGINE_INCLUDE_ALL
+#define SYMENGINE_ENUM(TYPECODE, CLASS) ML_TYPE(Basic ## CLASS ## T, (BasicT), "basic::" #CLASS);
+#include <symengine/type_codes.inc>
+#undef SYMENGINE_ENUM
+#undef SYMENGINE_INCLUDE_ALL
 
 struct basic_t : gc {
 	ml_type_t *Type;
 	RCP<const Basic> Value;
 
 	basic_t(RCP<const Basic> Value) : Value(Value) {
-		const Basic &B = *Value.get();
-		if (is_a_Set(B)) {
-			Type = BasicSetT;
-		} else if (is_a<Symbol>(B)) {
-			Type = BasicSymbolT;
-		} else {
-			Type = BasicT;
+		switch (Value->type_code_) {
+#define SYMENGINE_INCLUDE_ALL
+#define SYMENGINE_ENUM(TYPECODE, CLASS) case TYPECODE: Type = Basic ## CLASS ## T; break;
+#include <symengine/type_codes.inc>
+#undef SYMENGINE_ENUM
+#undef SYMENGINE_INCLUDE_ALL
+		default: Type = BasicT; break;
 		}
 	}
 };
@@ -184,21 +184,6 @@ struct basic_iterator_t : gc {
 
 ML_TYPE(BasicIteratorT, (), "basic_iterator");
 
-static void ML_TYPED_FN(ml_iterate, BasicSetT, ml_state_t *Caller, basic_t *Basic) {
-	const FiniteSet *Set = dynamic_cast<const FiniteSet *>(Basic->Value.get());
-	if (Set) {
-		const auto Container = Set->get_container();
-		if (Container.empty()) ML_RETURN(MLNil);
-		basic_iterator_t *Iterator = new basic_iterator_t;
-		Iterator->Type = BasicIteratorT;
-		Iterator->Iter = Container.begin();
-		Iterator->End = Container.end();
-		Iterator->Index = 1;
-		ML_RETURN(Iterator);
-	}
-	ML_RETURN(MLNil);
-}
-
 static void ML_TYPED_FN(ml_iter_next, BasicIteratorT, ml_state_t *Caller, basic_iterator_t *Iter) {
 	if (++Iter->Iter == Iter->End) ML_RETURN(MLNil);
 	++Iter->Index;
@@ -214,7 +199,23 @@ static void ML_TYPED_FN(ml_iter_value, BasicIteratorT, ml_state_t *Caller, basic
 	ML_RETURN(C);
 }
 
+static void ML_TYPED_FN(ml_iterate, BasicFiniteSetT, ml_state_t *Caller, basic_t *Basic) {
+	const FiniteSet *Set = dynamic_cast<const FiniteSet *>(Basic->Value.get());
+	if (Set) {
+		const auto Container = Set->get_container();
+		if (Container.empty()) ML_RETURN(MLNil);
+		basic_iterator_t *Iterator = new basic_iterator_t;
+		Iterator->Type = BasicIteratorT;
+		Iterator->Iter = Container.begin();
+		Iterator->End = Container.end();
+		Iterator->Index = 1;
+		ML_RETURN(Iterator);
+	}
+	ML_RETURN(MLNil);
+}
+
 ML_LIBRARY_ENTRY0(math_symengine) {
+	ml_type_add_parent(BasicSymbolT, MLFunctionT);
 	BasicSymbolT->call = basic_symbol_call;
 #include "symengine_init.cpp"
 	Slot[0] = (ml_value_t *)BasicT;

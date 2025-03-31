@@ -81,6 +81,11 @@ hierarchy
       "any":e -> "soundfont":w;
       "any":e -> "floatblock":w;
       "any":e -> "preset":w;
+      "any":e -> "raschemaindex":w;
+      "any":e -> "rainstance":w;
+      "any":e -> "raschema":w;
+      "any":e -> "ralistener":w;
+      "any":e -> "space":w;
       "any":e -> "world":w;
       "enum":e -> "bodydeftype":w;
       "any":e -> "bodydef":w;
@@ -96,12 +101,18 @@ hierarchy
       "parser":e -> "parser::string":w;
       "parser":e -> "parser::value":w;
       "parser::value":e -> "parser::named":w;
+      "any":e -> "cleri":w;
+      "any":e -> "cleriparse":w;
+      "function":e -> "clerigrammar":w;
       "any":e -> "socket":w;
       "enum":e -> "sockettype":w;
       "enum":e -> "socketevent":w;
       "any":e -> "frame":w;
       "sequence":e -> "message":w;
       "any":e -> "curl":w;
+      "any":e -> "basic":w;
+      "basic":e -> "basicset":w;
+      "any":e -> "basiciterator":w;
       "function":e -> "dist":w;
       "dist":e -> "bernoulli":w;
       "dist":e -> "binomial":w;
@@ -164,6 +175,8 @@ hierarchy
       "any":e -> "uuidindex":w;
       "any":e -> "connection":w;
       "function":e -> "statement":w;
+      "any":e -> "fdbdatabase":w;
+      "any":e -> "fdbtransaction":w;
       "any":e -> "dqlite":w;
    }
 

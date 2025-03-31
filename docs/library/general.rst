@@ -21,6 +21,10 @@ general
    *TBD*
 
 
+:mini:`fun raschema()`
+   *TBD*
+
+
 :mini:`type context`
    *TBD*
 
@@ -69,6 +73,34 @@ general
    *TBD*
 
 
+:mini:`type fdbdatabase`
+   *TBD*
+
+
+:mini:`meth fdbdatabase()`
+   *TBD*
+
+
+:mini:`meth (Arg₁: fdbdatabase):transaction`
+   *TBD*
+
+
+:mini:`type fdbtransaction`
+   *TBD*
+
+
+:mini:`meth (Arg₁: fdbtransaction):commit`
+   *TBD*
+
+
+:mini:`meth (Arg₁: fdbtransaction):get(Arg₂: address)`
+   *TBD*
+
+
+:mini:`meth (Arg₁: fdbtransaction):set(Arg₂: address, Arg₃: address)`
+   *TBD*
+
+
 :mini:`type geometry`
    *TBD*
 
@@ -77,7 +109,39 @@ general
    *TBD*
 
 
+:mini:`type rainstance`
+   *TBD*
+
+
+:mini:`meth (Arg₁: rainstance)[Arg₂: string]`
+   *TBD*
+
+
+:mini:`meth (Arg₁: rainstance):delete`
+   *TBD*
+
+
+:mini:`type ralistener`
+   *TBD*
+
+
+:mini:`meth (Arg₁: ralistener):delete`
+   *TBD*
+
+
+:mini:`type raschema`
+   *TBD*
+
+
+:mini:`type raschemaindex`
+   *TBD*
+
+
 :mini:`meth (Arg₁: string):SqlParse`
+   *TBD*
+
+
+:mini:`meth fdbdatabase(Arg₁: string)`
    *TBD*
 
 

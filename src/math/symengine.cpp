@@ -6,9 +6,14 @@
 #include <symengine/solve.h>
 #include <symengine/parser.h>
 
+#undef ML_CATEGORY
+#define ML_CATEGORY "math/symengine"
+
 using namespace SymEngine;
 
 ML_TYPE(BasicT, (), "basic");
+
+ML_TYPE(BasicSetT, (BasicT), "basic::Set");
 
 #define SYMENGINE_INCLUDE_ALL
 #define SYMENGINE_ENUM(TYPECODE, CLASS) ML_TYPE(Basic ## CLASS ## T, (BasicT), "basic::" #CLASS);
@@ -136,6 +141,13 @@ EXPRESSION_INFIX_METHOD(-, sub)
 EXPRESSION_INFIX_METHOD(*, mul)
 EXPRESSION_INFIX_METHOD(/, div)
 
+EXPRESSION_INFIX_METHOD(==, Eq)
+EXPRESSION_INFIX_METHOD(!==, Ne)
+EXPRESSION_INFIX_METHOD(<, Lt)
+EXPRESSION_INFIX_METHOD(>, Gt)
+EXPRESSION_INFIX_METHOD(<=, Le)
+EXPRESSION_INFIX_METHOD(>=, Ge)
+
 ML_METHOD("^", BasicT, BasicT) {
 	basic_t *A = (basic_t *)Args[0];
 	basic_t *B = (basic_t *)Args[1];
@@ -173,6 +185,25 @@ ML_METHOD("solve", BasicT, MLStringT) {
 	basic_t *A = (basic_t *)Args[0];
 	auto Symbol = symbol(ml_string_value(Args[1]));
 	basic_t *C = new basic_t(solve(A->Value, Symbol));
+	return (ml_value_t *)C;
+}
+
+ML_METHOD("diff", BasicT, MLStringT) {
+	basic_t *A = (basic_t *)Args[0];
+	auto Symbol = symbol(ml_string_value(Args[1]));
+	basic_t *C = new basic_t(diff(A->Value, Symbol, true));
+	return (ml_value_t *)C;
+}
+
+ML_METHOD("sup", BasicSetT) {
+	basic_t *A = (basic_t *)Args[0];
+	basic_t *C = new basic_t(sup(*static_cast<const Set *>(A->Value.get())));
+	return (ml_value_t *)C;
+}
+
+ML_METHOD("inf", BasicSetT) {
+	basic_t *A = (basic_t *)Args[0];
+	basic_t *C = new basic_t(inf(*static_cast<const Set *>(A->Value.get())));
 	return (ml_value_t *)C;
 }
 
@@ -216,6 +247,20 @@ static void ML_TYPED_FN(ml_iterate, BasicFiniteSetT, ml_state_t *Caller, basic_t
 
 ML_LIBRARY_ENTRY0(math_symengine) {
 	ml_type_add_parent(BasicSymbolT, MLFunctionT);
+	ml_type_add_parent(BasicEmptySetT, BasicSetT);
+	ml_type_add_parent(BasicUniversalSetT, BasicSetT);
+	ml_type_add_parent(BasicFiniteSetT, BasicSetT);
+	ml_type_add_parent(BasicComplementT, BasicSetT);
+	ml_type_add_parent(BasicConditionSetT, BasicSetT);
+	ml_type_add_parent(BasicIntervalT, BasicSetT);
+	ml_type_add_parent(BasicComplexesT, BasicSetT);
+	ml_type_add_parent(BasicRealsT, BasicSetT);
+	ml_type_add_parent(BasicIntegersT, BasicSetT);
+	ml_type_add_parent(BasicNaturalsT, BasicSetT);
+	ml_type_add_parent(BasicNaturals0T, BasicSetT);
+	ml_type_add_parent(BasicUnionT, BasicSetT);
+	ml_type_add_parent(BasicIntersectionT, BasicSetT);
+	ml_type_add_parent(BasicImageSetT, BasicSetT);
 	BasicSymbolT->call = basic_symbol_call;
 #include "symengine_init.cpp"
 	Slot[0] = (ml_value_t *)BasicT;

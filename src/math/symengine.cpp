@@ -38,7 +38,7 @@ struct basic_t : gc {
 };
 
 static RCP<const Basic> ml_basic_of(ml_value_t *Value) {
-	typeof(ml_basic_of) *fn = ml_typed_fn_get(ml_typeof(Value), ml_basic_of);
+	typeof(ml_basic_of) *fn = (typeof(ml_basic_of) *)ml_typed_fn_get(ml_typeof(Value), (void *)ml_basic_of);
 	if (fn) return fn(Value);
 	return symbol("<invalid>");
 }

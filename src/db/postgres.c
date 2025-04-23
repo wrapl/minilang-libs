@@ -410,7 +410,14 @@ static int connection_prepare(const char *Name, const char *SQL, connection_t *C
 
 static PGconn *connection_connect(connection_t *Connection) {
 	for (;;) {
-		ML_LOG_INFO(NULL, "%s", "Connecting to Postgres database");
+		const char *Host = "<unknown>";
+		for (const char **Keyword = Connection->Keywords; *Keyword; ++Keyword) {
+			if (!strcmp(*Keyword, "host")) {
+				Host = Connection->Values[Keyword - Connection->Keywords];
+				break;
+			}
+		}
+		ML_LOG_INFO(NULL, "Connecting to Postgres database at %s", Host);
 		stringmap_foreach(Connection->Statements, Connection, (void *)connection_prepare);
 		PGconn *Conn = PQconnectdbParams(Connection->Keywords, Connection->Values, 0);
 		if (PQstatus(Conn) == CONNECTION_OK) {

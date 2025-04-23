@@ -43,7 +43,7 @@ let RADB := scope("radb";) do
 		execute("git clone -b dev https://github.com/rajamukherji/radb.git", Dir)
 		:>execute("cp -rv ~/Work/Radb", Dir)
 		Dir:chdir
-		execute("git checkout c543b94")
+		execute("git checkout fc108745a5dd2a3e758d4a90cef610ca8c0f7ac4")
 		execute("make clean")
 		execute('make libradb.a RADB_MEM=GC CFLAGS=-fpic', DEBUG and "DEBUG=1")
 	end

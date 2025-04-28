@@ -6,7 +6,13 @@
 #undef ML_CATEGORY
 #define ML_CATEGORY "math/stat"
 
-ML_METHOD("stat::mean", MLVectorT) {
+ML_TYPE(MLStatisticT, (MLFunctionT), "statistic");
+
+ML_TYPE(MLAccumulatorT, (MLFunctionT), "accumulator");
+
+ML_TYPE(MLCalculatorT, (MLFunctionT), "calculator");
+
+static void ml_statistic_accumulators(ml_value_t *Statistic, inthash_t Accumulators) {
 
 }
 

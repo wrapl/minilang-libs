@@ -46,6 +46,12 @@ typedef struct {
 	int NumCalcs, NumAccs, NumStats;
 } statistics_state_t;
 
+static int statistics_max_calculator(calculator_t *Calc) {
+	int Total = 1;
+	for (int I = 0; I < Calc->Depends; ++I) Total += statistics_max_calculator(Calc->Depends[I]);
+	return Total;
+}
+
 static int statistics_add_calculator(calculator_t *Calc, calculator_t **Calcs, int *NumCalcs) {
 	int N = NumCalcs;
 	for (int I = 0; I < N; ++I) if (Calcs[I] == Calc) return I;
@@ -69,10 +75,20 @@ static __attribute__ ((noinline)) statistics_state_t *statistics_prepare(ml_valu
 		}
 	}
 	int NumAccs = 0, NumCalcs = 0;
-	calculator_t *Calculators[MaxCalcs];
-	accumulator_t *Acc[MaxAccs];
+	calculator_t *Calcs[MaxCalcs];
+	accumulator_t *Accs[MaxAccs];
 	ML_LIST_FOREACH(Arg, Iter) {
 		statistic_t *Stat = (statistic_t *)Iter->Value;
+		for (int I = 0; I < Stat->Count; ++I) {
+			accumulator_t *Acc = Stat->Accumulators[I];
+			for (int J = 0; J < NumAccs; ++J) if (Accs[J] == Acc) goto found_acc;
+			Accs[NumAccs++] = Acc;
+		found_acc:
+			for (int J = 0; J < Acc->Count; ++J) {
+				calculator_t *Calc = Acc->Calculators[J];
+				MaxCalcs += Calc->Count;
+			}
+		}
 	}
 }
 

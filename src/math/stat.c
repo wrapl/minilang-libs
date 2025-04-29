@@ -46,6 +46,36 @@ typedef struct {
 	int NumCalcs, NumAccs, NumStats;
 } statistics_state_t;
 
+static int statistics_add_calculator(calculator_t *Calc, calculator_t **Calcs, int *NumCalcs) {
+	int N = NumCalcs;
+	for (int I = 0; I < N; ++I) if (Calcs[I] == Calc) return I;
+	Calcs[N] = Calc;
+	++*NumCalcs;
+}
+
+static __attribute__ ((noinline)) statistics_state_t *statistics_prepare(ml_value_t *Arg) {
+	int NumStats = 0, MaxAccs = 0, MaxCalcs = 0;
+	ML_LIST_FOREACH(Arg, Iter) {
+		statistic_t *Stat = (statistic_t *)Iter->Value;
+		++NumStats;
+		MaxAccs += Stat->Count;
+		for (int I = 0; I < Stat->Count; ++I) {
+			accumulator_t *Acc = Stat->Accumulators[I];
+			MaxCalcs += Acc->Count;
+			for (int J = 0; J < Acc->Count; ++J) {
+				calculator_t *Calc = Acc->Calculators[J];
+				MaxCalcs += Calc->Count;
+			}
+		}
+	}
+	int NumAccs = 0, NumCalcs = 0;
+	calculator_t *Calculators[MaxCalcs];
+	accumulator_t *Acc[MaxAccs];
+	ML_LIST_FOREACH(Arg, Iter) {
+		statistic_t *Stat = (statistic_t *)Iter->Value;
+	}
+}
+
 ML_METHODX("()", StatisticsT, MLSequenceT) {
 	// 1. Compute set of unique accumulators
 	// 2. Initialize accumulators
@@ -53,21 +83,7 @@ ML_METHODX("()", StatisticsT, MLSequenceT) {
 	// 4. Iterate over sequence, invoking calculators and accumulators
 	// 5. Finalize accumulators
 	// 6. Calculate statistics
-	int NumStats = 0, MaxAccs = 0, MaxCalcs = 0;
-	ML_LIST_FOREACH(Args[0], Iter) {
-		statistic_t *Statistic = (statistic_t *)Iter->Value;
-		++NumStats;
-		MaxAccs += Statistic->Count;
-		for (int I = 0; I < Statistic->Count; ++I) {
-			accumulator_t *Accumulator = Statistic->Accumulators[I];
-			MaxCalcs += Accumulator->Count;
-			for (int J = 0; J < Accumulator->Count; ++J) {
-				calculator_t *Calculator = Accumulator->Calculators[J];
-				MaxCalcs += Calculator->Count;
-			}
-		}
-	}
-	int NumAccs = 0, NumCalcs = 0;
+
 
 }
 

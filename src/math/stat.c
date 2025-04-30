@@ -17,9 +17,10 @@ struct calculator_t {
 	calculator_t *Depends[];
 };
 
-ML_TYPE(CalculatorT, (MLFunctionT), "calculator");
+ML_TYPE(CalculatorT, (), "calculator");
 
 static calculator_t X[1] = {{CalculatorT, MLNil, 0, 0}};
+static calculator_t W[1] = {{CalculatorT, MLNil, 0, 0}};
 
 struct accumulator_t {
 	ml_type_t *Type;
@@ -28,7 +29,7 @@ struct accumulator_t {
 	calculator_t *Calcs[];
 };
 
-ML_TYPE(AccumulatorT, (MLFunctionT), "accumulator");
+ML_TYPE(AccumulatorT, (), "accumulator");
 
 struct statistic_t {
 	ml_type_t *Type;
@@ -38,7 +39,11 @@ struct statistic_t {
 	accumulator_t *Accs[];
 };
 
-ML_TYPE(StatisticT, (MLFunctionT), "statistic");
+static void statistic_call(ml_state_t *Caller, statistic_t *Stat, int Count, ml_value_t **Args);
+
+ML_TYPE(StatisticT, (MLFunctionT), "statistic",
+	.call = (void *)statistic_call
+);
 
 static calculator_t *calculator(ml_value_t *Fn, int Count, ...) {
 	calculator_t *Calc = xnew(calculator_t, Count, calculator_t *);
@@ -126,9 +131,146 @@ typedef struct {
 	ml_value_t *Iter;
 	int *StatConfigs, *AccConfigs, *CalcConfigs, *Configs;
 	int NumStats, NumAccs, NumCalcs;
-	int Index;
+	int Index, Single;
 	ml_value_t *Args[];
 } statistics_state_t;
+
+static void statistics_statistic(statistics_state_t *State, ml_value_t *Value) {
+	if (ml_is_error(Value)) ML_CONTINUE(State->Base.Caller, Value);
+	int Index = State->Index;
+	State->StatValues[Index] = Value;
+	if (Index) {
+		State->Index = --Index;
+		statistic_t *Stat = State->Stats[Index];
+		int *Config = State->Configs + State->StatConfigs[Index];
+		for (int I = 0; I < Stat->NumAccs; ++I) {
+			State->Args[I] = State->AccValues[Config[I]];
+		}
+		return ml_call(State, Stat->Calc, Stat->NumAccs, State->Args);
+	}
+	if (State->Single) ML_CONTINUE(State->Base.Caller, State->StatValues[0]);
+	ml_value_t *Result = ml_list();
+	for (int I = 0; I < State->NumStats; ++I) ml_list_put(Result, State->StatValues[I]);
+	ML_CONTINUE(State->Base.Caller, Result);
+}
+
+static void statistics_accumulator_calc(statistics_state_t *State, ml_value_t *Value) {
+	if (ml_is_error(Value)) ML_CONTINUE(State->Base.Caller, Value);
+	int Index = State->Index;
+	State->AccValues[Index] = Value;
+	if (Index) {
+		State->Index = --Index;
+		State->Args[0] = State->AccValues[Index];
+		return ml_call(State, State->Accs[Index]->Calc, 1, State->Args);
+	}
+	Index = State->Index = State->NumStats - 1;
+	statistic_t *Stat = State->Stats[Index];
+	int *Config = State->Configs + State->StatConfigs[Index];
+	for (int I = 0; I < Stat->NumAccs; ++I) {
+		State->Args[I] = State->AccValues[Config[I]];
+	}
+	State->Base.run = (ml_state_fn)statistics_statistic;
+	return ml_call(State, Stat->Calc, Stat->NumAccs, State->Args);
+}
+
+static void statistics_iterate(statistics_state_t *State, ml_value_t *Value);
+
+static void statistics_accumulator_update(statistics_state_t *State, ml_value_t *Value) {
+	if (ml_is_error(Value)) ML_CONTINUE(State->Base.Caller, Value);
+	int Index = State->Index;
+	State->AccValues[Index] = Value;
+	if (Index) {
+		State->Index = --Index;
+		accumulator_t *Acc = State->Accs[Index];
+		int *Config = State->Configs + State->AccConfigs[Index];
+		State->Args[0] = State->AccValues[Index];
+		for (int I = 0; I < Acc->NumCalcs; ++I) {
+			State->Args[I + 1] = State->CalcValues[Config[I]];
+		}
+		return ml_call(State, Acc->Update, Acc->NumCalcs + 1, State->Args);
+	}
+	State->Base.run = (ml_state_fn)statistics_iterate;
+	return ml_iter_next((ml_state_t *)State, State->Iter);
+}
+
+static void statistics_calculator_calc(statistics_state_t *State, ml_value_t *Value) {
+	if (ml_is_error(Value)) ML_CONTINUE(State->Base.Caller, Value);
+	int Index = State->Index;
+	State->CalcValues[Index] = Value;
+	if (Index > 2) {
+		State->Index = --Index;
+		calculator_t *Calc = State->Calcs[Index];
+		int *Config = State->Configs + State->CalcConfigs[Index];
+		for (int I = 0; I < Calc->NumDepends; ++I) {
+			State->Args[I] = State->CalcValues[Config[I]];
+		}
+		return ml_call(State, Calc->Calc, Calc->NumDepends, State->Args);
+	}
+	Index = State->Index = State->NumAccs - 1;
+	accumulator_t *Acc = State->Accs[Index];
+	int *Config = State->Configs + State->AccConfigs[Index];
+	State->Args[0] = State->AccValues[Index];
+	for (int I = 0; I < Acc->NumCalcs; ++I) {
+		State->Args[I + 1] = State->CalcValues[Config[I]];
+	}
+	State->Base.run = (ml_state_fn)statistics_accumulator_update;
+	return ml_call(State, Acc->Update, Acc->NumCalcs + 1, State->Args);
+}
+
+static void statistics_value(statistics_state_t *State, ml_value_t *Value) {
+	if (ml_is_error(Value)) ML_CONTINUE(State->Base.Caller, Value);
+	State->CalcValues[0] = Value;
+	int Index = State->Index = State->NumCalcs - 1;
+	if (Index > 1) {
+		calculator_t *Calc = State->Calcs[Index];
+		int *Config = State->Configs + State->CalcConfigs[Index];
+		for (int I = 0; I < Calc->NumDepends; ++I) {
+			State->Args[I] = State->CalcValues[Config[I]];
+		}
+		State->Base.run = (ml_state_fn)statistics_calculator_calc;
+		return ml_call(State, Calc->Calc, Calc->NumDepends, State->Args);
+	}
+	Index = State->Index = State->NumAccs - 1;
+	accumulator_t *Acc = State->Accs[Index];
+	int *Config = State->Configs + State->AccConfigs[Index];
+	State->Args[0] = State->AccValues[Index];
+	for (int I = 0; I < Acc->NumCalcs; ++I) {
+		State->Args[I + 1] = State->CalcValues[Config[I]];
+	}
+	State->Base.run = (ml_state_fn)statistics_accumulator_update;
+	return ml_call(State, Acc->Update, Acc->NumCalcs + 1, State->Args);
+}
+
+static void statistics_key(statistics_state_t *State, ml_value_t *Value) {
+	if (ml_is_error(Value)) ML_CONTINUE(State->Base.Caller, Value);
+	State->CalcValues[1] = Value;
+	State->Base.run = (ml_state_fn)statistics_value;
+	return ml_iter_value((ml_state_t *)State, State->Iter);
+}
+
+static void statistics_iterate(statistics_state_t *State, ml_value_t *Value) {
+	if (ml_is_error(Value)) ML_CONTINUE(State->Base.Caller, Value);
+	if (Value == MLNil) {
+		int Index = State->Index = State->NumAccs - 1;
+		State->Base.run = (ml_state_fn)statistics_accumulator_calc;
+		State->Args[0] = State->AccValues[Index];
+		return ml_call(State, State->Accs[Index]->Calc, 1, State->Args);
+	}
+	State->Base.run = (ml_state_fn)statistics_key;
+	return ml_iter_key((ml_state_t *)State, State->Iter = Value);
+}
+
+static void statistics_accumulator_init(statistics_state_t *State, ml_value_t *Value) {
+	if (ml_is_error(Value)) ML_CONTINUE(State->Base.Caller, Value);
+	int Index = State->Index;
+	State->AccValues[Index] = Value;
+	if (Index) {
+		State->Index = --Index;
+		return ml_call(State, State->Accs[Index]->Init, 0, NULL);
+	}
+	State->Base.run = (ml_state_fn)statistics_iterate;
+	return ml_iterate((ml_state_t *)State, State->Iter);
+}
 
 static int calculators_compare(const void *A, const void *B) {
 	const calculator_t *CalcA = *(const calculator_t **)A;
@@ -144,7 +286,7 @@ static __attribute__ ((noinline)) statistics_state_t *statistics_prepare(ml_valu
 	int NumStats = ml_list_length(Arg);
 	if (!NumStats) return NULL;
 	statistic_t **Stats = anew(statistic_t *, NumStats), **StatSlot = Stats;
-	int MaxAccs = 0, MaxCalcs = 1;
+	int MaxAccs = 0, MaxCalcs = 2;
 	ML_LIST_FOREACH(Arg, Iter) {
 		statistic_t *Stat = (statistic_t *)Iter->Value;
 		*StatSlot++ = Stat;
@@ -154,7 +296,8 @@ static __attribute__ ((noinline)) statistics_state_t *statistics_prepare(ml_valu
 	accumulator_t **Accs = anew(accumulator_t *, MaxAccs);
 	calculator_t **Calcs = anew(calculator_t *, MaxCalcs);
 	Calcs[0] = X;
-	int NumAccs = 0, NumCalcs = 1, MaxArgs = 1, ConfigSize = 1;
+	Calcs[1] = W;
+	int NumAccs = 0, NumCalcs = 2, MaxArgs = 1, ConfigSize = 1;
 	for (int I = 0; I < NumStats; ++I) {
 		statistic_t *Stat = Stats[I];
 		ConfigSize += 1 + Stat->NumAccs;
@@ -176,7 +319,7 @@ static __attribute__ ((noinline)) statistics_state_t *statistics_prepare(ml_valu
 		found_calc:;
 		}
 	}
-	qsort(Calcs + 1, NumCalcs - 1, sizeof(calculator_t *), calculators_compare);
+	qsort(Calcs + 2, NumCalcs - 2, sizeof(calculator_t *), calculators_compare);
 	int *Configs = anew(int, ConfigSize), *Config0 = Configs;
 	statistics_state_t *State = xnew(statistics_state_t, MaxArgs, ml_value_t *);
 	State->CalcConfigs = Config0;
@@ -235,135 +378,6 @@ static __attribute__ ((noinline)) statistics_state_t *statistics_prepare(ml_valu
 	return State;
 }
 
-static void statistics_statistic(statistics_state_t *State, ml_value_t *Value) {
-	if (ml_is_error(Value)) ML_CONTINUE(State->Base.Caller, Value);
-	int Index = State->Index;
-	State->StatValues[Index] = Value;
-	if (Index) {
-		State->Index = --Index;
-		statistic_t *Stat = State->Stats[Index];
-		int *Config = State->Configs + State->StatConfigs[Index];
-		for (int I = 0; I < Stat->NumAccs; ++I) {
-			State->Args[I] = State->AccValues[Config[I]];
-		}
-		return ml_call(State, Stat->Calc, Stat->NumAccs, State->Args);
-	}
-	ml_value_t *Result = ml_list();
-	for (int I = 0; I < State->NumStats; ++I) ml_list_put(Result, State->StatValues[I]);
-	ML_CONTINUE(State->Base.Caller, Result);
-}
-
-static void statistics_accumulator_calc(statistics_state_t *State, ml_value_t *Value) {
-	if (ml_is_error(Value)) ML_CONTINUE(State->Base.Caller, Value);
-	int Index = State->Index;
-	State->AccValues[Index] = Value;
-	if (Index) {
-		State->Index = --Index;
-		State->Args[0] = State->AccValues[Index];
-		return ml_call(State, State->Accs[Index]->Calc, 1, State->Args);
-	}
-	Index = State->Index = State->NumStats - 1;
-	statistic_t *Stat = State->Stats[Index];
-	int *Config = State->Configs + State->StatConfigs[Index];
-	for (int I = 0; I < Stat->NumAccs; ++I) {
-		State->Args[I] = State->AccValues[Config[I]];
-	}
-	State->Base.run = (ml_state_fn)statistics_statistic;
-	return ml_call(State, Stat->Calc, Stat->NumAccs, State->Args);
-}
-
-static void statistics_iterate(statistics_state_t *State, ml_value_t *Value);
-
-static void statistics_accumulator_update(statistics_state_t *State, ml_value_t *Value) {
-	if (ml_is_error(Value)) ML_CONTINUE(State->Base.Caller, Value);
-	int Index = State->Index;
-	State->AccValues[Index] = Value;
-	if (Index) {
-		State->Index = --Index;
-		accumulator_t *Acc = State->Accs[Index];
-		int *Config = State->Configs + State->AccConfigs[Index];
-		State->Args[0] = State->AccValues[Index];
-		for (int I = 0; I < Acc->NumCalcs; ++I) {
-			State->Args[I + 1] = State->CalcValues[Config[I]];
-		}
-		return ml_call(State, Acc->Update, Acc->NumCalcs + 1, State->Args);
-	}
-	State->Base.run = (ml_state_fn)statistics_iterate;
-	return ml_iter_next((ml_state_t *)State, State->Iter);
-}
-
-static void statistics_calculator_calc(statistics_state_t *State, ml_value_t *Value) {
-	if (ml_is_error(Value)) ML_CONTINUE(State->Base.Caller, Value);
-	int Index = State->Index;
-	State->CalcValues[Index] = Value;
-	if (Index > 1) {
-		State->Index = --Index;
-		calculator_t *Calc = State->Calcs[Index];
-		int *Config = State->Configs + State->CalcConfigs[Index];
-		for (int I = 0; I < Calc->NumDepends; ++I) {
-			State->Args[I] = State->CalcValues[Config[I]];
-		}
-		return ml_call(State, Calc->Calc, Calc->NumDepends, State->Args);
-	}
-	Index = State->Index = State->NumAccs - 1;
-	accumulator_t *Acc = State->Accs[Index];
-	int *Config = State->Configs + State->AccConfigs[Index];
-	State->Args[0] = State->AccValues[Index];
-	for (int I = 0; I < Acc->NumCalcs; ++I) {
-		State->Args[I + 1] = State->CalcValues[Config[I]];
-	}
-	State->Base.run = (ml_state_fn)statistics_accumulator_update;
-	return ml_call(State, Acc->Update, Acc->NumCalcs + 1, State->Args);
-}
-
-static void statistics_value(statistics_state_t *State, ml_value_t *Value) {
-	if (ml_is_error(Value)) ML_CONTINUE(State->Base.Caller, Value);
-	State->CalcValues[0] = Value;
-	int Index = State->Index = State->NumCalcs - 1;
-	if (Index) {
-		calculator_t *Calc = State->Calcs[Index];
-		int *Config = State->Configs + State->CalcConfigs[Index];
-		for (int I = 0; I < Calc->NumDepends; ++I) {
-			State->Args[I] = State->CalcValues[Config[I]];
-		}
-		State->Base.run = (ml_state_fn)statistics_calculator_calc;
-		return ml_call(State, Calc->Calc, Calc->NumDepends, State->Args);
-	}
-	Index = State->Index = State->NumAccs - 1;
-	accumulator_t *Acc = State->Accs[Index];
-	int *Config = State->Configs + State->AccConfigs[Index];
-	State->Args[0] = State->AccValues[Index];
-	for (int I = 0; I < Acc->NumCalcs; ++I) {
-		State->Args[I + 1] = State->CalcValues[Config[I]];
-	}
-	State->Base.run = (ml_state_fn)statistics_accumulator_update;
-	return ml_call(State, Acc->Update, Acc->NumCalcs + 1, State->Args);
-}
-
-static void statistics_iterate(statistics_state_t *State, ml_value_t *Value) {
-	if (ml_is_error(Value)) ML_CONTINUE(State->Base.Caller, Value);
-	if (Value == MLNil) {
-		int Index = State->Index = State->NumAccs - 1;
-		State->Base.run = (ml_state_fn)statistics_accumulator_calc;
-		State->Args[0] = State->AccValues[Index];
-		return ml_call(State, State->Accs[Index]->Calc, 1, State->Args);
-	}
-	State->Base.run = (ml_state_fn)statistics_value;
-	return ml_iter_value((ml_state_t *)State, State->Iter = Value);
-}
-
-static void statistics_accumulator_init(statistics_state_t *State, ml_value_t *Value) {
-	if (ml_is_error(Value)) ML_CONTINUE(State->Base.Caller, Value);
-	int Index = State->Index;
-	State->AccValues[Index] = Value;
-	if (Index) {
-		State->Index = --Index;
-		return ml_call(State, State->Accs[Index]->Init, 0, NULL);
-	}
-	State->Base.run = (ml_state_fn)statistics_iterate;
-	return ml_iterate((ml_state_t *)State, State->Iter);
-}
-
 ML_METHODX("()", StatisticsT, MLSequenceT) {
 	// 1. Compute set of unique accumulators
 	// 2. Initialize accumulators
@@ -381,11 +395,112 @@ ML_METHODX("()", StatisticsT, MLSequenceT) {
 	return ml_call(State, State->Accs[Index]->Init, 0, NULL);
 }
 
+static __attribute__ ((noinline)) statistics_state_t *statistics_prepare1(statistic_t *Stat) {
+	statistic_t **Stats = anew(statistic_t *, 1);
+	int MaxAccs = 0, MaxCalcs = 2;
+	Stats[0] = Stat;
+	MaxAccs += Stat->NumAccs;
+	MaxCalcs += Stat->NumCalcs;
+	accumulator_t **Accs = anew(accumulator_t *, MaxAccs);
+	calculator_t **Calcs = anew(calculator_t *, MaxCalcs);
+	Calcs[0] = X;
+	Calcs[1] = W;
+	int NumAccs = 0, NumCalcs = 2, MaxArgs = 1, ConfigSize = 1;
+	ConfigSize += 1 + Stat->NumAccs;
+	if (MaxArgs < Stat->NumAccs) MaxArgs = Stat->NumAccs;
+	for (int J = 0; J < Stat->NumAccs; ++J) {
+		accumulator_t *Acc = Stat->Accs[J];
+		if (MaxArgs < Acc->NumCalcs + 1) MaxArgs = Acc->NumCalcs + 1;
+		for (int K = 0; K < NumAccs; ++K) if (Accs[K] == Acc) goto found_acc;
+		Accs[NumAccs++] = Acc;
+		ConfigSize += 1 + Acc->NumCalcs;
+	found_acc:;
+	}
+	for (int J = 0; J < Stat->NumCalcs; ++J) {
+		calculator_t *Calc = Stat->Calcs[J];
+		if (MaxArgs < Calc->NumDepends) MaxArgs = Calc->NumDepends;
+		for (int K = 0; K < NumCalcs; ++K) if (Calcs[K] == Calc) goto found_calc;
+		Calcs[NumCalcs++] = Calc;
+		ConfigSize += 1 + Calc->NumDepends;
+	found_calc:;
+	}
+	qsort(Calcs + 2, NumCalcs - 2, sizeof(calculator_t *), calculators_compare);
+	int *Configs = anew(int, ConfigSize), *Config0 = Configs;
+	statistics_state_t *State = xnew(statistics_state_t, MaxArgs, ml_value_t *);
+	State->CalcConfigs = Config0;
+	int *Config1 = Configs + (NumCalcs + NumAccs + 1);
+	for (int I = 0; I < NumCalcs; ++I) {
+		calculator_t *Calc = Calcs[I];
+		*Config0++ = Config1 - Configs;
+		for (int J = 0; J < Calc->NumDepends; ++J) {
+			calculator_t *Dep = Calc->Depends[J];
+			for (int K = 0; K < NumCalcs; ++K) {
+				if (Calcs[K] == Dep) {
+					*Config1++ = K;
+					break;
+				}
+			}
+		}
+	}
+	State->AccConfigs = Config0;
+	for (int I = 0; I < NumAccs; ++I) {
+		accumulator_t *Acc = Accs[I];
+		*Config0++ = Config1 - Configs;
+		for (int J = 0; J < Acc->NumCalcs; ++J) {
+			calculator_t *Calc = Acc->Calcs[J];
+			for (int K = 0; K < NumCalcs; ++K) {
+				if (Calcs[K] == Calc) {
+					*Config1++ = K;
+					break;
+				}
+			}
+		}
+	}
+	State->StatConfigs = Config0;
+	*Config0++ = Config1 - Configs;
+	for (int J = 0; J < Stat->NumAccs; ++J) {
+		accumulator_t *Acc = Stat->Accs[J];
+		for (int K = 0; K < NumAccs; ++K) {
+			if (Accs[K] == Acc) {
+				*Config1++ = K;
+				break;
+			}
+		}
+	}
+	State->Stats = Stats;
+	State->Accs = Accs;
+	State->Calcs = Calcs;
+	State->NumStats = 1;
+	State->NumAccs = NumAccs;
+	State->NumCalcs = NumCalcs;
+	State->Configs = Configs;
+	State->CalcValues = anew(ml_value_t *, NumCalcs + NumAccs + 1);
+	State->AccValues = State->CalcValues + NumCalcs;
+	State->StatValues = State->AccValues + NumAccs;
+	return State;
+}
+
+static void statistic_call(ml_state_t *Caller, statistic_t *Stat, int Count, ml_value_t **Args) {
+	for (int I = 0; I < Count; ++I) Args[I] = ml_deref(Args[I]);
+	ML_CHECKX_ARG_COUNT(1);
+	ML_CHECKX_ARG_TYPE(0, MLSequenceT);
+	statistics_state_t *State = statistics_prepare1(Stat);
+	State->Base.Caller = Caller;
+	State->Base.Context = Caller->Context;
+	State->Base.run = (ml_state_fn)statistics_accumulator_init;
+	State->Iter = ml_chained(Count, Args);
+	State->Single = 1;
+	int Index = State->Index = State->NumAccs - 1;
+	return ml_call(State, State->Accs[Index]->Init, 0, NULL);
+}
+
 ML_METHOD_DECL(AddMethod, "+");
 ML_METHOD_DECL(SubMethod, "-");
 ML_METHOD_DECL(MulMethod, "*");
 ML_METHOD_DECL(DivMethod, "/");
 ML_METHOD_DECL(SqrtMethod, "math::sqrt");
+ML_METHOD_DECL(MinMethod, "min");
+ML_METHOD_DECL(MaxMethod, "max");
 
 ML_FUNCTION(CountInit) {
 	return ml_integer(0);
@@ -408,6 +523,7 @@ typedef struct {
 	union { ml_value_t *SumX; ml_value_t *Mean2X; };
 	ml_value_t *Count;
 	ml_value_t *Args[2];
+	int Sqrt;
 } stddev_state_t;
 
 static void stddev_variance(stddev_state_t *State, ml_value_t *Value) {
@@ -421,7 +537,11 @@ static void stddev_meanx2(stddev_state_t *State, ml_value_t *Value) {
 	State->Base.run = (ml_state_fn)stddev_variance;
 	State->Args[0] = Value;
 	State->Args[1] = State->Mean2X;
-	return ml_call(State, SubMethod, 2, State->Args);
+	if (State->Sqrt) {
+		return ml_call(State, SubMethod, 2, State->Args);
+	} else {
+		return ml_call(State->Base.Caller, SubMethod, 2, State->Args);
+	}
 }
 
 static void stddev_mean2x(stddev_state_t *State, ml_value_t *Value) {
@@ -441,7 +561,22 @@ static void stddev_meanx(stddev_state_t *State, ml_value_t *Value) {
 	return ml_call(State, MulMethod, 2, State->Args);
 }
 
-ML_FUNCTIONX(StdDevCalc) {
+ML_FUNCTIONX(StdDev) {
+	ML_CHECKX_ARG_COUNT(3);
+	stddev_state_t *State = new(stddev_state_t);
+	State->Base.Caller = Caller;
+	State->Base.Context = Caller->Context;
+	State->Base.run = (ml_state_fn)stddev_meanx;
+	State->Sqrt = 1;
+	State->SumX2 = Args[0];
+	State->SumX = Args[1];
+	State->Count = Args[2];
+	State->Args[0] = State->SumX;
+	State->Args[1] = State->Count;
+	return ml_call(State, DivMethod, 2, State->Args);
+}
+
+ML_FUNCTIONX(Variance) {
 	ML_CHECKX_ARG_COUNT(3);
 	stddev_state_t *State = new(stddev_state_t);
 	State->Base.Caller = Caller;
@@ -463,10 +598,23 @@ ML_LIBRARY_ENTRY0(math_stat) {
 	accumulator_t *Count = accumulator((ml_value_t *)CountInit, (ml_value_t *)CountUpdate, ml_integer(1), 0);
 	accumulator_t *SumX = accumulator(ml_integer(0), (ml_value_t *)SumUpdate, ml_integer(1), 1, X);
 	accumulator_t *SumX2 = accumulator(ml_integer(0), (ml_value_t *)SumUpdate, ml_integer(1), 1, X2);
-	statistic_t *Mean = statistic(DivMethod, 2, SumX, Count);
-	statistic_t *StdDev = statistic((ml_value_t *)StdDevCalc, 3, SumX2, SumX, Count);
+	accumulator_t *Min = accumulator(ml_integer(0), MinMethod, ml_integer(1), 1, X);
+	accumulator_t *Max = accumulator(ml_integer(0), MaxMethod, ml_integer(1), 1, X);
+	calculator_t *WX = calculator(MulMethod, 2, X, W);
+	calculator_t *WX2 = calculator(MulMethod, 2, X, WX);
+	calculator_t *WX3 = calculator(MulMethod, 2, X, WX2);
+	calculator_t *WX4 = calculator(MulMethod, 2, X, WX3);
+	accumulator_t *SumW = accumulator(ml_integer(0), (ml_value_t *)SumUpdate, ml_integer(1), 1, W);
+	accumulator_t *SumWX = accumulator(ml_integer(0), (ml_value_t *)SumUpdate, ml_integer(1), 1, WX);
+	accumulator_t *SumWX2 = accumulator(ml_integer(0), (ml_value_t *)SumUpdate, ml_integer(1), 1, WX2);
 	Slot[0] = ml_module("stat",
-		"mean", Mean,
-		"stddev", StdDev,
+		"mean", statistic(DivMethod, 2, SumX, Count),
+		"stddev", statistic((ml_value_t *)StdDev, 3, SumX2, SumX, Count),
+		"variance", statistic((ml_value_t *)Variance, 3, SumX2, SumX, Count),
+		"min", statistic(ml_integer(1), 1, Min),
+		"max", statistic(ml_integer(1), 1, Max),
+		"weighted_mean", statistic(DivMethod, 2, SumWX, SumW),
+		"weighted_stddev", statistic((ml_value_t *)StdDev, 3, SumWX2, SumWX, SumW),
+		"weighted_variance", statistic((ml_value_t *)Variance, 3, SumWX2, SumWX, SumW),
 	NULL);
 }

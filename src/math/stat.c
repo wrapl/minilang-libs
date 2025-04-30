@@ -498,7 +498,10 @@ ML_METHOD_DECL(AddMethod, "+");
 ML_METHOD_DECL(SubMethod, "-");
 ML_METHOD_DECL(MulMethod, "*");
 ML_METHOD_DECL(DivMethod, "/");
+ML_METHOD_DECL(PowMethod, "^");
 ML_METHOD_DECL(SqrtMethod, "math::sqrt");
+ML_METHOD_DECL(LogMethod, "math::log");
+ML_METHOD_DECL(ExpMethod, "math::exp");
 ML_METHOD_DECL(MinMethod, "min");
 ML_METHOD_DECL(MaxMethod, "max");
 
@@ -590,6 +593,14 @@ ML_FUNCTIONX(Variance) {
 	return ml_call(State, DivMethod, 2, State->Args);
 }
 
+ML_FUNCTIONX(Inverse) {
+	ML_CHECKX_ARG_COUNT(1);
+	ml_value_t **Args2 = ml_alloc_args(2);
+	Args2[0] = Args[0];
+	Args2[1] = ml_integer(-1);
+	return ml_call(Caller, PowMethod, 2, Args2);
+}
+
 ML_LIBRARY_ENTRY0(math_stat) {
 #include "stat_init.c"
 	calculator_t *X2 = calculator(MulMethod, 2, X, X);
@@ -607,6 +618,10 @@ ML_LIBRARY_ENTRY0(math_stat) {
 	accumulator_t *SumW = accumulator(ml_integer(0), (ml_value_t *)SumUpdate, ml_integer(1), 1, W);
 	accumulator_t *SumWX = accumulator(ml_integer(0), (ml_value_t *)SumUpdate, ml_integer(1), 1, WX);
 	accumulator_t *SumWX2 = accumulator(ml_integer(0), (ml_value_t *)SumUpdate, ml_integer(1), 1, WX2);
+	calculator_t *IX = calculator((ml_value_t *)Inverse, 1, X);
+	accumulator_t *SumIX = accumulator(ml_integer(0), (ml_value_t *)SumUpdate, (ml_value_t *)Inverse, 1, IX);
+	calculator_t *LogX = calculator(LogMethod, 1, X);
+	accumulator_t *SumLogX = accumulator(ml_integer(0), (ml_value_t *)SumUpdate, ml_integer(1), 1, LogX);
 	Slot[0] = ml_module("stat",
 		"mean", statistic(DivMethod, 2, SumX, Count),
 		"stddev", statistic((ml_value_t *)StdDev, 3, SumX2, SumX, Count),
@@ -616,5 +631,7 @@ ML_LIBRARY_ENTRY0(math_stat) {
 		"weighted_mean", statistic(DivMethod, 2, SumWX, SumW),
 		"weighted_stddev", statistic((ml_value_t *)StdDev, 3, SumWX2, SumWX, SumW),
 		"weighted_variance", statistic((ml_value_t *)Variance, 3, SumWX2, SumWX, SumW),
+		"harmonic_mean", statistic(MulMethod, 2, Count, SumIX),
+		"geometric_mean", statistic(ml_chainedv(2, DivMethod, ExpMethod), 2, SumLogX, Count),
 	NULL);
 }

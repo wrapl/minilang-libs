@@ -636,6 +636,16 @@ ML_FUNCTION(Percentile) {
 	return (ml_value_t *)statistic(ml_cfunctionx(Args[0], percentile), 1, AllX);
 }
 
+ML_FUNCTION(First) {
+	ML_CHECK_ARG_COUNT(1);
+	return ml_unpack(Args[0], 1);
+}
+
+ML_FUNCTION(Second) {
+	ML_CHECK_ARG_COUNT(1);
+	return ml_unpack(Args[0], 2);
+}
+
 ML_LIBRARY_ENTRY0(math_stat) {
 #include "stat_init.c"
 	calculator_t *X2 = calculator(MulMethod, 2, X, X);
@@ -658,6 +668,16 @@ ML_LIBRARY_ENTRY0(math_stat) {
 	calculator_t *LogX = calculator(LogMethod, 1, X);
 	accumulator_t *SumLogX = accumulator(ml_integer(0), (ml_value_t *)SumUpdate, ml_integer(1), 1, LogX);
 	AllX = accumulator((ml_value_t *)MLSliceT, PutMethod, SortMethod, 1, X);
+	calculator_t *A = calculator((ml_value_t *)First, 1, X);
+	calculator_t *B = calculator((ml_value_t *)Second, 1, X);
+	accumulator_t *SumA = accumulator(ml_integer(0), (ml_value_t *)SumUpdate, ml_integer(1), 1, A);
+	accumulator_t *SumB = accumulator(ml_integer(0), (ml_value_t *)SumUpdate, ml_integer(1), 1, B);
+	calculator_t *A2 = calculator(MulMethod, 2, A, A);
+	calculator_t *B2 = calculator(MulMethod, 2, B, B);
+	calculator_t *AB = calculator(MulMethod, 2, A, B);
+	accumulator_t *SumA2 = accumulator(ml_integer(0), (ml_value_t *)SumUpdate, ml_integer(1), 1, A2);
+	accumulator_t *SumB2 = accumulator(ml_integer(0), (ml_value_t *)SumUpdate, ml_integer(1), 1, B2);
+	accumulator_t *SumAB = accumulator(ml_integer(0), (ml_value_t *)SumUpdate, ml_integer(1), 1, AB);
 	Slot[0] = ml_module("stat",
 		"mean", statistic(DivMethod, 2, SumX, Count),
 		"stddev", statistic((ml_value_t *)StdDev, 3, SumX2, SumX, Count),

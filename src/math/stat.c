@@ -2,6 +2,7 @@
 #include <minilang/ml_array.h>
 #include <minilang/ml_macros.h>
 #include <minilang/ml_object.h>
+#include <math.h>
 
 #undef ML_CATEGORY
 #define ML_CATEGORY "math/stat"
@@ -504,6 +505,9 @@ ML_METHOD_DECL(LogMethod, "math::log");
 ML_METHOD_DECL(ExpMethod, "math::exp");
 ML_METHOD_DECL(MinMethod, "min");
 ML_METHOD_DECL(MaxMethod, "max");
+ML_METHOD_DECL(PutMethod, "put");
+ML_METHOD_DECL(SortMethod, "sort");
+ML_METHOD_DECL(DotMethod, ".");
 
 ML_FUNCTION(CountInit) {
 	return ml_integer(0);
@@ -601,6 +605,37 @@ ML_FUNCTIONX(Inverse) {
 	return ml_call(Caller, PowMethod, 2, Args2);
 }
 
+static void percentile(ml_state_t *Caller, void *Data, int Count, ml_value_t **Args) {
+	ML_CHECKX_ARG_COUNT(1);
+	ML_CHECKX_ARG_TYPE(0, MLSliceT);
+	double P = ml_real_value((ml_value_t *)Data);
+	int N = ml_slice_length(Args[0]);
+	double Exact = (N - 1) * P / 100.0;
+	int A = floor(Exact);
+	int B = ceil(Exact);
+	if (A == B) ML_RETURN(ml_slice_get(Args[0], A + 1));
+	ml_array_t *Weights = ml_array(ML_ARRAY_FORMAT_F64, 1, 2);
+	double *WeightsP = (double *)ml_array_data(Weights);
+	WeightsP[0] = B - Exact;
+	WeightsP[1] = Exact - A;
+	ml_array_t *Values = ml_array(ML_ARRAY_FORMAT_ANY, 1, 2);
+	ml_value_t **ValuesP = (ml_value_t **)ml_array_data(Values);
+	ValuesP[0] = ml_slice_get(Args[0], A + 1);
+	ValuesP[1] = ml_slice_get(Args[0], B + 1);
+	ml_value_t **Args2 = ml_alloc_args(2);
+	Args2[0] = (ml_value_t *)Weights;
+	Args2[1] = (ml_value_t *)Values;
+	return ml_call(Caller, DotMethod, 2, Args2);
+}
+
+static accumulator_t *AllX = NULL;
+
+ML_FUNCTION(Percentile) {
+	ML_CHECK_ARG_COUNT(1);
+	ML_CHECK_ARG_TYPE(0, MLRealT);
+	return (ml_value_t *)statistic(ml_cfunctionx(Args[0], percentile), 1, AllX);
+}
+
 ML_LIBRARY_ENTRY0(math_stat) {
 #include "stat_init.c"
 	calculator_t *X2 = calculator(MulMethod, 2, X, X);
@@ -622,6 +657,7 @@ ML_LIBRARY_ENTRY0(math_stat) {
 	accumulator_t *SumIX = accumulator(ml_integer(0), (ml_value_t *)SumUpdate, (ml_value_t *)Inverse, 1, IX);
 	calculator_t *LogX = calculator(LogMethod, 1, X);
 	accumulator_t *SumLogX = accumulator(ml_integer(0), (ml_value_t *)SumUpdate, ml_integer(1), 1, LogX);
+	AllX = accumulator((ml_value_t *)MLSliceT, PutMethod, SortMethod, 1, X);
 	Slot[0] = ml_module("stat",
 		"mean", statistic(DivMethod, 2, SumX, Count),
 		"stddev", statistic((ml_value_t *)StdDev, 3, SumX2, SumX, Count),
@@ -633,5 +669,7 @@ ML_LIBRARY_ENTRY0(math_stat) {
 		"weighted_variance", statistic((ml_value_t *)Variance, 3, SumWX2, SumWX, SumW),
 		"harmonic_mean", statistic(MulMethod, 2, Count, SumIX),
 		"geometric_mean", statistic(ml_chainedv(2, DivMethod, ExpMethod), 2, SumLogX, Count),
+		"p", Percentile,
+		"median", statistic(ml_cfunctionx(ml_real(50.0), percentile), 1, AllX),
 	NULL);
 }

@@ -148,6 +148,12 @@ EXPRESSION_INFIX_METHOD(>, Gt)
 EXPRESSION_INFIX_METHOD(<=, Le)
 EXPRESSION_INFIX_METHOD(>=, Ge)
 
+ML_METHOD("-", BasicT) {
+	basic_t *A = (basic_t *)Args[0];
+	basic_t *C = new basic_t(neg(A->Value));
+	return (ml_value_t *)C;
+}
+
 ML_METHOD("^", BasicT, BasicT) {
 	basic_t *A = (basic_t *)Args[0];
 	basic_t *B = (basic_t *)Args[1];
@@ -195,23 +201,25 @@ ML_METHOD("diff", BasicT, MLStringT) {
 	return (ml_value_t *)C;
 }
 
-ML_METHOD("math::sqrt", BasicT) {
-	basic_t *A = (basic_t *)Args[0];
-	basic_t *C = new basic_t(function_symbol("sqrt", A->Value));
-	return (ml_value_t *)C;
+#define ML_MATH_METHOD(NAME) \
+\
+ML_METHOD("math::" #NAME, BasicT) { \
+	basic_t *A = (basic_t *)Args[0]; \
+	basic_t *C = new basic_t(NAME(A->Value)); \
+	return (ml_value_t *)C; \
 }
 
-ML_METHOD("math::exp", BasicT) {
-	basic_t *A = (basic_t *)Args[0];
-	basic_t *C = new basic_t(function_symbol("exp", A->Value));
-	return (ml_value_t *)C;
-}
-
-ML_METHOD("math::log", BasicT) {
-	basic_t *A = (basic_t *)Args[0];
-	basic_t *C = new basic_t(function_symbol("log", A->Value));
-	return (ml_value_t *)C;
-}
+ML_MATH_METHOD(sqrt)
+ML_MATH_METHOD(exp)
+ML_MATH_METHOD(log)
+ML_MATH_METHOD(sin)
+ML_MATH_METHOD(cos)
+ML_MATH_METHOD(tan)
+ML_MATH_METHOD(asin)
+ML_MATH_METHOD(acos)
+ML_MATH_METHOD(atan)
+ML_MATH_METHOD(floor)
+ML_MATH_METHOD(abs)
 
 ML_METHOD("sup", BasicSetT) {
 	basic_t *A = (basic_t *)Args[0];

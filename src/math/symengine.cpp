@@ -195,6 +195,24 @@ ML_METHOD("diff", BasicT, MLStringT) {
 	return (ml_value_t *)C;
 }
 
+ML_METHOD("math::sqrt", BasicT) {
+	basic_t *A = (basic_t *)Args[0];
+	basic_t *C = new basic_t(function_symbol("sqrt", A->Value));
+	return (ml_value_t *)C;
+}
+
+ML_METHOD("math::exp", BasicT) {
+	basic_t *A = (basic_t *)Args[0];
+	basic_t *C = new basic_t(function_symbol("exp", A->Value));
+	return (ml_value_t *)C;
+}
+
+ML_METHOD("math::log", BasicT) {
+	basic_t *A = (basic_t *)Args[0];
+	basic_t *C = new basic_t(function_symbol("log", A->Value));
+	return (ml_value_t *)C;
+}
+
 ML_METHOD("sup", BasicSetT) {
 	basic_t *A = (basic_t *)Args[0];
 	basic_t *C = new basic_t(sup(*static_cast<const Set *>(A->Value.get())));

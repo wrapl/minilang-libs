@@ -524,78 +524,17 @@ ML_FUNCTIONX(SumUpdate) {
 	return ml_call(Caller, AddMethod, 2, Args);
 }
 
-typedef struct {
-	ml_state_t Base;
-	union { ml_value_t *SumX2; ml_value_t *MeanX2; };
-	union { ml_value_t *SumX; ml_value_t *Mean2X; };
-	ml_value_t *Count;
-	ml_value_t *Args[2];
-	int Sqrt;
-} stddev_state_t;
+ML_MINI_FUNCTION(StdDev, ("SumX2", "SumX", "Count"),
+	"let MeanX2 := SumX2 / Count\n"
+	"let MeanX := SumX / Count\n"
+	"ret math::sqrt(MeanX2 - (MeanX * MeanX))"
+)
 
-static void stddev_variance(stddev_state_t *State, ml_value_t *Value) {
-	if (ml_is_error(Value)) ML_CONTINUE(State->Base.Caller, Value);
-	State->Args[0] = Value;
-	return ml_call(State->Base.Caller, SqrtMethod, 1, State->Args);
-}
-
-static void stddev_meanx2(stddev_state_t *State, ml_value_t *Value) {
-	if (ml_is_error(Value)) ML_CONTINUE(State->Base.Caller, Value);
-	State->Base.run = (ml_state_fn)stddev_variance;
-	State->Args[0] = Value;
-	State->Args[1] = State->Mean2X;
-	if (State->Sqrt) {
-		return ml_call(State, SubMethod, 2, State->Args);
-	} else {
-		return ml_call(State->Base.Caller, SubMethod, 2, State->Args);
-	}
-}
-
-static void stddev_mean2x(stddev_state_t *State, ml_value_t *Value) {
-	if (ml_is_error(Value)) ML_CONTINUE(State->Base.Caller, Value);
-	State->Mean2X = Value;
-	State->Base.run = (ml_state_fn)stddev_meanx2;
-	State->Args[0] = State->SumX2;
-	State->Args[1] = State->Count;
-	return ml_call(State, DivMethod, 2, State->Args);
-}
-
-static void stddev_meanx(stddev_state_t *State, ml_value_t *Value) {
-	if (ml_is_error(Value)) ML_CONTINUE(State->Base.Caller, Value);
-	State->Base.run = (ml_state_fn)stddev_mean2x;
-	State->Args[0] = Value;
-	State->Args[1] = Value;
-	return ml_call(State, MulMethod, 2, State->Args);
-}
-
-ML_FUNCTIONX(StdDev) {
-	ML_CHECKX_ARG_COUNT(3);
-	stddev_state_t *State = new(stddev_state_t);
-	State->Base.Caller = Caller;
-	State->Base.Context = Caller->Context;
-	State->Base.run = (ml_state_fn)stddev_meanx;
-	State->Sqrt = 1;
-	State->SumX2 = Args[0];
-	State->SumX = Args[1];
-	State->Count = Args[2];
-	State->Args[0] = State->SumX;
-	State->Args[1] = State->Count;
-	return ml_call(State, DivMethod, 2, State->Args);
-}
-
-ML_FUNCTIONX(Variance) {
-	ML_CHECKX_ARG_COUNT(3);
-	stddev_state_t *State = new(stddev_state_t);
-	State->Base.Caller = Caller;
-	State->Base.Context = Caller->Context;
-	State->Base.run = (ml_state_fn)stddev_meanx;
-	State->SumX2 = Args[0];
-	State->SumX = Args[1];
-	State->Count = Args[2];
-	State->Args[0] = State->SumX;
-	State->Args[1] = State->Count;
-	return ml_call(State, DivMethod, 2, State->Args);
-}
+ML_MINI_FUNCTION(Variance, ("SumX2", "SumX", "Count"),
+	"let MeanX2 := SumX2 / Count\n"
+	"let MeanX := SumX / Count\n"
+	"ret MeanX2 - (MeanX * MeanX)"
+)
 
 ML_FUNCTIONX(Inverse) {
 	ML_CHECKX_ARG_COUNT(1);
@@ -646,6 +585,25 @@ ML_FUNCTION(Second) {
 	return ml_unpack(Args[0], 2);
 }
 
+ML_MINI_FUNCTION(Correlation, ("SumA", "SumB", "SumAB", "SumA2", "SumB2", "Count"),
+	"let EAB := SumAB / Count\n"
+	"let EA := SumA / Count\n"
+	"let EB := SumB / Count\n"
+	"let EA2 := SumA2 / Count\n"
+	"let EB2 := SumB2 / Count\n"
+	"let CovAB := EAB - (EA * EB)\n"
+	"let StdA := math::sqrt(EA2 - (EA * EA))\n"
+	"let StdB := math::sqrt(EB2 - (EB * EB))\n"
+	"ret CovAB / StdA / StdB"
+)
+
+ML_MINI_FUNCTION(Covariance, ("SumA", "SumB", "SumAB", "Count"),
+	"let EAB := SumAB / Count\n"
+	"let EA := SumA / Count\n"
+	"let EB := SumB / Count\n"
+	"ret EAB - (EA * EB)\n"
+)
+
 ML_LIBRARY_ENTRY0(math_stat) {
 #include "stat_init.c"
 	calculator_t *X2 = calculator(MulMethod, 2, X, X);
@@ -680,8 +638,8 @@ ML_LIBRARY_ENTRY0(math_stat) {
 	accumulator_t *SumAB = accumulator(ml_integer(0), (ml_value_t *)SumUpdate, ml_integer(1), 1, AB);
 	Slot[0] = ml_module("stat",
 		"mean", statistic(DivMethod, 2, SumX, Count),
-		"stddev", statistic((ml_value_t *)StdDev, 3, SumX2, SumX, Count),
-		"variance", statistic((ml_value_t *)Variance, 3, SumX2, SumX, Count),
+		"stddev", statistic(StdDev, 3, SumX2, SumX, Count),
+		"variance", statistic(Variance, 3, SumX2, SumX, Count),
 		"min", statistic(ml_integer(1), 1, Min),
 		"max", statistic(ml_integer(1), 1, Max),
 		"weighted_mean", statistic(DivMethod, 2, SumWX, SumW),
@@ -691,5 +649,7 @@ ML_LIBRARY_ENTRY0(math_stat) {
 		"geometric_mean", statistic(ml_chainedv(2, DivMethod, ExpMethod), 2, SumLogX, Count),
 		"p", Percentile,
 		"median", statistic(ml_cfunctionx(ml_real(50.0), percentile), 1, AllX),
+		"correlation", statistic(Correlation, 6, SumA, SumB, SumAB, SumA2, SumB2, Count),
+		"covariance", statistic(Covariance, 4, SumA, SumB, SumAB, Count),
 	NULL);
 }

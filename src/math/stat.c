@@ -588,7 +588,7 @@ ML_FUNCTION(Second) {
 
 ML_MINI_FUNCTION(Correlation, ("SumXY", "SumX", "Count"),
 	"let Degree := SumX:shape[1]\n"
-	"let SumX2 := type(SumX)([Degree]; I) SumXY[I, I]\n"
+	"let SumX2 := SumXY:diag\n"
 	"let StdDevX := math::sqrt((Count * SumX2) - (SumX * SumX))\n"
 	"let StdDev := StdDevX ** StdDevX\n"
 	"let Covar := (Count * SumXY) - (SumX ** SumX)\n"

@@ -508,6 +508,7 @@ ML_METHOD_DECL(MaxMethod, "max");
 ML_METHOD_DECL(PutMethod, "put");
 ML_METHOD_DECL(SortMethod, "sort");
 ML_METHOD_DECL(DotMethod, ".");
+ML_METHOD_DECL(MulMulMethod, "**");
 
 ML_FUNCTION(CountInit) {
 	return ml_integer(0);
@@ -585,23 +586,13 @@ ML_FUNCTION(Second) {
 	return ml_unpack(Args[0], 2);
 }
 
-ML_MINI_FUNCTION(Correlation, ("SumA", "SumB", "SumAB", "SumA2", "SumB2", "Count"),
-	"let EAB := SumAB / Count\n"
-	"let EA := SumA / Count\n"
-	"let EB := SumB / Count\n"
-	"let EA2 := SumA2 / Count\n"
-	"let EB2 := SumB2 / Count\n"
-	"let CovAB := EAB - (EA * EB)\n"
-	"let StdA := math::sqrt(EA2 - (EA * EA))\n"
-	"let StdB := math::sqrt(EB2 - (EB * EB))\n"
-	"ret CovAB / StdA / StdB"
-)
-
-ML_MINI_FUNCTION(Covariance, ("SumA", "SumB", "SumAB", "Count"),
-	"let EAB := SumAB / Count\n"
-	"let EA := SumA / Count\n"
-	"let EB := SumB / Count\n"
-	"ret EAB - (EA * EB)\n"
+ML_MINI_FUNCTION(Correlation, ("SumXY", "SumX", "Count"),
+	"let Degree := SumX:shape[1]\n"
+	"let SumX2 := type(SumX)([Degree]; I) SumXY[I, I]\n"
+	"let StdDevX := math::sqrt((Count * SumX2) - (SumX * SumX))\n"
+	"let StdDev := StdDevX ** StdDevX\n"
+	"let Covar := (Count * SumXY) - (SumX ** SumX)\n"
+	"ret Covar / StdDev\n"
 )
 
 ML_LIBRARY_ENTRY0(math_stat) {
@@ -626,16 +617,8 @@ ML_LIBRARY_ENTRY0(math_stat) {
 	calculator_t *LogX = calculator(LogMethod, 1, X);
 	accumulator_t *SumLogX = accumulator(ml_integer(0), (ml_value_t *)SumUpdate, ml_integer(1), 1, LogX);
 	AllX = accumulator((ml_value_t *)MLSliceT, PutMethod, SortMethod, 1, X);
-	calculator_t *A = calculator((ml_value_t *)First, 1, X);
-	calculator_t *B = calculator((ml_value_t *)Second, 1, X);
-	accumulator_t *SumA = accumulator(ml_integer(0), (ml_value_t *)SumUpdate, ml_integer(1), 1, A);
-	accumulator_t *SumB = accumulator(ml_integer(0), (ml_value_t *)SumUpdate, ml_integer(1), 1, B);
-	calculator_t *A2 = calculator(MulMethod, 2, A, A);
-	calculator_t *B2 = calculator(MulMethod, 2, B, B);
-	calculator_t *AB = calculator(MulMethod, 2, A, B);
-	accumulator_t *SumA2 = accumulator(ml_integer(0), (ml_value_t *)SumUpdate, ml_integer(1), 1, A2);
-	accumulator_t *SumB2 = accumulator(ml_integer(0), (ml_value_t *)SumUpdate, ml_integer(1), 1, B2);
-	accumulator_t *SumAB = accumulator(ml_integer(0), (ml_value_t *)SumUpdate, ml_integer(1), 1, AB);
+	calculator_t *XY = calculator(MulMulMethod, 2, X, X);
+	accumulator_t *SumXY = accumulator(ml_integer(0), (ml_value_t *)SumUpdate, ml_integer(1), 1, XY);
 	Slot[0] = ml_module("stat",
 		"mean", statistic(DivMethod, 2, SumX, Count),
 		"stddev", statistic(StdDev, 3, SumX2, SumX, Count),
@@ -649,7 +632,7 @@ ML_LIBRARY_ENTRY0(math_stat) {
 		"geometric_mean", statistic(ml_chainedv(2, DivMethod, ExpMethod), 2, SumLogX, Count),
 		"p", Percentile,
 		"median", statistic(ml_cfunctionx(ml_real(50.0), percentile), 1, AllX),
-		"correlation", statistic(Correlation, 6, SumA, SumB, SumAB, SumA2, SumB2, Count),
-		"covariance", statistic(Covariance, 4, SumA, SumB, SumAB, Count),
+		"correlation", statistic(Correlation, 3, SumXY, SumX, Count),
+		"meanxy", statistic(DivMethod, 2, SumXY, Count),
 	NULL);
 }

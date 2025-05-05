@@ -179,7 +179,7 @@ static statistic_t *statistic(ml_value_t *Fn, int Count, ...) {
 	Stat->NumAccs = Accs->Num;
 	Stat->NumStats = Stats->Num;
 	Stat->ConfigSize = Count + Stats->ConfigSize + Accs->ConfigSize + Calcs->ConfigSize;
-	Stat->Rank = Rank;
+	Stat->Rank = Rank + 1;
 	return Stat;
 }
 
@@ -209,7 +209,7 @@ static void statistics_statistic(statistics_state_t *State, ml_value_t *Value) {
 		for (int I = 0; I < Stat->NumDepends; ++I) {
 			State->Args[I] = State->AccValues[Config[I]];
 		}
-		return ml_call(State, Stat->Calc, Stat->NumAccs, State->Args);
+		return ml_call(State, Stat->Calc, Stat->NumDepends, State->Args);
 	}
 	if (!State->Count) ML_CONTINUE(State->Base.Caller, State->StatValues[0]);
 	ml_value_t *Result = ml_list();
@@ -244,7 +244,7 @@ static void statistics_calculator_calc(statistics_state_t *State, ml_value_t *Va
 	if (ml_is_error(Value)) ML_CONTINUE(State->Base.Caller, Value);
 	int Index = State->Index;
 	State->CalcValues[Index] = Value;
-	if (Index > 2) {
+	if (Index) {
 		State->Index = --Index;
 		calculator_t *Calc = State->Calcs[Index];
 		int *Config = State->Configs + State->CalcConfigs[Index];
@@ -274,10 +274,11 @@ static void statistics_iterate(statistics_state_t *State, ml_value_t *Value) {
 			State->Args[I] = State->AccValues[Config[I]];
 		}
 		State->Base.run = (ml_state_fn)statistics_statistic;
-		return ml_call(State, Stat->Calc, Stat->NumAccs, State->Args);
+		return ml_call(State, Stat->Calc, Stat->NumDepends, State->Args);
 	}
+	State->Iter = Value;
 	int Index = State->Index = State->NumCalcs - 1;
-	if (Index > 1) {
+	if (Index >= 0) {
 		calculator_t *Calc = State->Calcs[Index];
 		int *Config = State->Configs + State->CalcConfigs[Index];
 		for (int I = 0; I < Calc->NumDepends; ++I) {
@@ -332,7 +333,7 @@ static int statistics_compare(const void *A, const void *B) {
 static __attribute__ ((noinline)) statistics_state_t *statistics_prepare(ml_value_t *Arg) {
 	int Length = ml_list_length(Arg);
 	if (!Length) return NULL;
-	int MaxStats = Length, MaxAccs = 0, MaxCalcs = 2;
+	int MaxStats = Length, MaxAccs = 0, MaxCalcs = 0;
 	ML_LIST_FOREACH(Arg, Iter) {
 		statistic_t *Stat = (statistic_t *)Iter->Value;
 		MaxStats += Stat->NumStats;
@@ -343,7 +344,7 @@ static __attribute__ ((noinline)) statistics_state_t *statistics_prepare(ml_valu
 	ML_LIST_FOREACH(Arg, Iter) *StatSlot++ = (statistic_t *)Iter->Value;
 	accumulator_t **Accs = anew(accumulator_t *, MaxAccs);
 	calculator_t **Calcs = anew(calculator_t *, MaxCalcs);
-	int NumStats = Length, NumAccs = 0, NumCalcs = 0, MaxArgs = 1, ConfigSize = Length + 2;
+	int NumStats = Length, NumAccs = 0, NumCalcs = 0, MaxArgs = 1, ConfigSize = Length;
 	for (int I = 0; I < Length; ++I) {
 		statistic_t *Stat = Stats[I];
 		ConfigSize += 1 + Stat->NumDepends;
@@ -375,7 +376,6 @@ static __attribute__ ((noinline)) statistics_state_t *statistics_prepare(ml_valu
 	}
 	qsort(Calcs, NumCalcs, sizeof(calculator_t *), calculators_compare);
 	qsort(Stats, NumStats, sizeof(statistic_t *), statistics_compare);
-	asm("int3");
 	int *Configs = anew(int, ConfigSize), *Config0 = Configs;
 	ML_LIST_FOREACH(Arg, Iter) {
 		statistic_t *Stat = (statistic_t *)Iter->Value;
@@ -427,7 +427,7 @@ static __attribute__ ((noinline)) statistics_state_t *statistics_prepare(ml_valu
 				accumulator_t *Acc = (accumulator_t *)Dep;
 				for (int K = 0; K < NumAccs; ++K) {
 					if (Accs[K] == Acc) {
-						*Config1++ = NumCalcs + K;
+						*Config1++ = K;
 						break;
 					}
 				}
@@ -435,7 +435,7 @@ static __attribute__ ((noinline)) statistics_state_t *statistics_prepare(ml_valu
 				statistic_t *Stat2 = (statistic_t *)Dep;
 				for (int K = 0; K < NumStats; ++K) {
 					if (Stats[K] == Stat2) {
-						*Config1++ = NumCalcs + NumAccs + K;
+						*Config1++ = NumAccs + K;
 						break;
 					}
 				}
@@ -529,13 +529,7 @@ ML_FUNCTIONX(SumUpdate) {
 	return ml_call(Caller, AddMethod, 2, Args);
 }
 
-ML_MINI_FUNCTION(StdDev, ("SumX2", "SumX", "Count"),
-	"let MeanX2 := SumX2 / Count\n"
-	"let MeanX := SumX / Count\n"
-	"ret math::sqrt(MeanX2 - (MeanX * MeanX))"
-)
-
-ML_MINI_FUNCTION(Variance, ("SumX2", "SumX", "Count"),
+ML_MINI_FUNCTION(VarianceFunc, ("SumX2", "SumX", "Count"),
 	"let MeanX2 := SumX2 / Count\n"
 	"let MeanX := SumX / Count\n"
 	"ret MeanX2 - (MeanX * MeanX)"
@@ -590,12 +584,13 @@ ML_FUNCTION(Second) {
 	return ml_unpack(Args[0], 2);
 }
 
-ML_MINI_FUNCTION(Correlation, ("SumXY", "SumX", "Count"),
+ML_MINI_FUNCTION(CovarianceFunc, ("SumXY", "SumX", "Count"), "(Count * SumXY) - (SumX ** SumX)")
+
+ML_MINI_FUNCTION(CorrelationFunc, ("SumXY", "SumX", "Count", "Covar"),
 	"let Degree := SumX:shape[1]\n"
 	"let SumX2 := SumXY:diag\n"
 	"let StdDevX := math::sqrt((Count * SumX2) - (SumX * SumX))\n"
 	"let StdDev := StdDevX ** StdDevX\n"
-	"let Covar := (Count * SumXY) - (SumX ** SumX)\n"
 	"ret Covar / StdDev\n"
 )
 
@@ -625,20 +620,24 @@ ML_LIBRARY_ENTRY0(math_stat) {
 	AllX = accumulator((ml_value_t *)MLSliceT, PutMethod, 1, X);
 	calculator_t *XY = calculator(MulMulMethod, 2, X, X);
 	accumulator_t *SumXY = accumulator(ml_integer(0), (ml_value_t *)SumUpdate, 1, XY);
+	statistic_t *Variance = statistic((ml_value_t *)VarianceFunc, 3, SumX2, SumX, Count);
+	statistic_t *WeightedVariance = statistic((ml_value_t *)VarianceFunc, 3, SumWX2, SumWX, SumW);
+	statistic_t *Covariance = statistic(CovarianceFunc, 3, SumXY, SumX, Count);
 	Slot[0] = ml_module("stat",
 		"mean", statistic(DivMethod, 2, SumX, Count),
-		"stddev", statistic(StdDev, 3, SumX2, SumX, Count),
-		"variance", statistic(Variance, 3, SumX2, SumX, Count),
+		"variance", Variance,
+		"stddev", statistic(SqrtMethod, 1, Variance),
 		"min", statistic(ml_integer(1), 1, Min),
 		"max", statistic(ml_integer(1), 1, Max),
 		"weighted_mean", statistic(DivMethod, 2, SumWX, SumW),
-		"weighted_stddev", statistic((ml_value_t *)StdDev, 3, SumWX2, SumWX, SumW),
-		"weighted_variance", statistic((ml_value_t *)Variance, 3, SumWX2, SumWX, SumW),
+		"weighted_variance", WeightedVariance,
+		"weighted_stddev", statistic(SqrtMethod, 1, WeightedVariance),
 		"harmonic_mean", statistic(MulMethod, 2, Count, SumIX),
 		"geometric_mean", statistic(ml_chainedv(2, DivMethod, ExpMethod), 2, SumLogX, Count),
 		"p", Percentile,
 		"median", statistic(ml_cfunctionx(ml_real(50.0), percentile), 1, AllX),
-		"correlation", statistic(Correlation, 3, SumXY, SumX, Count),
+		"covariance", Covariance,
+		"correlation", statistic(CorrelationFunc, 4, SumXY, SumX, Count, Covariance),
 		"meanxy", statistic(DivMethod, 2, SumXY, Count),
 	NULL);
 }

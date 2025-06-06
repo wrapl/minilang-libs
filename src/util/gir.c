@@ -1694,18 +1694,24 @@ int ml_gir_queue_fill(gir_scheduler_t *Scheduler) {
 	return ml_scheduler_queue_fill(Scheduler->Queue);
 }
 
-static ptrset_t SleepSet[1] = {PTRSET_INIT};
+typedef struct {
+	ml_state_t *State;
+	ml_value_t *Result;
+} ml_gir_sleep_t;
 
 static gboolean sleep_run(void *Data) {
-	ptrset_remove(SleepSet, Data);
-	ml_state_schedule((ml_state_t *)Data, MLNil);
+	ml_gir_sleep_t *Sleep = (ml_gir_sleep_t *)Data;
+	ml_state_schedule(Sleep->State, Sleep->Result);
+	GC_free(Sleep);
 	return G_SOURCE_REMOVE;
 }
 
-void ml_gir_queue_sleep(gir_scheduler_t *Scheduler, ml_state_t *State, const struct timespec Duration) {
-	ptrset_insert(SleepSet, State);
-	guint Interval = (Duration.tv_sec * 1000) + (Duration.tv_nsec / 1000000);
-	g_timeout_add(Interval, sleep_run, State);
+void ml_gir_queue_sleep(gir_scheduler_t *Scheduler, ml_state_t *State, double Duration, ml_value_t *Result) {
+	ml_gir_sleep_t *Sleep = GC_malloc_uncollectable(sizeof(ml_gir_sleep_t));
+	Sleep->State = State;
+	Sleep->Result = Result;
+	guint Interval = Duration * 1000;
+	g_timeout_add(Interval, sleep_run, Sleep);
 }
 
 static gir_scheduler_t *gir_scheduler(ml_context_t *Context) {
@@ -1725,8 +1731,10 @@ ML_FUNCTIONX(MLSleep) {
 	ML_CHECKX_ARG_COUNT(1);
 	ML_CHECKX_ARG_TYPE(0, MLNumberT);
 	guint Interval = ml_real_value(Args[0]) * 1000;
-	ptrset_insert(SleepSet, Caller);
-	g_timeout_add(Interval, sleep_run, Caller);
+	ml_gir_sleep_t *Sleep = GC_malloc_uncollectable(sizeof(ml_gir_sleep_t));
+	Sleep->State = Caller;
+	Sleep->Result = (Count > 1) ? Args[1] : MLNil;
+	g_timeout_add(Interval, sleep_run, Sleep);
 }
 
 ML_FUNCTIONX(GirInstall) {

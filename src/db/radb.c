@@ -47,7 +47,7 @@ ML_FUNCTION(FixedStoreCreate) {
 	size_t ChunkSize = 0;
 	ml_fixed_store_t *Store = new(ml_fixed_store_t);
 	Store->Type = FixedStoreT;
-	Store->Handle = fixed_store_create(ml_string_value(Args[0]), ml_integer_value_fast(Args[1]), ChunkSize);
+	Store->Handle = fixed_store_create(ml_string_value(Args[0]), ml_integer_value(Args[1]), ChunkSize);
 	CHECK_HANDLE(Store);
 	return (ml_value_t *)Store;
 }
@@ -76,7 +76,7 @@ ML_METHOD("get", FixedStoreT, MLIntegerT) {
 // Returns the entry at :mini:`Index` in :mini:`Store`.
 	ml_fixed_store_t *Store = (ml_fixed_store_t *)Args[0];
 	CHECK_HANDLE(Store);
-	size_t Index = ml_integer_value_fast(Args[1]);
+	size_t Index = ml_integer_value(Args[1]);
 	void *Value = fixed_store_get(Store->Handle, Index);
 	size_t Length = fixed_store_node_size(Store->Handle);
 	return ml_buffer(Value, Length);
@@ -124,11 +124,11 @@ ML_FUNCTION(StringStoreCreate) {
 	size_t ChunkSize = 0;
 	if (Count > 2) {
 		ML_CHECK_ARG_TYPE(2, MLIntegerT);
-		ChunkSize = ml_integer_value_fast(Args[2]);
+		ChunkSize = ml_integer_value(Args[2]);
 	}
 	ml_string_store_t *Store = new(ml_string_store_t);
 	Store->Type = StringStoreT;
-	Store->Handle = string_store_create(ml_string_value(Args[0]), ml_integer_value_fast(Args[1]), ChunkSize);
+	Store->Handle = string_store_create(ml_string_value(Args[0]), ml_integer_value(Args[1]), ChunkSize);
 	CHECK_HANDLE(Store);
 	return (ml_value_t *)Store;
 }
@@ -157,7 +157,7 @@ ML_METHOD("get", StringStoreT, MLIntegerT) {
 // Returns the entry at :mini:`Index` in :mini:`Store`.
 	ml_string_store_t *Store = (ml_string_store_t *)Args[0];
 	CHECK_HANDLE(Store);
-	size_t Index = ml_integer_value_fast(Args[1]);
+	size_t Index = ml_integer_value(Args[1]);
 	size_t Length = string_store_size(Store->Handle, Index);
 	if (Length == INVALID_INDEX) return ml_error("IndexError", "Invalid index");
 	char *Value = snew(Length + 1);
@@ -174,7 +174,7 @@ ML_METHOD("set", StringStoreT, MLIntegerT, MLAddressT) {
 // Stores :mini:`Value` as the entry at :mini:`Index` in :mini:`Store` and returns :mini:`Value`.
 	ml_string_store_t *Store = (ml_string_store_t *)Args[0];
 	CHECK_HANDLE(Store);
-	size_t Index = ml_integer_value_fast(Args[1]);
+	size_t Index = ml_integer_value(Args[1]);
 	string_store_set(Store->Handle, Index, ml_address_value(Args[2]), ml_address_length(Args[2]));
 	return Args[2];
 }
@@ -192,7 +192,7 @@ ML_METHOD("write", StringStoreT, MLIntegerT) {
 	CHECK_HANDLE(Store);
 	ml_string_store_writer_t *Writer = new(ml_string_store_writer_t);
 	Writer->Type = StringStoreWriterT;
-	string_store_writer_open(Writer->Handle, Store->Handle, ml_integer_value_fast(Args[1]));
+	string_store_writer_open(Writer->Handle, Store->Handle, ml_integer_value(Args[1]));
 	return (ml_value_t *)Writer;
 }
 
@@ -201,7 +201,7 @@ ML_METHOD("append", StringStoreT, MLIntegerT) {
 	CHECK_HANDLE(Store);
 	ml_string_store_writer_t *Writer = new(ml_string_store_writer_t);
 	Writer->Type = StringStoreWriterT;
-	string_store_writer_append(Writer->Handle, Store->Handle, ml_integer_value_fast(Args[1]));
+	string_store_writer_append(Writer->Handle, Store->Handle, ml_integer_value(Args[1]));
 	return (ml_value_t *)Writer;
 }
 
@@ -218,31 +218,31 @@ ML_METHOD("read", StringStoreT, MLIntegerT) {
 	CHECK_HANDLE(Store);
 	ml_string_store_reader_t *Reader = new(ml_string_store_reader_t);
 	Reader->Type = StringStoreReaderT;
-	string_store_reader_open(Reader->Handle, Store->Handle, ml_integer_value_fast(Args[1]));
+	string_store_reader_open(Reader->Handle, Store->Handle, ml_integer_value(Args[1]));
 	return (ml_value_t *)Reader;
 }
 
 ML_METHOD("search", StringStoreT, MLIntegerT, MLIntegerT) {
 	ml_string_store_t *Store = (ml_string_store_t *)Args[0];
 	CHECK_HANDLE(Store);
-	size_t Index = ml_integer_value_fast(Args[1]);
-	uint32_t Value = ml_integer_value_fast(Args[2]);
+	size_t Index = ml_integer_value(Args[1]);
+	uint32_t Value = ml_integer_value(Args[2]);
 	return string_store_value_search_uint32(Store->Handle, Index, Value) ? MLSome : MLNil;
 }
 
 ML_METHOD("insert", StringStoreT, MLIntegerT, MLIntegerT) {
 	ml_string_store_t *Store = (ml_string_store_t *)Args[0];
 	CHECK_HANDLE(Store);
-	size_t Index = ml_integer_value_fast(Args[1]);
-	uint32_t Value = ml_integer_value_fast(Args[2]);
+	size_t Index = ml_integer_value(Args[1]);
+	uint32_t Value = ml_integer_value(Args[2]);
 	return string_store_value_insert_uint32(Store->Handle, Index, Value) ? MLSome : MLNil;
 }
 
 ML_METHOD("remove", StringStoreT, MLIntegerT, MLIntegerT) {
 	ml_string_store_t *Store = (ml_string_store_t *)Args[0];
 	CHECK_HANDLE(Store);
-	size_t Index = ml_integer_value_fast(Args[1]);
-	uint32_t Value = ml_integer_value_fast(Args[2]);
+	size_t Index = ml_integer_value(Args[1]);
+	uint32_t Value = ml_integer_value(Args[2]);
 	return string_store_value_remove_uint32(Store->Handle, Index, Value) ? MLSome : MLNil;
 }
 
@@ -265,11 +265,11 @@ ML_FUNCTION(CborStoreCreate) {
 	size_t ChunkSize = 0;
 	if (Count > 2) {
 		ML_CHECK_ARG_TYPE(2, MLIntegerT);
-		ChunkSize = ml_integer_value_fast(Args[2]);
+		ChunkSize = ml_integer_value(Args[2]);
 	}
 	ml_string_store_t *Store = new(ml_string_store_t);
 	Store->Type = CborStoreT;
-	Store->Handle = string_store_create(ml_string_value(Args[0]), ml_integer_value_fast(Args[1]), ChunkSize);
+	Store->Handle = string_store_create(ml_string_value(Args[0]), ml_integer_value(Args[1]), ChunkSize);
 	CHECK_HANDLE(Store);
 	return (ml_value_t *)Store;
 }
@@ -292,7 +292,7 @@ ML_METHOD("close", CborStoreT) {
 ML_METHOD("get", CborStoreT, MLIntegerT) {
 	ml_string_store_t *Store = (ml_string_store_t *)Args[0];
 	CHECK_HANDLE(Store);
-	size_t Index = ml_integer_value_fast(Args[1]);
+	size_t Index = ml_integer_value(Args[1]);
 	size_t Length = string_store_size(Store->Handle, Index);
 	if (Length == INVALID_INDEX) return ml_error("IndexError", "Invalid index");
 	ml_cbor_reader_t *Cbor = ml_cbor_reader(NULL, NULL, NULL);
@@ -310,7 +310,7 @@ ML_METHOD("get", CborStoreT, MLIntegerT) {
 ML_METHOD("set", CborStoreT, MLIntegerT, MLAnyT) {
 	ml_string_store_t *Store = (ml_string_store_t *)Args[0];
 	CHECK_HANDLE(Store);
-	size_t Index = ml_integer_value_fast(Args[1]);
+	size_t Index = ml_integer_value(Args[1]);
 	string_store_writer_t Writer[1];
 	string_store_writer_open(Writer, Store->Handle, Index);
 	ml_value_t *Error = ml_cbor_encode_to(Writer, (void *)string_store_writer_write, NULL, Args[2]);
@@ -348,7 +348,7 @@ ML_FUNCTION(StringIndexCreate) {
 	size_t ChunkSize = 0;
 	if (Count > 1) {
 		ML_CHECK_ARG_TYPE(2, MLIntegerT);
-		ChunkSize = ml_integer_value_fast(Args[1]);
+		ChunkSize = ml_integer_value(Args[1]);
 	}
 	const char *Prefix = ml_string_value(Args[0]);
 	string_store_t *Values = string_store_create(Prefix, 16, ChunkSize);
@@ -449,7 +449,7 @@ ML_METHOD("delete", StringIndexT, MLAddressT) {
 ML_METHOD("get", StringIndexT, MLIntegerT) {
 	ml_string_index_t *Store = (ml_string_index_t *)Args[0];
 	CHECK_HANDLE(Store);
-	size_t Index = ml_integer_value_fast(Args[1]);
+	size_t Index = ml_integer_value(Args[1]);
 	size_t Size = string_store_size(Store->Values, Index);
 	char *Value = snew(Size + 1);
 	string_store_get(Store->Values, Index, Value, Size);

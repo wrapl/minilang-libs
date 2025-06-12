@@ -121,9 +121,12 @@ ML_VALUE(GirModule, GirModuleT);
 
 ML_METHOD("::", GirModuleT, MLStringT) {
 	static stringmap_t Cache[1] = {STRINGMAP_INIT};
-	ml_value_t **Slot = (ml_value_t **)stringmap_slot(Cache, ml_string_value(Args[1]));
+	const char *Name0 = ml_string_value(Args[1]);
+	ml_value_t *Value = stringmap_search(GirModuleT->Exports, Name0);
+	if (Value) return Value;
+	ml_value_t **Slot = (ml_value_t **)stringmap_slot(Cache, Name0);
 	if (!Slot[0]) {
-		char *Name = GC_strdup(ml_string_value(Args[1]));
+		char *Name = GC_strdup(Name0);
 		char *Version = strchr(Name, '@');
 		if (Version) *Version++ = 0;
 		Slot[0] = ml_gir_typelib(Name, Version);
@@ -1691,23 +1694,36 @@ int ml_gir_queue_fill(gir_scheduler_t *Scheduler) {
 	return ml_scheduler_queue_fill(Scheduler->Queue);
 }
 
+typedef struct {
+	ml_state_t *State;
+	ml_value_t *Result;
+} ml_gir_sleep_t;
+
+static gboolean sleep_run(void *Data) {
+	ml_gir_sleep_t *Sleep = (ml_gir_sleep_t *)Data;
+	ml_state_schedule(Sleep->State, Sleep->Result);
+	GC_free(Sleep);
+	return G_SOURCE_REMOVE;
+}
+
+void ml_gir_queue_sleep(gir_scheduler_t *Scheduler, ml_state_t *State, double Duration, ml_value_t *Result) {
+	ml_gir_sleep_t *Sleep = GC_malloc_uncollectable(sizeof(ml_gir_sleep_t));
+	Sleep->State = State;
+	Sleep->Result = Result;
+	guint Interval = Duration * 1000;
+	g_timeout_add(Interval, sleep_run, Sleep);
+}
+
 static gir_scheduler_t *gir_scheduler(ml_context_t *Context) {
 	gir_scheduler_t *Scheduler = new(gir_scheduler_t);
 	Scheduler->Base.add = (ml_scheduler_add_fn)ml_gir_queue_add;
 	Scheduler->Base.run = (ml_scheduler_run_fn)ml_gir_queue_run;
 	Scheduler->Base.fill = (ml_scheduler_fill_fn)ml_gir_queue_fill;
+	Scheduler->Base.sleep = (ml_scheduler_sleep_fn)ml_gir_queue_sleep;
 	Scheduler->Queue = ml_default_queue_init(Context, 256);
 	Scheduler->MainContext = g_main_context_default();
 	ml_context_set_static(Context, ML_SCHEDULER_INDEX, Scheduler);
 	return Scheduler;
-}
-
-static ptrset_t SleepSet[1] = {PTRSET_INIT};
-
-static gboolean sleep_run(void *Data) {
-	ptrset_remove(SleepSet, Data);
-	ml_state_schedule((ml_state_t *)Data, MLNil);
-	return G_SOURCE_REMOVE;
 }
 
 ML_FUNCTIONX(MLSleep) {
@@ -1715,8 +1731,10 @@ ML_FUNCTIONX(MLSleep) {
 	ML_CHECKX_ARG_COUNT(1);
 	ML_CHECKX_ARG_TYPE(0, MLNumberT);
 	guint Interval = ml_real_value(Args[0]) * 1000;
-	ptrset_insert(SleepSet, Caller);
-	g_timeout_add(Interval, sleep_run, Caller);
+	ml_gir_sleep_t *Sleep = GC_malloc_uncollectable(sizeof(ml_gir_sleep_t));
+	Sleep->State = Caller;
+	Sleep->Result = (Count > 1) ? Args[1] : MLNil;
+	g_timeout_add(Interval, sleep_run, Sleep);
 }
 
 ML_FUNCTIONX(GirInstall) {

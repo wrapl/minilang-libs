@@ -132,7 +132,7 @@ static void ML_TYPED_FN(ml_cbor_write, MLBitsetT, ml_cbor_writer_t *Writer, bits
 	ml_cbor_write_raw(Writer, Bytes, Size);
 }
 
-ML_FUNCTION(DecodeBitset) {
+static ml_value_t *decode_bitset(ml_cbor_reader_t *Reader, int Count, ml_value_t **Args) {
 	ML_CHECK_ARG_COUNT(1);
 	ML_CHECK_ARG_TYPE(0, MLAddressT);
 	roaring_bitmap_t *Value = roaring_bitmap_portable_deserialize_safe(ml_address_value(Args[0]), ml_address_length(Args[0]));
@@ -145,6 +145,6 @@ ML_FUNCTION(DecodeBitset) {
 
 ML_LIBRARY_ENTRY0(util_bitset) {
 #include "bitset_init.c"
-	ml_cbor_default_object("bitset", (ml_value_t *)DecodeBitset);
+	ml_cbor_default_object("bitset", decode_bitset);
 	Slot[0] = (ml_value_t *)MLBitsetT;
 }

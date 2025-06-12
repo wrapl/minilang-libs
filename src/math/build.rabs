@@ -1,2 +1,7 @@
 so_module("math/dist.so", [file("dist.o")])
-:>so_module("math/stat.so", [file("stat.o")])
+so_module("math/stat.so", [file("stat.o")])
+
+scope("symengine";) do
+	LDFLAGS := old + ["-lsymengine"]
+	so_module("math/symengine.so", [file("symengine.o")])
+end

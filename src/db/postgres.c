@@ -410,7 +410,14 @@ static int connection_prepare(const char *Name, const char *SQL, connection_t *C
 
 static PGconn *connection_connect(connection_t *Connection) {
 	for (;;) {
-		ML_LOG_INFO(NULL, "%s", "Connecting to Postgres database");
+		const char *Host = "<unknown>";
+		for (const char **Keyword = Connection->Keywords; *Keyword; ++Keyword) {
+			if (!strcmp(*Keyword, "host")) {
+				Host = Connection->Values[Keyword - Connection->Keywords];
+				break;
+			}
+		}
+		ML_LOG_INFO(NULL, "Connecting to Postgres database at %s", Host);
 		stringmap_foreach(Connection->Statements, Connection, (void *)connection_prepare);
 		PGconn *Conn = PQconnectdbParams(Connection->Keywords, Connection->Values, 0);
 		if (PQstatus(Conn) == CONNECTION_OK) {
@@ -735,6 +742,22 @@ ML_METHOD("connected", MLConnectionT) {
 ML_METHOD("close", MLConnectionT) {
 	return MLNil;
 }
+
+#define STRING_INFO_METHOD(NAME) \
+\
+ML_METHOD(#NAME, MLConnectionT) { \
+	connection_t *Connection = (connection_t *)Args[0]; \
+	const char *Value = PQ ## NAME(Connection->Conn); \
+	return Value ? ml_string_copy(Value, -1) : MLNil; \
+}
+
+STRING_INFO_METHOD(db)
+STRING_INFO_METHOD(user)
+STRING_INFO_METHOD(pass)
+STRING_INFO_METHOD(host)
+STRING_INFO_METHOD(hostaddr)
+STRING_INFO_METHOD(port)
+STRING_INFO_METHOD(options)
 
 ML_LIBRARY_ENTRY0(db_postgres) {
 #include "postgres_init.c"

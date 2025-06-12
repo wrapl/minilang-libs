@@ -27,22 +27,22 @@ file("curl_options.c")[CurlHeader] => fun(Target) do
 			Output:write(',\n\t"{Name}", CURLOPT_{Value}')
 		end
 	end
-	Output:write('\n);\n\nML_SUB_ENUM(CurlOptionIntegerT, "curl::integer::option", CurlOptionT')
+	Output:write('\n);\n\nML_SUB_ENUM(CurlOptionIntegerT, "curl::option::integer", CurlOptionT')
 	for Value in Options["LONG"] & Options["OFF_T"] do
 		let Name := Value:replace("_", " "):lower:title:replace(" ", "")
 		Output:write(',\n\t"{Name}"')
 	end
-	Output:write('\n);\n\nML_SUB_ENUM(CurlOptionStringT, "curl::string::option", CurlOptionT')
+	Output:write('\n);\n\nML_SUB_ENUM(CurlOptionStringT, "curl::option::string", CurlOptionT')
 	for Value in Options["STRINGPOINT"] do
 		let Name := Value:replace("_", " "):lower:title:replace(" ", "")
 		Output:write(',\n\t"{Name}"')
 	end
-	Output:write('\n);\n\nML_SUB_ENUM(CurlOptionSetT, "curl::set::option", CurlOptionT')
+	Output:write('\n);\n\nML_SUB_ENUM(CurlOptionSetT, "curl::option::set", CurlOptionT')
 	for Value in Options["SLISTPOINT"] do
 		let Name := Value:replace("_", " "):lower:title:replace(" ", "")
 		Output:write(',\n\t"{Name}"')
 	end
-	Output:write('\n);\n\nML_SUB_ENUM(CurlOptionFunctionT, "curl::set::function", CurlOptionT')
+	Output:write('\n);\n\nML_SUB_ENUM(CurlOptionFunctionT, "curl::option::function", CurlOptionT')
 	for Value in Options["FUNCTIONPOINT"] do
 		let Name := Value:replace("_", " "):lower:title:replace(" ", "")
 		Output:write(',\n\t"{Name}"')
@@ -55,22 +55,22 @@ file("curl_options.c")[CurlHeader] => fun(Target) do
 			Output:write(',\n\t"{Name}", CURLINFO_{Value}')
 		end
 	end
-	Output:write('\n);\n\nML_SUB_ENUM(CurlInfoIntegerT, "curl::integer::info", CurlInfoT')
+	Output:write('\n);\n\nML_SUB_ENUM(CurlInfoIntegerT, "curl::info::integer", CurlInfoT')
 	for Value in Infos["LONG"] & Infos["OFF_T"] do
 		let Name := Value:replace("_", " "):lower:title:replace(" ", "")
 		Output:write(',\n\t"{Name}"')
 	end
-	Output:write('\n);\n\nML_SUB_ENUM(CurlInfoRealT, "curl::real::info", CurlInfoT')
+	Output:write('\n);\n\nML_SUB_ENUM(CurlInfoRealT, "curl::info::real", CurlInfoT')
 	for Value in Infos["DOUBLE"] do
 		let Name := Value:replace("_", " "):lower:title:replace(" ", "")
 		Output:write(',\n\t"{Name}"')
 	end
-	Output:write('\n);\n\nML_SUB_ENUM(CurlInfoStringT, "curl::string::info", CurlInfoT')
+	Output:write('\n);\n\nML_SUB_ENUM(CurlInfoStringT, "curl::info::string", CurlInfoT')
 	for Value in Infos["STRING"] do
 		let Name := Value:replace("_", " "):lower:title:replace(" ", "")
 		Output:write(',\n\t"{Name}"')
 	end
-	Output:write('\n);\n\nML_SUB_ENUM(CurlInfoSetT, "curl::set::info", CurlInfoT')
+	Output:write('\n);\n\nML_SUB_ENUM(CurlInfoSetT, "curl::info::set", CurlInfoT')
 	for Value in Infos["SLIST"] do
 		let Name := Value:replace("_", " "):lower:title:replace(" ", "")
 		Output:write(',\n\t"{Name}"')

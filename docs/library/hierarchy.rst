@@ -113,6 +113,9 @@ hierarchy
       "any":e -> "basic":w;
       "basic":e -> "basicset":w;
       "any":e -> "basiciterator":w;
+      "any":e -> "calculator":w;
+      "any":e -> "accumulator":w;
+      "function":e -> "statistic":w;
       "function":e -> "dist":w;
       "dist":e -> "bernoulli":w;
       "dist":e -> "binomial":w;

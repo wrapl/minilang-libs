@@ -1,6 +1,6 @@
 so_module("db/sqlite.so", [file("sqlite.o")], Tags is ["standard"])
 
-scope("dqlite";) do
+:<scope("dqlite";) do
 	let RaftDir := file("raft")
 	let RaftLib := RaftDir / ".libs/libraft.a" => fun() do
 		RaftDir:rmdir:mkdir:chdir
@@ -23,7 +23,7 @@ scope("dqlite";) do
 	PREBUILDS := old + [Lib]
 	CFLAGS := old + ['-I{Dir/"include"}']
 	so_module("db/dqlite.so", [file("dqlite.o")], [Lib])
-end
+end>:
 
 :<scope("sqlite";) do
 	file("sqlite/sqlite3.c") => fun() do

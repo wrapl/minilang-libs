@@ -31,6 +31,7 @@ scope("gumbo";) do
 		file("gumbo/src/string_piece.o"),
 		file("gumbo/src/utf8.o")
 	]
+	PREBUILDS := old + [GUMBO]
 	file("html_init.c")[GUMBO]
 	for Object in Objects do
 		(Object % "c")[GUMBO] => fun() nil

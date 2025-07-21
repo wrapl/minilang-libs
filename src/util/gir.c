@@ -244,7 +244,7 @@ ML_TYPE(GirStructT, (GirBaseInfoT), "struct-type",
 ML_TYPE(GirStructInstanceT, (), "struct-instance");
 // A gobject-introspection struct instance.
 
-ml_value_t *ml_gir_struct_instance(ml_value_t *Struct, void *Value) {
+ml_value_t *ml_gir_struct_instance(ml_type_t *Struct, void *Value) {
 	struct_instance_t *Instance = new(struct_instance_t);
 	Instance->Type = (struct_t *)Struct;
 	Instance->Value = Value;
@@ -556,6 +556,10 @@ static ml_value_t *gir_enum_value(enum_t *Type, int64_t Value) {
 	}
 	Enum->Name = ml_stringbuffer_to_string(Buffer);
 	return (ml_value_t *)Enum;
+}
+
+ml_value_t *ml_gir_enum_value(ml_type_t *Enum, gint64 Value) {
+	return gir_enum_value((enum_t *)Enum, Value);
 }
 
 static gint64 gir_enum_value_value(ml_value_t *Value) {

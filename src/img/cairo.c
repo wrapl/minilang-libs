@@ -1,5 +1,6 @@
 #include "../util/gir.h"
 #include <minilang/ml_library.h>
+#include <minilang/ml_macros.h>
 #include <cairo.h>
 
 #undef ML_CATEGORY
@@ -7,6 +8,7 @@
 
 ml_type_t *CairoContextT;
 ml_type_t *CairoSurfaceT;
+ml_type_t *CairoFormatT;
 ml_type_t *CairoOperatorT;
 ml_type_t *CairoFontSlantT;
 ml_type_t *CairoFontWeightT;
@@ -16,7 +18,7 @@ ML_FUNCTION(CairoContext) {
 	ML_CHECK_ARG_TYPE(0, CairoSurfaceT);
 	cairo_surface_t *Surface = ml_gir_struct_instance_value(Args[0]);
 	cairo_t *Cairo = cairo_create(Surface);
-	return ml_gir_struct_instance((ml_value_t *)CairoContextT, Cairo);
+	return ml_gir_struct_instance(CairoContextT, Cairo);
 }
 
 ML_METHOD("save", CairoContextT) {
@@ -53,7 +55,7 @@ ML_METHOD("set_source_rgba", CairoContextT, MLRealT, MLRealT, MLRealT) {
 ML_METHOD("get_operator", CairoContextT) {
 	cairo_t *Cairo = ml_gir_struct_instance_value(Args[0]);
 	cairo_operator_t Operator = cairo_get_operator(Cairo);
-	return ml_gir_enum_value((ml_value_t *)CairoOperatorT, Operator);
+	return ml_gir_enum_value(CairoOperatorT, Operator);
 }
 
 ML_METHOD("set_operator", CairoContextT, CairoOperatorT) {
@@ -265,11 +267,108 @@ ML_METHOD("show_text", CairoContextT, MLStringT) {
 	return MLNil;
 }
 
+static void cairo_surface_finalizer(void *Value, void *Data) {
+	cairo_surface_t *Surface = ml_gir_struct_instance_value((ml_value_t *)Value);
+	cairo_surface_destroy(Surface);
+}
+
+ML_FUNCTION(CairoSurfaceCreate) {
+	ML_CHECK_ARG_COUNT(3);
+	ML_CHECK_ARG_TYPE(0, CairoFormatT);
+	ML_CHECK_ARG_TYPE(1, MLRealT);
+	ML_CHECK_ARG_TYPE(2, MLRealT);
+	cairo_surface_t *Surface = cairo_image_surface_create(
+		ml_gir_enum_value_value(Args[0]),
+		ml_real_value(Args[1]),
+		ml_real_value(Args[2])
+	);
+	ml_value_t *Value = ml_gir_struct_instance(CairoSurfaceT, Surface);
+	GC_register_finalizer(Value, cairo_surface_finalizer, NULL, NULL, NULL);
+	return Value;
+}
+
+ML_FUNCTION(CairoSurfaceCreateForData) {
+	ML_CHECK_ARG_COUNT(5);
+	ML_CHECK_ARG_TYPE(0, MLBufferT);
+	ML_CHECK_ARG_TYPE(1, CairoFormatT);
+	ML_CHECK_ARG_TYPE(2, MLRealT);
+	ML_CHECK_ARG_TYPE(3, MLRealT);
+	ML_CHECK_ARG_TYPE(4, MLRealT);
+	cairo_surface_t *Surface = cairo_image_surface_create_for_data(
+		(unsigned char *)ml_buffer_value(Args[0]),
+		ml_gir_enum_value_value(Args[1]),
+		ml_real_value(Args[2]),
+		ml_real_value(Args[3]),
+		ml_real_value(Args[4])
+	);
+	ml_value_t *Value = ml_gir_struct_instance(CairoSurfaceT, Surface);
+	GC_register_finalizer(Value, cairo_surface_finalizer, NULL, NULL, NULL);
+	return Value;
+}
+
+ML_FUNCTION(CairoSurfaceCreateFromPng) {
+	ML_CHECK_ARG_COUNT(1);
+	ML_CHECK_ARG_TYPE(0, MLStringT);
+	cairo_surface_t *Surface = cairo_image_surface_create_from_png(
+		ml_string_value(Args[0])
+	);
+	ml_value_t *Value = ml_gir_struct_instance(CairoSurfaceT, Surface);
+	GC_register_finalizer(Value, cairo_surface_finalizer, NULL, NULL, NULL);
+	return Value;
+}
+
+static cairo_status_t read_from_buffer(ml_stringbuffer_t *Buffer, unsigned char *Data, unsigned int Length) {
+	size_t Available = 0;
+	while (Length > 0) {
+		Available = ml_stringbuffer_reader(Buffer, Available);
+		if (!Available) return CAIRO_STATUS_READ_ERROR;
+		if (Available > Length) {
+			memcpy(Data, Buffer->Head->Chars + Buffer->Start, Length);
+			break;
+		}
+		memcpy(Data, Buffer->Head->Chars + Buffer->Start, Available);
+		Data += Available;
+		Length -= Available;
+	}
+	return CAIRO_STATUS_SUCCESS;
+}
+
+ML_FUNCTION(CairoSurfaceCreateFromPngStream) {
+	ML_CHECK_ARG_COUNT(1);
+	ML_CHECK_ARG_TYPE(0, MLStringBufferT);
+	cairo_surface_t *Surface = cairo_image_surface_create_from_png_stream(
+		(cairo_read_func_t)read_from_buffer,
+		Args[0]
+	);
+	ml_value_t *Value = ml_gir_struct_instance(CairoSurfaceT, Surface);
+	GC_register_finalizer(Value, cairo_surface_finalizer, NULL, NULL, NULL);
+	return Value;
+}
+
+ML_METHOD("write_to_png", CairoSurfaceT, MLStringT) {
+	cairo_surface_t *Surface = ml_gir_struct_instance_value(Args[0]);
+	cairo_status_t Status = cairo_surface_write_to_png(Surface, ml_string_value(Args[1]));
+	if (Status == CAIRO_STATUS_SUCCESS) return Args[0];
+	return ml_error("CairoError", "%s", cairo_status_to_string(Status));
+}
+
+static cairo_status_t write_to_buffer(ml_stringbuffer_t *Buffer, const unsigned char *Data, unsigned int Length) {
+	ml_stringbuffer_write(Buffer, (const char *)Data, Length);
+	return CAIRO_STATUS_SUCCESS;
+}
+
+ML_METHOD("write_to_png_stream", CairoSurfaceT, MLStringBufferT) {
+	cairo_surface_t *Surface = ml_gir_struct_instance_value(Args[0]);
+	cairo_surface_write_to_png_stream(Surface, (cairo_write_func_t)write_to_buffer, Args[1]);
+	return Args[0];
+}
+
 ML_LIBRARY_ENTRY0(img_cairo) {
 	ml_value_t *Typelib = ml_gir_typelib("cairo", "1.0");
 	CairoContextT = (ml_type_t *)ml_gir_import(Typelib, "Context");
 	CairoContextT->Constructor = (ml_value_t *)CairoContext;
 	CairoSurfaceT = (ml_type_t *)ml_gir_import(Typelib, "Surface");
+	CairoFormatT = (ml_type_t *)ml_gir_import(Typelib, "Format");
 	CairoOperatorT = (ml_type_t *)ml_gir_import(Typelib, "Operator");
 	CairoFontSlantT = (ml_type_t *)ml_gir_import(Typelib, "FontSlant");
 	CairoFontWeightT = (ml_type_t *)ml_gir_import(Typelib, "FontWeight");

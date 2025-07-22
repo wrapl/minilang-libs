@@ -1,6 +1,7 @@
 #include "../util/gir.h"
 #include <minilang/ml_library.h>
 #include <minilang/ml_macros.h>
+#include <minilang/ml_stream.h>
 #include <cairo.h>
 
 #undef ML_CATEGORY
@@ -317,32 +318,38 @@ ML_FUNCTION(CairoSurfaceCreateFromPng) {
 	return Value;
 }
 
-static cairo_status_t read_from_buffer(ml_stringbuffer_t *Buffer, unsigned char *Data, unsigned int Length) {
-	size_t Available = 0;
-	while (Length > 0) {
-		Available = ml_stringbuffer_reader(Buffer, Available);
-		if (!Available) return CAIRO_STATUS_READ_ERROR;
-		if (Available > Length) {
-			memcpy(Data, Buffer->Head->Chars + Buffer->Start, Length);
-			break;
-		}
-		memcpy(Data, Buffer->Head->Chars + Buffer->Start, Available);
-		Data += Available;
-		Length -= Available;
-	}
+typedef struct {
+	ml_context_t *Context;
+	ml_value_t *Stream;
+	union {
+		typeof(ml_stream_read) *read;
+		typeof(ml_stream_write) *write;
+	};
+} stream_context_t;
+
+static cairo_status_t read_from_stream(stream_context_t *Reader, unsigned char *Data, unsigned int Length) {
+	ml_result_state_t *State = ml_result_state(Reader->Context);
+	Reader->read((ml_state_t *)State, Reader->Stream, Data, Length);
+	ml_scheduler_t *Scheduler = ml_context_get_static(Reader->Context, ML_SCHEDULER_INDEX);
+	while (!State->Value) Scheduler->run(Scheduler);
+	ml_value_t *Result = ml_deref(State->Value);
+	if (ml_is_error(Result)) return CAIRO_STATUS_WRITE_ERROR;
+	//if (ml_integer_value(Result) != Length) return CAIRO_STATUS_WRITE_ERROR;
 	return CAIRO_STATUS_SUCCESS;
 }
 
-ML_FUNCTION(CairoSurfaceCreateFromPngStream) {
-	ML_CHECK_ARG_COUNT(1);
-	ML_CHECK_ARG_TYPE(0, MLStringBufferT);
+ML_FUNCTIONX(CairoSurfaceCreateFromPngStream) {
+	ML_CHECKX_ARG_COUNT(1);
+	ML_CHECKX_ARG_TYPE(0, MLStringBufferT);
+	stream_context_t Reader[1] = {{Caller->Context, Args[0]}};
+	Reader->read = ml_typed_fn_get(ml_typeof(Args[0]), ml_stream_read) ?: ml_stream_read_method;
 	cairo_surface_t *Surface = cairo_image_surface_create_from_png_stream(
-		(cairo_read_func_t)read_from_buffer,
-		Args[0]
+		(cairo_read_func_t)read_from_stream,
+		Reader
 	);
 	ml_value_t *Value = ml_gir_struct_instance(CairoSurfaceT, Surface);
 	GC_register_finalizer(Value, cairo_surface_finalizer, NULL, NULL, NULL);
-	return Value;
+	ML_RETURN(Value);
 }
 
 ML_METHOD("write_to_png", CairoSurfaceT, MLStringT) {
@@ -352,15 +359,23 @@ ML_METHOD("write_to_png", CairoSurfaceT, MLStringT) {
 	return ml_error("CairoError", "%s", cairo_status_to_string(Status));
 }
 
-static cairo_status_t write_to_buffer(ml_stringbuffer_t *Buffer, const unsigned char *Data, unsigned int Length) {
-	ml_stringbuffer_write(Buffer, (const char *)Data, Length);
+static cairo_status_t write_to_stream(stream_context_t *Writer, const unsigned char *Data, unsigned int Length) {
+	ml_result_state_t *State = ml_result_state(Writer->Context);
+	Writer->write((ml_state_t *)State, Writer->Stream, Data, Length);
+	ml_scheduler_t *Scheduler = ml_context_get_static(Writer->Context, ML_SCHEDULER_INDEX);
+	while (!State->Value) Scheduler->run(Scheduler);
+	ml_value_t *Result = ml_deref(State->Value);
+	if (ml_is_error(Result)) return CAIRO_STATUS_WRITE_ERROR;
+	if (ml_integer_value(Result) != Length) return CAIRO_STATUS_WRITE_ERROR;
 	return CAIRO_STATUS_SUCCESS;
 }
 
-ML_METHOD("write_to_png_stream", CairoSurfaceT, MLStringBufferT) {
+ML_METHODX("write_to_png_stream", CairoSurfaceT, MLStreamT) {
 	cairo_surface_t *Surface = ml_gir_struct_instance_value(Args[0]);
-	cairo_surface_write_to_png_stream(Surface, (cairo_write_func_t)write_to_buffer, Args[1]);
-	return Args[0];
+	stream_context_t Writer[1] = {{Caller->Context, Args[0]}};
+	Writer->write = ml_typed_fn_get(ml_typeof(Args[0]), ml_stream_write) ?: ml_stream_write_method;
+	cairo_surface_write_to_png_stream(Surface, (cairo_write_func_t)write_to_stream, Writer);
+	ML_RETURN(MLNil);
 }
 
 ML_LIBRARY_ENTRY0(img_cairo) {
@@ -373,5 +388,9 @@ ML_LIBRARY_ENTRY0(img_cairo) {
 	CairoFontSlantT = (ml_type_t *)ml_gir_import(Typelib, "FontSlant");
 	CairoFontWeightT = (ml_type_t *)ml_gir_import(Typelib, "FontWeight");
 #include "cairo_init.c"
+	stringmap_insert(CairoSurfaceT->Exports, "create", CairoSurfaceCreate);
+	stringmap_insert(CairoSurfaceT->Exports, "create_for_data", CairoSurfaceCreateForData);
+	stringmap_insert(CairoSurfaceT->Exports, "create_from_png", CairoSurfaceCreateFromPng);
+	stringmap_insert(CairoSurfaceT->Exports, "create_from_png_stream", CairoSurfaceCreateFromPngStream);
 	Slot[0] = Typelib;
 }

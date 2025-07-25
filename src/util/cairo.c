@@ -14,7 +14,7 @@ ml_type_t *CairoOperatorT;
 ml_type_t *CairoFontSlantT;
 ml_type_t *CairoFontWeightT;
 
-ML_FUNCTION(CairoContext) {
+ML_FUNCTION(CairoCreate) {
 	ML_CHECK_ARG_COUNT(1);
 	ML_CHECK_ARG_TYPE(0, CairoSurfaceT);
 	cairo_surface_t *Surface = ml_gir_struct_instance_value(Args[0]);
@@ -378,16 +378,25 @@ ML_METHODX("write_to_png_stream", CairoSurfaceT, MLStreamT) {
 	ML_RETURN(MLNil);
 }
 
+ML_METHOD("get_data", CairoSurfaceT) {
+	cairo_surface_t *Surface = ml_gir_struct_instance_value(Args[0]);
+	int Height = cairo_image_surface_get_height(Surface);
+	int Stride = cairo_image_surface_get_stride(Surface);
+	unsigned char *Pixels = cairo_image_surface_get_data(Surface);
+	return ml_buffer((char *)Pixels, Height * Stride);
+}
+
 ML_LIBRARY_ENTRY0(img_cairo) {
 	ml_value_t *Typelib = ml_gir_typelib("cairo", "1.0");
 	CairoContextT = (ml_type_t *)ml_gir_import(Typelib, "Context");
-	CairoContextT->Constructor = (ml_value_t *)CairoContext;
+	CairoContextT->Constructor = (ml_value_t *)CairoCreate;
 	CairoSurfaceT = (ml_type_t *)ml_gir_import(Typelib, "Surface");
 	CairoFormatT = (ml_type_t *)ml_gir_import(Typelib, "Format");
 	CairoOperatorT = (ml_type_t *)ml_gir_import(Typelib, "Operator");
 	CairoFontSlantT = (ml_type_t *)ml_gir_import(Typelib, "FontSlant");
 	CairoFontWeightT = (ml_type_t *)ml_gir_import(Typelib, "FontWeight");
 #include "cairo_init.c"
+	stringmap_insert(CairoContextT->Exports, "create", CairoCreate);
 	stringmap_insert(CairoSurfaceT->Exports, "create", CairoSurfaceCreate);
 	stringmap_insert(CairoSurfaceT->Exports, "create_for_data", CairoSurfaceCreateForData);
 	stringmap_insert(CairoSurfaceT->Exports, "create_from_png", CairoSurfaceCreateFromPng);

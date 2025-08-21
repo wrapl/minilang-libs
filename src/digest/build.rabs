@@ -1,1 +1,2 @@
 so_module("digest/hmac.so", [file("hmac.o")], ["-lnettle"], Tags is ["standard"])
+so_module("digest/hash.so", [file("hash.o")], ["-lnettle"], Tags is ["standard"])

@@ -43,7 +43,7 @@ ML_METHOD("update", NAME ## T, MLAddressT) { \
 	return (ml_value_t *)Hash; \
 } \
 \
-static void ML_TYPED_FN(ml_stream_write, MLStreamFdT, ml_state_t *Caller, CNAME ## _t *Hash, void *Address, int Count) { \
+static void ML_TYPED_FN(ml_stream_write, NAME ## T, ml_state_t *Caller, CNAME ## _t *Hash, void *Address, int Count) { \
 	CNAME ## _update(Hash->Context, Count, Address); \
 	ML_RETURN(ml_integer(Count)); \
 } \

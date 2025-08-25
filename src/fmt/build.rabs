@@ -48,3 +48,8 @@ scope("md4c";) do
 	CFLAGS := old + ['-I{MD4C:dir}']
 	so_module("fmt/markdown.so", [file("markdown.o")], [])
 end
+
+scope("yaml";) do
+	LDFLAGS := old + ["-lyaml"]
+	so_module("fmt/yaml.so", [file("yaml.o")], Tags is ["standard"])
+end

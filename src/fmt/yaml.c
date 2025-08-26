@@ -73,7 +73,11 @@ ML_METHOD(Decode, MLStringT) {
 	State->Container = ml_list();
 	State->Key = IsList;
 	for (;;) {
-		yaml_parser_parse(Parser, Event);
+		if (!yaml_parser_parse(Parser, Event)) {
+			State->Container = ml_error("YAMLError", "%s at %ld (%s)", Parser->problem, Parser->problem_offset, Parser->context);
+			goto done;
+		}
+		if (Event->type) printf("Event = %d\n", Event->type);
 		switch (Event->type) {
 		case YAML_NO_EVENT: break;
 		case YAML_STREAM_START_EVENT: {
@@ -98,12 +102,23 @@ ML_METHOD(Decode, MLStringT) {
 			break;
 		}
 		case YAML_SCALAR_EVENT: {
-			printf("Scalar: <%s> <%s> <%.*s>\n",
+			printf("Scalar: <%s> <%s> <%.*s> <%d/%d>\n",
 				Event->data.scalar.anchor,
 				Event->data.scalar.tag,
 				(int)Event->data.scalar.length,
-				Event->data.scalar.value
+				Event->data.scalar.value,
+				Event->data.scalar.plain_implicit,
+				Event->data.scalar.quoted_implicit
 			);
+			ml_value_t *Value;
+			if (Event->data.scalar.quoted_implicit) {
+				Value = ml_string_copy(Event->data.scalar.value, Event->data.scalar.length);
+			} else if (Event->data.scalar.plain_implicit) {
+
+			} else {
+				// TODO: use tag to get correct type
+				Value = MLNil;
+			}
 			break;
 		}
 		case YAML_SEQUENCE_START_EVENT: {

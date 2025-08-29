@@ -9,6 +9,10 @@ img/cairo
 
 .. rst-class:: mini-api
 
+:mini:`fun cairosurfacecreatefordata(Arg₁: buffer, Arg₂: cairoformat, Arg₃: real, Arg₄: real, Arg₅: real)`
+   *TBD*
+
+
 :mini:`meth (Arg₁: cairocontext):arc(Arg₂: real, Arg₃: real, Arg₄: real, Arg₅: real, Arg₆: real)`
    *TBD*
 
@@ -137,7 +141,31 @@ img/cairo
    *TBD*
 
 
-:mini:`fun cairocontext(Arg₁: cairosurface)`
+:mini:`fun cairosurfacecreate(Arg₁: cairoformat, Arg₂: real, Arg₃: real)`
+   *TBD*
+
+
+:mini:`fun cairocreate(Arg₁: cairosurface)`
+   *TBD*
+
+
+:mini:`meth (Arg₁: cairosurface):get_data`
+   *TBD*
+
+
+:mini:`meth (Arg₁: cairosurface):write_to_png(Arg₂: string)`
+   *TBD*
+
+
+:mini:`meth (Arg₁: cairosurface):write_to_png_stream(Arg₂: stream)`
+   *TBD*
+
+
+:mini:`fun cairosurfacecreatefrompng(Arg₁: string)`
+   *TBD*
+
+
+:mini:`fun cairosurfacecreatefrompngstream(Arg₁: string::buffer)`
    *TBD*
 
 

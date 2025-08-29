@@ -44,6 +44,11 @@ ML_METHOD("update", NAME ## T, MLAddressT) { \
 	return (ml_value_t *)HMAC; \
 } \
 \
+static void ML_TYPED_FN(ml_stream_write, NAME ## T, ml_state_t *Caller, CNAME ## _t *HMAC, void *Address, int Count) { \
+	hmac_ ## CNAME ## _update(HMAC->Context, Count, Address); \
+	ML_RETURN(ml_integer(Count)); \
+} \
+\
 ML_METHOD("digest", NAME ## T) { \
 /*<HMAC:CNAME
 //>address

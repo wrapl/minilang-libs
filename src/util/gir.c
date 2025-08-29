@@ -244,7 +244,7 @@ ML_TYPE(GirStructT, (GirBaseInfoT), "struct-type",
 ML_TYPE(GirStructInstanceT, (), "struct-instance");
 // A gobject-introspection struct instance.
 
-ml_value_t *ml_gir_struct_instance(ml_value_t *Struct, void *Value) {
+ml_value_t *ml_gir_struct_instance(ml_type_t *Struct, void *Value) {
 	struct_instance_t *Instance = new(struct_instance_t);
 	Instance->Type = (struct_t *)Struct;
 	Instance->Value = Value;
@@ -556,6 +556,10 @@ static ml_value_t *gir_enum_value(enum_t *Type, int64_t Value) {
 	}
 	Enum->Name = ml_stringbuffer_to_string(Buffer);
 	return (ml_value_t *)Enum;
+}
+
+ml_value_t *ml_gir_enum_value(ml_type_t *Enum, gint64 Value) {
+	return gir_enum_value((enum_t *)Enum, Value);
 }
 
 static gint64 gir_enum_value_value(ml_value_t *Value) {
@@ -1497,11 +1501,7 @@ static void gir_closure_marshal(GClosure *Closure, GValue *Dest, guint NumArgs, 
 	ml_value_t *MLArgs[NumArgs];
 	MLArgs[0] = _value_to_ml(Args, NULL);
 	for (guint I = 1; I < NumArgs; ++I) MLArgs[I] = _value_to_ml(Args + I, Info->Args[I]);
-	ml_result_state_t *State = ml_result_state(Info->Context);
-	ml_call(State, Info->Function, NumArgs, MLArgs);
-	ml_scheduler_t *Scheduler = ml_context_get_static(Info->Context, ML_SCHEDULER_INDEX);
-	while (!State->Value) Scheduler->run(Scheduler);
-	ml_value_t *Value = State->Value;
+	ml_value_t *Value = ml_call_wait(Info->Context, Info->Function, NumArgs, MLArgs);
 	if (ml_is_error(Value)) ML_LOG_ERROR(Value, "Closure returned error");
 	if (Dest) {
 		if (ml_is(Value, MLBooleanT)) {

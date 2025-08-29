@@ -20,10 +20,10 @@ void ml_gir_init(stringmap_t *Globals);
 
 ml_value_t *ml_gir_instance_get(void *Handle, ml_type_t *Fallback);
 
-ml_value_t *ml_gir_struct_instance(ml_value_t *Struct, void *Value);
+ml_value_t *ml_gir_struct_instance(ml_type_t *Struct, void *Value);
 void *ml_gir_struct_instance_value(ml_value_t *Value);
 
-ml_value_t *ml_gir_enum_value(ml_value_t *Enum, gint64 Value);
+ml_value_t *ml_gir_enum_value(ml_type_t *Enum, gint64 Value);
 gint64 ml_gir_enum_value_value(ml_value_t *Value);
 
 #ifndef GENERATE_INIT

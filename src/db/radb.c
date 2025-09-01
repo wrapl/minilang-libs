@@ -31,7 +31,7 @@ ML_FUNCTION(FixedStoreOpen) {
 	ML_CHECK_ARG_TYPE(0, MLStringT);
 	ml_fixed_store_t *Store = new(ml_fixed_store_t);
 	Store->Type = FixedStoreT;
-	Store->Handle = fixed_store_open(ml_string_value(Args[0]));
+	Store->Handle = fixed_store_open(ml_string_value(Args[0]), 0);
 	if (!Store->Handle) return ml_error("StoreError", "Error opening fixed store");
 	return (ml_value_t *)Store;
 }
@@ -95,6 +95,7 @@ typedef struct ml_string_store_writer_t {
 typedef struct ml_string_store_reader_t {
 	const ml_type_t *Type;
 	string_store_reader_t Handle[1];
+	size_t Index;
 } ml_string_store_reader_t;
 
 ML_TYPE(StringStoreT, (), "string-store");
@@ -108,7 +109,7 @@ ML_FUNCTION(StringStoreOpen) {
 	ML_CHECK_ARG_TYPE(0, MLStringT);
 	ml_string_store_t *Store = new(ml_string_store_t);
 	Store->Type = StringStoreT;
-	Store->Handle = string_store_open(ml_string_value(Args[0]));
+	Store->Handle = string_store_open(ml_string_value(Args[0]), 0);
 	if (!Store->Handle) return ml_error("StoreError", "Error opening string store");
 	return (ml_value_t *)Store;
 }
@@ -205,6 +206,15 @@ ML_METHOD("append", StringStoreT, MLIntegerT) {
 	return (ml_value_t *)Writer;
 }
 
+ML_METHOD("truncate", StringStoreT, MLIntegerT, MLIntegerT) {
+	ml_string_store_t *Store = (ml_string_store_t *)Args[0];
+	CHECK_HANDLE(Store);
+	ml_string_store_writer_t *Writer = new(ml_string_store_writer_t);
+	Writer->Type = StringStoreWriterT;
+	string_store_writer_truncate(Writer->Handle, Store->Handle, ml_integer_value(Args[1]), ml_integer_value(Args[2]));
+	return (ml_value_t *)Writer;
+}
+
 ML_TYPE(StringStoreReaderT, (MLStreamT), "string-store-reader");
 // A stream for reading from a string store entry.
 
@@ -213,12 +223,29 @@ static void ML_TYPED_FN(ml_stream_read, StringStoreReaderT, ml_state_t *Caller, 
 	ML_RETURN(ml_integer(Total));
 }
 
+static void ML_TYPED_FN(ml_stream_seek, StringStoreReaderT, ml_state_t *Caller, ml_string_store_reader_t *Reader, int64_t Offset, int Mode) {
+	size_t Length = string_store_size(Reader->Handle->Store, Reader->Index);
+	size_t Position = Length - Reader->Handle->Remain;
+	if (Mode == SEEK_CUR) {
+		ML_RETURN(ml_integer(Position + string_store_reader_seek(Reader->Handle, Offset)));
+	}
+	if (Mode == SEEK_END) Offset = Length - Offset;
+	if (Offset == Position) return;
+	if (Offset > Position) {
+		ML_RETURN(ml_integer(Position + string_store_reader_seek(Reader->Handle, Offset - Position)));
+	}
+	string_store_reader_open(Reader->Handle, Reader->Handle->Store, Reader->Index);
+	ML_RETURN(ml_integer(string_store_reader_seek(Reader->Handle, Offset)));
+
+}
+
 ML_METHOD("read", StringStoreT, MLIntegerT) {
 	ml_string_store_t *Store = (ml_string_store_t *)Args[0];
 	CHECK_HANDLE(Store);
 	ml_string_store_reader_t *Reader = new(ml_string_store_reader_t);
 	Reader->Type = StringStoreReaderT;
-	string_store_reader_open(Reader->Handle, Store->Handle, ml_integer_value(Args[1]));
+	Reader->Index = ml_integer_value(Args[1]);
+	string_store_reader_open(Reader->Handle, Store->Handle, Reader->Index);
 	return (ml_value_t *)Reader;
 }
 
@@ -253,7 +280,7 @@ ML_FUNCTION(CborStoreOpen) {
 	ML_CHECK_ARG_TYPE(0, MLStringT);
 	ml_string_store_t *Store = new(ml_string_store_t);
 	Store->Type = CborStoreT;
-	Store->Handle = string_store_open(ml_string_value(Args[0]));
+	Store->Handle = string_store_open(ml_string_value(Args[0]), 0);
 	if (!Store->Handle) return ml_error("StoreError", "Error opening string store");
 	return (ml_value_t *)Store;
 }
@@ -366,10 +393,10 @@ ML_FUNCTION(StringIndexOpen) {
 	ML_CHECK_ARG_COUNT(1);
 	ML_CHECK_ARG_TYPE(0, MLStringT);
 	const char *Prefix = ml_string_value(Args[0]);
-	string_store_t *Values = string_store_open(Prefix);
+	string_store_t *Values = string_store_open(Prefix, 0);
 	ml_string_index_t *Store = new(ml_string_index_t);
 	Store->Type = StringIndexT;
-	Store->Handle = linear_index_open(Prefix, Values);
+	Store->Handle = linear_index_open(Prefix, Values, 0);
 	linear_index_set_compare(Store->Handle, (linear_compare_t)linear_compare_string);
 	linear_index_set_insert(Store->Handle, (linear_insert_t)linear_insert_string);
 	CHECK_HANDLE(Store);
@@ -499,10 +526,10 @@ ML_FUNCTION(UUIDIndexOpen) {
 	ML_CHECK_ARG_COUNT(1);
 	ML_CHECK_ARG_TYPE(0, MLStringT);
 	const char *Prefix = ml_string_value(Args[0]);
-	fixed_store_t *Values = fixed_store_open(Prefix);
+	fixed_store_t *Values = fixed_store_open(Prefix, 0);
 	ml_uuid_index_t *Store = new(ml_uuid_index_t);
 	Store->Type = UUIDIndexT;
-	Store->Handle = linear_index_open(Prefix, Values);
+	Store->Handle = linear_index_open(Prefix, Values, 0);
 	linear_index_set_compare(Store->Handle, (linear_compare_t)linear_compare_uuid);
 	linear_index_set_insert(Store->Handle, (linear_insert_t)linear_insert_uuid);
 	CHECK_HANDLE(Store);

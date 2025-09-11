@@ -1501,7 +1501,12 @@ static void gir_closure_marshal(GClosure *Closure, GValue *Dest, guint NumArgs, 
 	ml_value_t *MLArgs[NumArgs];
 	MLArgs[0] = _value_to_ml(Args, NULL);
 	for (guint I = 1; I < NumArgs; ++I) MLArgs[I] = _value_to_ml(Args + I, Info->Args[I]);
-	ml_value_t *Value = ml_call_wait(Info->Context, Info->Function, NumArgs, MLArgs);
+	//ml_value_t *Value = ml_call_wait(Info->Context, Info->Function, NumArgs, MLArgs);
+	ml_result_state_t *State = ml_result_state(Info->Context);
+	ml_call(State, Info->Function, NumArgs, MLArgs);
+	ml_scheduler_t *Scheduler = ml_context_get_static(Info->Context, ML_SCHEDULER_INDEX);
+	while (!State->Value) Scheduler->run(Scheduler);
+	ml_value_t *Value = State->Value;
 	if (ml_is_error(Value)) ML_LOG_ERROR(Value, "Closure returned error");
 	if (Dest) {
 		if (ml_is(Value, MLBooleanT)) {

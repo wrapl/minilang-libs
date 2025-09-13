@@ -792,6 +792,7 @@ static gboolean console_update_status(gtk_console_t *Console) {
 }
 
 gtk_console_t *gtk_console(ml_state_t *Caller, ml_getter_t GlobalGet, void *Globals) {
+	g_main_context_acquire(NULL);
 	gtk_init(0, 0);
 	gtk_console_t *Console = new(gtk_console_t);
 	Console->Base.Type = ConsoleT;
@@ -1067,7 +1068,7 @@ gtk_console_t *gtk_console(ml_state_t *Caller, ml_getter_t GlobalGet, void *Glob
 		GlobalGet,
 		Globals
 	));
-
+	g_main_context_release(NULL);
 	return Console;
 }
 

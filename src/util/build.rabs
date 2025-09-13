@@ -2,6 +2,7 @@ so_module("util/bitset.so", [file("bitset.o"), file("roaring.o")])
 
 GIR := scope("gir";) do
 	CFLAGS := old + [
+		"-Wno-switch",
 		pkgconfig("--cflags gobject-introspection-1.0")
 	]
 	LDFLAGS := old + [

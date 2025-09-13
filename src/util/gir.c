@@ -1507,13 +1507,19 @@ struct gir_callback_state_t {
 };
 
 static void gir_callback_state_end(gir_callback_state_t *State, ml_value_t *Value) {
+	fprintf(stderr, "HERE: %d\n", __LINE__);
 	State->Value = Value;
-	g_main_loop_quit(MainLoop);
+	fprintf(stderr, "HERE: %d\n", __LINE__);
+	g_main_context_wakeup(NULL);
+	fprintf(stderr, "HERE: %d\n", __LINE__);
 }
 
 static void gir_callback_state_start(gir_callback_state_t *State, ml_value_t *Value) {
+	fprintf(stderr, "HERE: %d\n", __LINE__);
 	State->Base.run = (ml_state_fn)gir_callback_state_end;
+	fprintf(stderr, "HERE: %d\n", __LINE__);
 	ml_call((ml_state_t *)State, Value, State->Count, State->Args);
+	fprintf(stderr, "HERE: %d\n", __LINE__);
 }
 
 static ml_value_t *gir_callback_call(ml_context_t *Context, ml_value_t *Function, int Count, ml_value_t **Args) {
@@ -1523,7 +1529,7 @@ static ml_value_t *gir_callback_call(ml_context_t *Context, ml_value_t *Function
 	fprintf(stderr, "HERE: %d\n", __LINE__);
 	Scheduler->add(Scheduler, (ml_state_t *)&State, Function);
 	fprintf(stderr, "HERE: %d\n", __LINE__);
-	g_main_loop_run(MainLoop);
+	while (!State.Value) g_main_context_iteration(NULL, TRUE);
 	fprintf(stderr, "HERE: %d\n", __LINE__);
 	//ml_result_state_t *State = ml_result_state(Instance->Context);
 	//ml_call(State, Instance->Function, Arg - Args, Args);

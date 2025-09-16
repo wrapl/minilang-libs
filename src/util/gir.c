@@ -4,6 +4,7 @@
 #include <minilang/ml_library.h>
 #include <girffi.h>
 #include <stdio.h>
+#include <semaphore.h>
 
 #undef ML_CATEGORY
 #define ML_CATEGORY "gir"
@@ -1490,7 +1491,9 @@ static pthread_t GirThread;
 static GMainLoop *MainLoop = NULL;
 
 static void *gir_thread_fn(void *Arg) {
+	sem_t *Ready = (sem_t *)Arg;
 	MainLoop = g_main_loop_new(NULL, TRUE);
+	sem_post(Ready);
 	fprintf(stderr, "HERE: %d\n", __LINE__);
 	g_main_loop_run(MainLoop);
 	fprintf(stderr, "HERE: %d\n", __LINE__);
@@ -3389,7 +3392,8 @@ static void gir_function_call(ml_state_t *Caller, gir_function_t *Function, int 
 	}
 	}
 	fprintf(stderr, "HERE: %d\n", __LINE__);
-	g_idle_add_once(gir_function_call_invoke, FunctionCall);
+	//g_idle_add_once(gir_function_call_invoke, FunctionCall);
+	gir_function_call_invoke(FunctionCall);
 	fprintf(stderr, "HERE: %d\n", __LINE__);
 }
 
@@ -4460,7 +4464,11 @@ ML_LIBRARY_ENTRY(gir) {
 	stringmap_insert(GirModuleT->Exports, "sleep", MLSleep);
 	//stringmap_insert(Globals, "gir", MLGirTypelibT);
 	//gir_scheduler(Caller->Context);
-	pthread_create(&GirThread, NULL, gir_thread_fn,  NULL);
+	sem_t Ready[1];
+	sem_init(Ready, 0, 0);
+	GC_pthread_create(&GirThread, NULL, gir_thread_fn,  Ready);
+	sem_wait(Ready);
+	sem_destroy(Ready);
 	Slot[0] = GirModule;
 	ML_RETURN(GirModule);
 }

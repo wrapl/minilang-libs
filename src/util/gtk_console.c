@@ -1105,9 +1105,11 @@ typedef struct {
 static void finish_load(load_state_t *State, ml_value_t *GirModule) {
 	ml_state_t *Caller = State->Base.Caller;
 #include "gtk_console_init.c"
+	g_main_context_acquire(NULL);
 	gtk_console_t *Console = gtk_console(Caller, (ml_getter_t)ml_stringmap_global_get, MLGlobals);
 	State->Slot[0] = (ml_value_t *)Console;
 	gtk_console_show(Console, NULL);
+	g_main_context_release(NULL);
 	/*if (MainModule) gtk_console_load_file(Console, MainModule, Args);
 	if (Command) gtk_console_evaluate(Console, Command);
 	while (!MainResult) Scheduler->run(Scheduler);*/

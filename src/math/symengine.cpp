@@ -271,6 +271,30 @@ static void ML_TYPED_FN(ml_iterate, BasicFiniteSetT, ml_state_t *Caller, basic_t
 	ML_RETURN(MLNil);
 }
 
+static ml_value_t *ML_TYPED_FN(ml_unpack, BasicFiniteSetT, basic_t *Basic, int Index) {
+	const FiniteSet *Set = dynamic_cast<const FiniteSet *>(Basic->Value.get());
+	if (Set) {
+		const auto Args = Set->get_args();
+		if ((unsigned int)Index > Args.size()) return MLNil;
+		return (ml_value_t *)(new basic_t(Args[Index - 1]));
+	}
+	return MLNil;
+}
+
+ML_METHOD("[]", BasicFiniteSetT, MLIntegerT) {
+	basic_t *Basic = (basic_t *)Args[0];
+	int Index = ml_integer_value(Args[1]);
+	const FiniteSet *Set = dynamic_cast<const FiniteSet *>(Basic->Value.get());
+	if (Set) {
+		const auto Args = Set->get_args();
+		if (Index <= 0) Index += Args.size() + 1;
+		if (Index <= 0) return MLNil;
+		if ((unsigned int)Index > Args.size()) return MLNil;
+		return (ml_value_t *)(new basic_t(Args[Index - 1]));
+	}
+	return MLNil;
+}
+
 ML_LIBRARY_ENTRY0(math_symengine) {
 	ml_type_add_parent(BasicSymbolT, MLFunctionT);
 	ml_type_add_parent(BasicEmptySetT, BasicSetT);

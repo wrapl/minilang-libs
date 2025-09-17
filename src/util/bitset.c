@@ -10,17 +10,17 @@
 typedef struct {
 	ml_type_t *Type;
 	roaring_bitmap_t *Value;
-} bitset_t;
+} ml_bitset_t;
 
 ML_TYPE(MLBitsetT, (MLSequenceT), "bitset");
 
 static void bitset_finalize(void *Bitset, void *Data) {
-	roaring_bitmap_free(((bitset_t *)Bitset)->Value);
+	roaring_bitmap_free(((ml_bitset_t *)Bitset)->Value);
 }
 
 ML_METHOD(MLBitsetT) {
 //>bitset
-	bitset_t *Bitset = new(bitset_t);
+	ml_bitset_t *Bitset = new(ml_bitset_t);
 	Bitset->Type = MLBitsetT;
 	Bitset->Value = roaring_bitmap_create();
 	GC_register_finalizer(Bitset, bitset_finalize, NULL, NULL, NULL);
@@ -28,26 +28,26 @@ ML_METHOD(MLBitsetT) {
 }
 
 ML_METHOD("set", MLBitsetT, MLIntegerT) {
-	bitset_t *Bitset = (bitset_t *)Args[0];
+	ml_bitset_t *Bitset = (ml_bitset_t *)Args[0];
 	roaring_bitmap_add(Bitset->Value, ml_integer_value(Args[1]));
 	return (ml_value_t *)Bitset;
 }
 
 ML_METHOD("set", MLBitsetT, MLIntegerRangeT) {
-	bitset_t *Bitset = (bitset_t *)Args[0];
+	ml_bitset_t *Bitset = (ml_bitset_t *)Args[0];
 	ml_integer_range_t *Range = (ml_integer_range_t *)Args[1];
 	roaring_bitmap_add_range_closed(Bitset->Value, Range->Start, Range->Limit);
 	return (ml_value_t *)Bitset;
 }
 
 ML_METHOD("unset", MLBitsetT, MLIntegerT) {
-	bitset_t *Bitset = (bitset_t *)Args[0];
+	ml_bitset_t *Bitset = (ml_bitset_t *)Args[0];
 	roaring_bitmap_remove(Bitset->Value, ml_integer_value(Args[1]));
 	return (ml_value_t *)Bitset;
 }
 
 ML_METHOD("unset", MLBitsetT, MLIntegerRangeT) {
-	bitset_t *Bitset = (bitset_t *)Args[0];
+	ml_bitset_t *Bitset = (ml_bitset_t *)Args[0];
 	ml_integer_range_t *Range = (ml_integer_range_t *)Args[1];
 	roaring_bitmap_remove_range_closed(Bitset->Value, Range->Start, Range->Limit);
 	return (ml_value_t *)Bitset;
@@ -55,7 +55,7 @@ ML_METHOD("unset", MLBitsetT, MLIntegerRangeT) {
 
 ML_METHOD("append", MLStringBufferT, MLBitsetT) {
 	ml_stringbuffer_t *Buffer = (ml_stringbuffer_t *)Args[0];
-	bitset_t *Bitset = (bitset_t *)Args[1];
+	ml_bitset_t *Bitset = (ml_bitset_t *)Args[1];
 	roaring_uint32_iterator_t Iter[1];
 	roaring_init_iterator(Bitset->Value, Iter);
 	if (!Iter->has_value) {
@@ -96,7 +96,7 @@ typedef struct {
 ML_TYPE(BitsetIterT, (), "bitset::iter");
 //!internal
 
-static void ML_TYPED_FN(ml_iterate, MLBitsetT, ml_state_t *Caller, bitset_t *Bitset) {
+static void ML_TYPED_FN(ml_iterate, MLBitsetT, ml_state_t *Caller, ml_bitset_t *Bitset) {
 	if (!roaring_bitmap_get_cardinality(Bitset->Value)) ML_RETURN(MLNil);
 	bitset_iter_t *Iter = new(bitset_iter_t);
 	Iter->Type = BitsetIterT;
@@ -120,7 +120,7 @@ static void ML_TYPED_FN(ml_iter_value, BitsetIterT, ml_state_t *Caller, bitset_i
 	ML_RETURN(ml_integer(Iter->Iter->current_value));
 }
 
-static void ML_TYPED_FN(ml_cbor_write, MLBitsetT, ml_cbor_writer_t *Writer, bitset_t *Bitset) {
+static void ML_TYPED_FN(ml_cbor_write, MLBitsetT, ml_cbor_writer_t *Writer, ml_bitset_t *Bitset) {
 	ml_cbor_write_tag(Writer, ML_CBOR_TAG_OBJECT);
 	ml_cbor_write_array(Writer, 2);
 	ml_cbor_write_string(Writer, strlen("bitset"));
@@ -137,7 +137,7 @@ static ml_value_t *decode_bitset(ml_cbor_reader_t *Reader, int Count, ml_value_t
 	ML_CHECK_ARG_TYPE(0, MLAddressT);
 	roaring_bitmap_t *Value = roaring_bitmap_portable_deserialize_safe(ml_address_value(Args[0]), ml_address_length(Args[0]));
 	if (!Value) return ml_error("DecodeError", "Error decoding bitmap data");
-	bitset_t *Bitset = new(bitset_t);
+	ml_bitset_t *Bitset = new(ml_bitset_t);
 	Bitset->Type = MLBitsetT;
 	Bitset->Value = Value;
 	return (ml_value_t *)Bitset;

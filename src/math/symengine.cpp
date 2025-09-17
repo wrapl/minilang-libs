@@ -58,7 +58,7 @@ ML_METHOD(MLRealT, BasicT) {
 
 #ifdef ML_COMPLEX
 
-#include <ccomplex>
+#include <complex>
 #undef I
 
 static RCP<const Basic> ML_TYPED_FN(ml_basic_of, MLComplexT, ml_value_t *Value) {

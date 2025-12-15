@@ -1,5 +1,5 @@
 export: fun any(Chars) do
-	let M := map(swap(Chars))
+	let M := set(Chars)
 	fun(S, I) do
 		let C := S[I]
 		M[C] and (I + 1, C, 0)
@@ -11,7 +11,7 @@ export: fun many(Chars, Min, Max) do
 end
 
 export: fun none(Chars) do
-	let M := map(swap(Chars))
+	let M := set(Chars)
 	fun(S, I) do
 		let C := S[I]
 		(not M[C]) and (I + 1, C, 0)
@@ -23,10 +23,21 @@ export: fun skip(Chars, Min, Max) do
 end
 
 export: fun match(Pattern) do
-	let L := Pattern:length
-	fun(S, I) do
-		let J := I + L
-		S[I, J] = Pattern and (J, Pattern, 0)
+	switch Pattern: type
+	case string do
+		let L := Pattern:length
+		fun(S, I) do
+			let J := I + L
+			S[I, J] = Pattern and (J, Pattern, 0)
+		end
+	case regex do
+		fun(S, I) do
+			if let (Index, Match) := S:find2(Pattern, I) then
+				if Index = 1 then
+					ret (I + Match:length, Match, 0)
+				end
+			end
+		end
 	end
 end
 
@@ -89,7 +100,7 @@ export: fun alt([Ps]) do
 	ret resume(1, nil, _, _)
 end
 
-export: fun seq([Ps]) do
+export: fun seqn([Ps]) do
 	fun(S, var I) do
 		let Results := []
 

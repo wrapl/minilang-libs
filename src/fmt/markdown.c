@@ -304,10 +304,25 @@ ML_METHOD(Parse, MLStringT) {
 	return (ml_value_t *)Root;
 }
 
+extern ml_type_t MarkdownT[];
+
+ML_FUNCTION(Markdown) {
+	ML_CHECK_ARG_COUNT(1);
+	ML_CHECK_ARG_TYPE(0, MLStringT);
+	ml_string_t *Markdown = new(ml_string_t);
+	Markdown->Type = MarkdownT;
+	Markdown->Length = ml_string_length(Args[0]);
+	Markdown->Value = ml_string_value(Args[0]);
+	return (ml_value_t *)Markdown;
+}
+
+ML_TYPE(MarkdownT, (MLStringT), "markdown",
+	.Constructor = (ml_value_t *)Markdown
+);
+
 ML_LIBRARY_ENTRY0(fmt_markdown) {
 #include "markdown_init.c"
-	Slot[0] = ml_module("markdown",
-		"parse", Parse,
-		"flag", FlagT,
-	NULL);
+	stringmap_insert(MarkdownT->Exports, "parse", Parse);
+	stringmap_insert(MarkdownT->Exports, "flag", FlagT);
+	Slot[0] = (ml_value_t *)MarkdownT;
 }

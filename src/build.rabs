@@ -145,7 +145,7 @@ for Path in file(""):ls do
 	end
 end
 
-context(""):in(;) do
+PARENT:in(;) do
 	let All := meta("all")
 	let ByTag := {}
 	for (Name, File, Tags) in Modules do

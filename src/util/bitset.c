@@ -53,6 +53,16 @@ ML_METHOD("unset", MLBitsetT, MLIntegerRangeT) {
 	return (ml_value_t *)Bitset;
 }
 
+ML_METHOD("count", MLBitsetT) {
+	ml_bitset_t *Bitset = (ml_bitset_t *)Args[0];
+	return ml_integer(roaring_bitmap_get_cardinality(Bitset->Value));
+}
+
+ML_METHOD("size", MLBitsetT) {
+	ml_bitset_t *Bitset = (ml_bitset_t *)Args[0];
+	return ml_integer(roaring_bitmap_get_cardinality(Bitset->Value));
+}
+
 ML_METHOD("append", MLStringBufferT, MLBitsetT) {
 	ml_stringbuffer_t *Buffer = (ml_stringbuffer_t *)Args[0];
 	ml_bitset_t *Bitset = (ml_bitset_t *)Args[1];

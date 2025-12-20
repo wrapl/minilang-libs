@@ -1,0 +1,379 @@
+#include <minilang/ml_library.h>
+#include <minilang/ml_macros.h>
+#include <minilang/ml_logging.h>
+#include <string.h>
+#include <z3.h>
+
+\{let Exports := {}}
+
+\{fun z3type(Name, Append) do
+	let Title := sum(Name / "_", :title)
+	Exports[Title:lower] := 'Z3{Title}T'
+:\typedef struct {
+	ml_type_t *Type;
+	Z3_context Context;
+	Z3_\{Name} Handle;
+} z3_\{Name}_t;
+
+ML_TYPE(Z3\{Title}T, (), "\{Name}");
+
+static ml_value_t *z3_\{Name}(Z3_context Z3Context, Z3_\{Name} Handle) {
+	if (!Handle) return ml_error("ValueError", "\{Name} is null");
+	z3_\{Name}_t *\{Title} = new(z3_\{Name}_t);
+	\{Title}->Type = Z3\{Title}T;
+	\{Title}->Context = Z3Context;
+	\{Title}->Handle = Handle;
+	return (ml_value_t *)\{Title};
+}
+
+static Z3_\{Name} ml_\{Name}_value(ml_value_t *Value) {
+	return ((z3_\{Name}_t *)Value)->Handle;
+}
+
+\{if Append then :\
+ML_METHOD("append", MLStringBufferT, Z3\{Title}T) {
+	ml_stringbuffer_t *Buffer = (ml_stringbuffer_t *)Args[0];
+	Z3_string String = Z3_\{Name}_to_string(Z3Context, ((z3_\{Name}_t *)Args[1])->Handle);
+	ml_stringbuffer_write(Buffer, String, strlen(String));
+	return (ml_value_t *)Buffer;
+}
+\;
+end}
+
+\;
+end}
+
+\{fun ctype(Type) do
+	switch Type: string
+	case "integer" do 'long '
+	case "string" do 'const char *'
+	else 'Z3_{Type} '
+	end
+end}
+
+\{fun mtype(Type) do
+	switch Type: string
+	case "integer" do 'MLIntegerT'
+	case "string" do 'MLStringT'
+	else 'Z3{Type / "_" -> :title, ""}T'
+	end
+end}
+
+\{fun return(Type, Value) do
+	switch Type: string
+	case "integer" do 'ml_integer({Value})'
+	case "string" do 'ml_cstring({Value})'
+	else 'z3_{Type}(Z3Context, {Value})'
+	end
+end}
+
+\{fun z3method(Function, Method, Return, [Params]) do
+:\ML_METHOD("\{string::escape(Method)}"\{for Param in Params do :\, \{mtype(Param)}\; end}) {\{for I, Param in Params do:\
+	\{ctype(Param)}V\{I} = ml_\{Param}_value(Args[\{I - 1}]);\; end}
+	\{ctype(Return)}R = Z3_\{Function}(Z3Context\{for I, Param in Params do :\, V\{I}\; end});
+	return \{return(Return, "R")};
+}
+\;
+end}
+
+\{fun z3methodv(Function, Method, Return, [Params]) do
+	let N := Params:count
+:\ML_METHODV("\{string::escape(Method)}"\{for Param in Params do :\, \{mtype(Param)}\; end}) {\{for I, Param in Params limit (N - 1) do :\
+	\{ctype(Param)}V\{I} = ml_\{Param}_value(Args[\{I - 1}]);\; end}
+	int N = Count + \{1 - N};
+	Z3_\{Params[-1]} V\{N}[N];
+	for (int I = \{N - 1}; I < Count; ++I) {
+		ML_CHECK_ARG_TYPE(I, Z3\{Params[-1]:title}T);
+		V\{N}[I + \{1 - N}] = ml_\{Params[-1]}_value(Args[I]);
+	}
+	\{ctype(Return)}R = Z3_\{Function}(Z3Context\{for I, Param in Params limit (N - 1) do :\, V\{I}\; end}, N, V\{N});
+	return \{return(Return, "R")};
+}
+\;
+end}
+
+\{fun z3function(Function, Name, Return, [Params]) do
+	Exports[Name] := 'Z3{Name:title}'
+:\ML_FUNCTION(Z3\{Name:title}) {\{if Params:count > 0 then :\
+	ML_CHECK_ARG_COUNT(\{Params:count});\; end}\{for I, Param in Params do :\
+	ML_CHECK_ARG_TYPE(\{I - 1}, \{mtype(Param)});\; end}\{for I, Param in Params do :\
+	\{ctype(Param)}V\{I} = ml_\{Param}_value(Args[\{I - 1}]);\; end}
+	\{ctype(Return)}R = Z3_\{Function}(Z3Context\{for I, Param in Params do :\, V\{I}\; end});
+	return \{return(Return, "R")};
+}
+\;
+end}
+
+static Z3_context Z3Context;
+\{z3type("ast", Append is true)}
+
+ML_UNION_TYPE(Z3ValueT, Z3AstT, MLNumberT);
+
+ML_METHOD(Z3AstT, MLIntegerT) {
+	return z3_ast(Z3Context, Z3_mk_int64(Z3Context, ml_integer_value(Args[0]), Z3_mk_int_sort(Z3Context)));
+}
+
+ML_METHOD(MLIntegerT, Z3AstT) {
+	int64_t Value;
+	if (Z3_get_numeral_int64(Z3Context, ml_ast_value(Args[0]), &Value)) {
+		return ml_integer(Value);
+	} else {
+		return ml_error("ValueError", "Could not extract integer value");
+	}
+}
+
+ML_METHOD(MLRealT, Z3AstT) {
+	return ml_real(Z3_get_numeral_double(Z3Context, ml_ast_value(Args[0])));
+}
+
+typedef Z3_ast Z3_value;
+
+Z3_ast ml_value_value(ml_value_t *Value) {
+	typeof(ml_value_value) *function = ml_typed_fn_get(ml_typeof(Value), ml_value_value);
+	if (function) return function(Value);
+	return Z3_mk_int(Z3Context, 0, Z3_mk_int_sort(Z3Context));
+}
+
+static Z3_ast ML_TYPED_FN(ml_value_value, Z3AstT, z3_ast_t *Value) {
+	return Value->Handle;
+}
+
+static Z3_ast ML_TYPED_FN(ml_value_value, MLIntegerT, ml_value_t *Value) {
+	int Index = ml_integer_value(Value);
+	return Z3_mk_int(Z3Context, Index, Z3_mk_int_sort(Z3Context));
+}
+
+\{z3type("symbol")}
+
+ML_UNION_TYPE(Z3NameT, Z3SymbolT, MLStringT, MLIntegerT);
+
+ML_METHOD(Z3SymbolT, MLStringT) {
+	const char *Name = ml_string_value(Args[0]);
+	return z3_symbol(Z3Context, Z3_mk_string_symbol(Z3Context, Name));
+}
+
+ML_METHOD(Z3SymbolT, MLIntegerT) {
+	int Index = ml_integer_value(Args[0]);
+	return z3_symbol(Z3Context, Z3_mk_int_symbol(Z3Context, Index));
+}
+
+typedef Z3_symbol Z3_name;
+
+Z3_symbol ml_name_value(ml_value_t *Value) {
+	typeof(ml_name_value) *function = ml_typed_fn_get(ml_typeof(Value), ml_name_value);
+	if (function) return function(Value);
+	return Z3_mk_string_symbol(Z3Context, "unknown");
+}
+
+static Z3_symbol ML_TYPED_FN(ml_name_value, Z3SymbolT, z3_symbol_t *Value) {
+	return Value->Handle;
+}
+
+static Z3_symbol ML_TYPED_FN(ml_name_value, MLStringT, ml_value_t *Value) {
+	const char *Name = ml_string_value(Value);
+	return Z3_mk_string_symbol(Z3Context, Name);
+}
+
+static Z3_symbol ML_TYPED_FN(ml_name_value, MLIntegerT, ml_value_t *Value) {
+	int Index = ml_integer_value(Value);
+	return Z3_mk_int_symbol(Z3Context, Index);
+}
+
+\{z3type("sort", Append is true)}
+
+ML_UNION_TYPE(Z3TypeT, Z3SortT, MLTypeT);
+
+ML_METHOD(Z3SortT, Z3ValueT) {
+	Z3_ast Ast = ml_value_value(Args[0]);
+	return z3_sort(Z3Context, Z3_get_sort(Z3Context, Ast));
+}
+
+typedef Z3_sort Z3_type;
+
+Z3_sort ml_type_value(ml_value_t *Value) {
+	typeof(ml_type_value) *function = ml_typed_fn_get(ml_typeof(Value), ml_type_value);
+	if (function) return function(Value);
+	return Z3_mk_uninterpreted_sort(Z3Context, Z3_mk_string_symbol(Z3Context, ml_typeof(Value)->Name));
+}
+
+static Z3_sort ML_TYPED_FN(ml_type_value, Z3SortT, z3_sort_t *Value) {
+	return Value->Handle;
+}
+
+static Z3_sort ML_TYPED_FN(ml_type_value, MLTypeT, ml_type_t *Type) {
+	if (Type == MLBooleanT) return Z3_mk_bool_sort(Z3Context);
+	if (Type == MLIntegerT) return Z3_mk_int_sort(Z3Context);
+	if (Type == MLRealT) return Z3_mk_real_sort(Z3Context);
+	return Z3_mk_uninterpreted_sort(Z3Context, Z3_mk_string_symbol(Z3Context, Type->Name));
+}
+
+\{z3type("func_decl", Append is true)}
+
+\{z3type("goal", Append is true)}
+
+ML_METHOD(Z3GoalT, MLBooleanT, MLBooleanT, MLBooleanT) {
+	return z3_goal(Z3Context, Z3_mk_goal(Z3Context, ml_boolean_value(Args[0]), ml_boolean_value(Args[1]), ml_boolean_value(Args[2])));
+}
+
+ML_METHOD("assert", Z3GoalT, Z3AstT) {
+	Z3_goal_assert(Z3Context, ml_goal_value(Args[0]), ml_ast_value(Args[1]));
+	return Args[0];
+}
+
+\{z3type("model", Append is true)}
+
+ML_METHOD("consts", Z3ModelT) {
+	Z3_model Model = ml_model_value(Args[0]);
+	ml_value_t *Result = ml_list();
+	unsigned N = Z3_model_get_num_consts(Z3Context, Model);
+	for (unsigned I = 0; I < N; ++I) {
+		ml_list_put(Result, z3_func_decl(Z3Context, Z3_model_get_const_decl(Z3Context, Model, I)));
+	}
+	return Result;
+}
+
+ML_METHOD("funcs", Z3ModelT) {
+	Z3_model Model = ml_model_value(Args[0]);
+	ml_value_t *Result = ml_list();
+	unsigned N = Z3_model_get_num_funcs(Z3Context, Model);
+	for (unsigned I = 0; I < N; ++I) {
+		ml_list_put(Result, z3_func_decl(Z3Context, Z3_model_get_func_decl(Z3Context, Model, I)));
+	}
+	return Result;
+}
+
+\{z3method("model_get_const_interp", "const_interp", "ast", "model", "func_decl")}
+
+ML_METHOD("eval", Z3ModelT, Z3AstT, MLBooleanT) {
+	Z3_model Model = ml_model_value(Args[0]);
+	Z3_ast Ast = ml_ast_value(Args[1]);
+	bool Completion = ml_boolean_value(Args[2]);
+	Z3_ast Result = NULL;
+	if (Z3_model_eval(Z3Context, Model, Ast, Completion, &Result)) {
+		return z3_ast(Z3Context, Result);
+	} else {
+		return MLNil;
+	}
+}
+
+\{z3type("solver", Append is true)}
+
+ML_METHOD(Z3SolverT) {
+	return z3_solver(Z3Context, Z3_mk_solver(Z3Context));
+}
+
+ML_METHOD("assert", Z3SolverT, Z3AstT) {
+	Z3_solver_assert(Z3Context, ml_solver_value(Args[0]), ml_ast_value(Args[1]));
+	return Args[0];
+}
+
+ML_METHOD("check", Z3SolverT) {
+	Z3_solver Solver = ml_solver_value(Args[0]);
+	if (!Z3_solver_check(Z3Context, Solver)) {
+		return ml_error("UnknownResult", "%s", Z3_solver_get_reason_unknown(Z3Context, Solver));
+	}
+	return z3_model(Z3Context, Z3_solver_get_model(Z3Context, Solver));
+}
+
+\{z3type("optimize", Append is true)}
+
+ML_METHOD(Z3OptimizeT) {
+	return z3_optimize(Z3Context, Z3_mk_optimize(Z3Context));
+}
+
+ML_METHOD("assert", Z3OptimizeT, Z3AstT) {
+	Z3_optimize_assert(Z3Context, ml_optimize_value(Args[0]), ml_ast_value(Args[1]));
+	return Args[0];
+}
+
+ML_METHOD("maximize", Z3OptimizeT, Z3AstT) {
+	Z3_optimize_maximize(Z3Context, ml_optimize_value(Args[0]), ml_ast_value(Args[1]));
+	return Args[0];
+}
+
+ML_METHOD("minimize", Z3OptimizeT, Z3AstT) {
+	Z3_optimize_minimize(Z3Context, ml_optimize_value(Args[0]), ml_ast_value(Args[1]));
+	return Args[0];
+}
+
+ML_METHODV("check", Z3OptimizeT) {
+	Z3_optimize Optimize = ml_optimize_value(Args[0]);
+	if (Count > 1) {
+		for (int I = 1; I < Count; ++I) ML_CHECK_ARG_TYPE(I, Z3AstT);
+		Z3_ast Assumptions[Count - 1];
+		for (int I = 1; I < Count; ++I) Assumptions[I - 1] = ml_ast_value(Args[I]);
+		if (!Z3_optimize_check(Z3Context, Optimize, Count - 1, Assumptions)) {
+			return ml_error("UnknownResult", "%s", Z3_optimize_get_reason_unknown(Z3Context, Optimize));
+		}
+	} else {
+		if (!Z3_optimize_check(Z3Context, Optimize, 0, NULL)) {
+			return ml_error("UnknownResult", "%s", Z3_optimize_get_reason_unknown(Z3Context, Optimize));
+		}
+	}
+	return z3_model(Z3Context, Z3_optimize_get_model(Z3Context, Optimize));
+}
+
+ML_METHODV(Z3FuncDeclT, Z3NameT, Z3TypeT) {
+	Z3_func_decl FuncDecl;
+	Z3_symbol Symbol = ml_name_value(Args[0]);
+	Z3_sort Return = ml_type_value(Args[1]);
+	if (Count > 2) {
+		for (int I = 2; I < Count; ++I) ML_CHECK_ARG_TYPE(I, Z3TypeT);
+		Z3_sort Domain[Count - 2];
+		for (int I = 2; I < Count; ++I) Domain[I - 2] = ml_type_value(Args[I]);
+		FuncDecl = Z3_mk_func_decl(Z3Context, Symbol, Count - 2, Domain, Return);
+	} else {
+		FuncDecl = Z3_mk_func_decl(Z3Context, Symbol, 0, NULL, Return);
+	}
+	return z3_func_decl(Z3Context, FuncDecl);
+}
+
+ML_METHODV("()", Z3FuncDeclT) {
+	for (int I = 1; I < Count; ++I) ML_CHECK_ARG_TYPE(I, Z3ValueT);
+	Z3_ast Z3Args[Count - 1];
+	for (int I = 1; I < Count; ++I) Z3Args[Count - 1] = ml_value_value(Args[I]);
+	return z3_ast(Z3Context, Z3_mk_app(Z3Context, ml_func_decl_value(Args[0]), Count - 1, Z3Args));
+}
+
+\{z3function("mk_const", "const", "ast", "name", "type")}
+\{z3function("mk_true", "true", "ast")}
+\{z3function("mk_false", "false", "ast")}
+\{z3method("mk_eq", "=", "ast", "ast", "value")}
+\{z3methodv("mk_distinct", "!=", "ast", "value")}
+\{z3method("mk_not", "~", "ast", "value")}
+\{z3method("mk_ite", "ite", "ast", "value", "value", "value")}
+\{z3method("mk_iff", "<=>", "ast", "value", "value")}
+\{z3method("mk_implies", "=>", "ast", "value", "value")}
+\{z3method("mk_xor", "><", "ast", "ast", "value")}
+\{z3methodv("mk_and", "/\\", "ast", "value")}
+\{z3methodv("mk_or", "\\/", "ast", "value")}
+\{z3methodv("mk_add", "+", "ast", "value")}
+\{z3methodv("mk_mul", "*", "ast", "value")}
+\{z3methodv("mk_sub", "-", "ast", "value")}
+\{z3method("mk_unary_minus", "-", "ast", "value")}
+\{z3method("mk_div", "/", "ast", "value", "value")}
+\{z3method("mk_mod", "%", "ast", "value", "value")}
+\{z3method("mk_rem", "rem", "ast", "value", "value")}
+\{z3method("mk_power", "^", "ast", "value", "value")}
+\{z3method("mk_lt", "<", "ast", "value", "value")}
+\{z3method("mk_le", "<=", "ast", "value", "value")}
+\{z3method("mk_gt", ">", "ast", "value", "value")}
+\{z3method("mk_ge", ">=", "ast", "value", "value")}
+\{z3method("mk_divides", "|", "ast", "value", "value")}
+
+static ml_logger_t *Logger = NULL;
+
+static void z3_error_handler(Z3_context Context, Z3_error_code ErrorCode) {
+	ml_log(Logger, ML_LOG_LEVEL_ERROR, NULL, __FILE__, __LINE__, "%s", Z3_get_error_msg(Z3Context, ErrorCode));
+}
+
+ML_LIBRARY_ENTRY0(z3) {
+#include "z3_init.c"
+	Logger = ml_logger("Z3");
+	ml_log(Logger, ML_LOG_LEVEL_INFO, NULL, __FILE__, __LINE__, "Initializing Z3 library");
+	Z3Context = Z3_mk_context(NULL);
+	Z3_set_error_handler(Z3Context, z3_error_handler);
+	Slot[0] = ml_module("z3",\{for Name, Value in Exports do :\
+		"\{Name}", \{Value},\; end} 
+	NULL);
+}

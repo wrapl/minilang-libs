@@ -9,8 +9,8 @@ scope("kiwi";) do
 end
 
 scope("z3";) do
-	file("z3.c")[file("xepp.mini"), file("z3.c.xe")] => fun(Target) do
-		execute("minilang", file("xepp.mini"), file("z3.c.xe"), Target)
+	file("z3.c")[file("z3.c.minipp")] => fun(Target) do
+		execute("minipp", file("z3.c.minipp"), "-o", Target)
 	end
 	LDFLAGS := old + ["-lz3"]
 	so_module("solver/z3.so", [file("z3.o")])

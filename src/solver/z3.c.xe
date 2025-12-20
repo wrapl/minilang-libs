@@ -41,7 +41,7 @@ static ml_value_t *z3_<$name>(Z3_context Context, Z3_<$name> Handle) {
 	<case "integer":return ml_integer(<$>);>
 	<case "string":return ml_cstring(<$>);>
 	<else:return z3_<$1>(Context, <$>);>
->> 
+>>
 
 <define "z3-method" $function $method $return [$params]:
 ML_METHOD(<stringify:<$method>><for $param $params:, <mtype $param>>) {
@@ -131,11 +131,15 @@ ML_UNION_TYPE(Z3ValueT, Z3AstT, MLNumberT);
 <z3-method "mk_mod" "%" "ast" "ast" "ast">
 <z3-method "mk_rem" "rem" "ast" "ast" "ast">
 <z3-method "mk_power" "^" "ast" "ast" "ast">
+<z3-method "mk_abs" "math::abs" "ast" "ast">
 <z3-method "mk_lt" "<" "ast" "ast" "ast">
 <z3-method "mk_le" "<=" "ast" "ast" "ast">
 <z3-method "mk_gt" ">" "ast" "ast" "ast">
 <z3-method "mk_ge" ">=" "ast" "ast" "ast">
 <z3-method "mk_divides" "|" "ast" "ast" "ast">
+<z3-method "mk_int2real" "real" "ast" "ast">
+<z3-method "mk_real2int" "integer" "ast" "ast">
+
 
 ML_METHOD("append", MLStringBufferT, Z3AstT) {
 	ml_stringbuffer_t *Buffer = (ml_stringbuffer_t *)Args[0];

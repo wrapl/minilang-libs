@@ -6,7 +6,7 @@
 
 \{let Exports := {}}
 
-\{fun z3type(Name, Append) do
+\{fun z3type(Name, Append, RC) do
 	let Title := sum(Name / "_", :title)
 	Exports[Title:lower] := 'Z3{Title}T'
 :\typedef struct {
@@ -17,12 +17,19 @@
 
 ML_TYPE(Z3\{Title}T, (), "\{Name}");
 
+\{RC and :\
+static void finalize_\{Name}(z3_\{Name}_t *Value, void *Data) {
+	Z3_\{Name}_dec_ref(Z3Context, Value->Handle);
+}\;}
+
 static ml_value_t *z3_\{Name}(Z3_context Z3Context, Z3_\{Name} Handle) {
 	if (!Handle) return ml_error("ValueError", "\{Name} is null");
 	z3_\{Name}_t *\{Title} = new(z3_\{Name}_t);
 	\{Title}->Type = Z3\{Title}T;
 	\{Title}->Context = Z3Context;
-	\{Title}->Handle = Handle;
+	\{Title}->Handle = Handle;\{RC and :\
+	Z3_\{Name}_inc_ref(Z3Context, Handle);
+	GC_register_finalizer(\{Title}, (GC_finalization_proc)finalize_\{Name}, NULL, NULL, NULL);\;}
 	return (ml_value_t *)\{Title};
 }
 
@@ -30,15 +37,13 @@ static Z3_\{Name} ml_\{Name}_value(ml_value_t *Value) {
 	return ((z3_\{Name}_t *)Value)->Handle;
 }
 
-\{if Append then :\
+\{Append and :\
 ML_METHOD("append", MLStringBufferT, Z3\{Title}T) {
 	ml_stringbuffer_t *Buffer = (ml_stringbuffer_t *)Args[0];
 	Z3_string String = Z3_\{Name}_to_string(Z3Context, ((z3_\{Name}_t *)Args[1])->Handle);
 	ml_stringbuffer_write(Buffer, String, strlen(String));
 	return (ml_value_t *)Buffer;
-}
-\;
-end}
+}\;}
 
 \;
 end}
@@ -105,7 +110,11 @@ end}
 end}
 
 static Z3_context Z3Context;
-\{z3type("ast", Append is true)}
+
+#define Z3_ast_inc_ref Z3_inc_ref
+#define Z3_ast_dec_ref Z3_dec_ref
+
+\{z3type("ast", Append is true, RC is true)}
 
 ML_UNION_TYPE(Z3ValueT, Z3AstT, MLNumberT);
 
@@ -209,7 +218,7 @@ static Z3_sort ML_TYPED_FN(ml_type_value, MLTypeT, ml_type_t *Type) {
 
 \{z3type("func_decl", Append is true)}
 
-\{z3type("goal", Append is true)}
+\{z3type("goal", Append is true, RC is true)}
 
 ML_METHOD(Z3GoalT, MLBooleanT, MLBooleanT, MLBooleanT) {
 	return z3_goal(Z3Context, Z3_mk_goal(Z3Context, ml_boolean_value(Args[0]), ml_boolean_value(Args[1]), ml_boolean_value(Args[2])));
@@ -220,7 +229,7 @@ ML_METHOD("assert", Z3GoalT, Z3AstT) {
 	return Args[0];
 }
 
-\{z3type("model", Append is true)}
+\{z3type("model", Append is true, RC is true)}
 
 ML_METHOD("consts", Z3ModelT) {
 	Z3_model Model = ml_model_value(Args[0]);
@@ -256,7 +265,7 @@ ML_METHOD("eval", Z3ModelT, Z3AstT, MLBooleanT) {
 	}
 }
 
-\{z3type("solver", Append is true)}
+\{z3type("solver", Append is true, RC is true)}
 
 ML_METHOD(Z3SolverT) {
 	return z3_solver(Z3Context, Z3_mk_solver(Z3Context));
@@ -275,7 +284,7 @@ ML_METHOD("check", Z3SolverT) {
 	return z3_model(Z3Context, Z3_solver_get_model(Z3Context, Solver));
 }
 
-\{z3type("optimize", Append is true)}
+\{z3type("optimize", Append is true, RC is true)}
 
 ML_METHOD(Z3OptimizeT) {
 	return z3_optimize(Z3Context, Z3_mk_optimize(Z3Context));
@@ -364,6 +373,7 @@ ML_METHODV("()", Z3FuncDeclT) {
 static ml_logger_t *Logger = NULL;
 
 static void z3_error_handler(Z3_context Context, Z3_error_code ErrorCode) {
+	fprintf(stderr, "At least we get here!\\n");
 	ml_log(Logger, ML_LOG_LEVEL_ERROR, NULL, __FILE__, __LINE__, "%s", Z3_get_error_msg(Z3Context, ErrorCode));
 }
 
@@ -371,9 +381,9 @@ ML_LIBRARY_ENTRY0(z3) {
 #include "z3_init.c"
 	Logger = ml_logger("Z3");
 	ml_log(Logger, ML_LOG_LEVEL_INFO, NULL, __FILE__, __LINE__, "Initializing Z3 library");
-	Z3Context = Z3_mk_context(NULL);
+	Z3Context = Z3_mk_context_rc(NULL);
 	Z3_set_error_handler(Z3Context, z3_error_handler);
 	Slot[0] = ml_module("z3",\{for Name, Value in Exports do :\
-		"\{Name}", \{Value},\; end} 
+		"\{Name}", \{Value},\; end}
 	NULL);
 }

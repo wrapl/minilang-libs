@@ -209,11 +209,22 @@ static Z3_sort ML_TYPED_FN(ml_type_value, Z3SortT, z3_sort_t *Value) {
 	return Value->Handle;
 }
 
-static Z3_sort ML_TYPED_FN(ml_type_value, MLTypeT, ml_type_t *Type) {
-	if (Type == MLBooleanT) return Z3_mk_bool_sort(Z3Context);
-	if (Type == MLIntegerT) return Z3_mk_int_sort(Z3Context);
-	if (Type == MLRealT) return Z3_mk_real_sort(Z3Context);
+static Z3_sort ml_type_to_sort(ml_type_t *Type) {
+	typeof(ml_type_to_sort) *function = ml_typed_fn_get(Type, ml_type_to_sort);
+	if (function) return function(Type);
 	return Z3_mk_uninterpreted_sort(Z3Context, Z3_mk_string_symbol(Z3Context, Type->Name));
+}
+
+static Z3_sort ML_TYPED_FN(ml_type_to_sort, MLBooleanT, ml_type_t *Type) {
+	return Z3_mk_bool_sort(Z3Context);
+}
+
+static Z3_sort ML_TYPED_FN(ml_type_to_sort, MLIntegerT, ml_type_t *Type) {
+	return Z3_mk_int_sort(Z3Context);
+}
+
+static Z3_sort ML_TYPED_FN(ml_type_to_sort, MLRealT, ml_type_t *Type) {
+	return Z3_mk_real_sort(Z3Context);
 }
 
 \{z3type("func_decl", Append is true)}

@@ -5,8 +5,7 @@
 #include <z3.h>
 
 \{let Exports := {}}
-
-\{fun z3type(Name, Append, RC) do
+\{fun z3type(Name, Append, RC, Generic) do
 	let Title := sum(Name / "_", :title)
 	Exports[Title:lower] := 'Z3{Title}T'
 :\typedef struct {
@@ -17,6 +16,7 @@
 
 ML_TYPE(Z3\{Title}T, (), "\{Name}");
 
+\{if not Generic then :\
 \{RC and :\
 static void finalize_\{Name}(z3_\{Name}_t *Value, void *Data) {
 	Z3_\{Name}_dec_ref(Z3Context, Value->Handle);
@@ -32,6 +32,7 @@ static ml_value_t *z3_\{Name}(Z3_context Z3Context, Z3_\{Name} Handle) {
 	GC_register_finalizer(\{Title}, (GC_finalization_proc)finalize_\{Name}, NULL, NULL, NULL);\;}
 	return (ml_value_t *)\{Title};
 }
+\; end}
 
 static Z3_\{Name} ml_\{Name}_value(ml_value_t *Value) {
 	return ((z3_\{Name}_t *)Value)->Handle;
@@ -111,10 +112,56 @@ end}
 
 static Z3_context Z3Context;
 
+\{let SortKinds := [
+	"Z3_UNINTERPRETED_SORT",
+	"Z3_BOOL_SORT",
+	"Z3_INT_SORT",
+	"Z3_REAL_SORT",
+	"Z3_BV_SORT",
+	"Z3_ARRAY_SORT",
+	"Z3_DATATYPE_SORT",
+	"Z3_RELATION_SORT",
+	"Z3_FINITE_DOMAIN_SORT",
+	"Z3_FLOATING_POINT_SORT",
+	"Z3_ROUNDING_MODE_SORT",
+	"Z3_SEQ_SORT",
+	"Z3_RE_SORT",
+	"Z3_CHAR_SORT",
+	"Z3_TYPE_VAR",
+	"Z3_UNKNOWN_SORT"
+]}
+
 #define Z3_ast_inc_ref Z3_inc_ref
 #define Z3_ast_dec_ref Z3_dec_ref
 
-\{z3type("ast", Append is true, RC is true)}
+\{z3type("ast", Append is true, RC is true, Generic is true)}
+
+\{fun z3asttype(Kind) do
+	let Name := Kind:after("_"):before("_", -1):lower
+	let Title := sum(Name / "_", :title)
+:\
+ML_TYPE(Z3\{Title}AstT, (Z3AstT), "ast::\{Name}");\;
+end}
+
+\{each SortKinds -> z3asttype}
+
+static void finalize_ast(z3_ast_t *Value, void *Data) {
+	Z3_dec_ref(Z3Context, Value->Handle);
+}
+
+static ml_value_t *z3_ast(Z3_context Z3Context, Z3_ast Handle) {
+	if (!Handle) return ml_error("ValueError", "ast is null");
+	z3_ast_t *Ast = new(z3_ast_t);
+	switch (Z3_get_sort_kind(Z3Context, Z3_get_sort(Z3Context, Handle))) { \{for Kind in SortKinds do
+		let Title := sum(Kind:after("_"):before("_", -1):lower / "_", :title); :\
+	case \{Kind}: Ast->Type = Z3\{Title}AstT; break;\;
+	end}
+	}
+	Ast->Context = Z3Context;
+	Ast->Handle = Handle;
+	GC_register_finalizer(Ast, (GC_finalization_proc)finalize_ast, NULL, NULL, NULL);
+	return (ml_value_t *)Ast;
+}
 
 ML_UNION_TYPE(Z3ValueT, Z3AstT, MLNumberT);
 
@@ -355,12 +402,13 @@ ML_METHODV("()", Z3FuncDeclT) {
 	return z3_ast(Z3Context, Z3_mk_app(Z3Context, ml_func_decl_value(Args[0]), Count - 1, Z3Args));
 }
 
+\{z3function("mk_bv_sort", "bits", "sort", "integer")}
 \{z3function("mk_const", "const", "ast", "name", "type")}
 \{z3function("mk_true", "true", "ast")}
 \{z3function("mk_false", "false", "ast")}
 \{z3method("mk_eq", "=", "ast", "ast", "value")}
 \{z3methodv("mk_distinct", "!=", "ast", "value")}
-\{z3method("mk_not", "~", "ast", "value")}
+\{z3method("mk_not", "!", "ast", "value")}
 \{z3method("mk_ite", "ite", "ast", "value", "value", "value")}
 \{z3method("mk_iff", "<=>", "ast", "value", "value")}
 \{z3method("mk_implies", "=>", "ast", "value", "value")}

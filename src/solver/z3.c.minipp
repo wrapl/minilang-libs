@@ -1,3 +1,5 @@
+\{logger: log("main")}
+
 #include <minilang/ml_library.h>
 #include <minilang/ml_macros.h>
 #include <minilang/ml_logging.h>
@@ -53,6 +55,8 @@ end}
 	switch Type: string
 	case "integer" do 'long '
 	case "string" do 'const char *'
+	case r"(.+)_ast" do "Z3_ast "
+	case r"(.+)_value" do "Z3_ast "
 	else 'Z3_{Type} '
 	end
 end}
@@ -61,7 +65,7 @@ end}
 	switch Type: string
 	case "integer" do 'MLIntegerT'
 	case "string" do 'MLStringT'
-	else 'Z3{Type / "_" -> :title, ""}T'
+	else 'Z3{sum(Type / "_", :title)}T'
 	end
 end}
 
@@ -69,6 +73,7 @@ end}
 	switch Type: string
 	case "integer" do 'ml_integer({Value})'
 	case "string" do 'ml_cstring({Value})'
+	case r".+_ast" do 'z3_ast(Z3Context, {Value})'
 	else 'z3_{Type}(Z3Context, {Value})'
 	end
 end}
@@ -87,9 +92,9 @@ end}
 :\ML_METHODV("\{string::escape(Method)}"\{for Param in Params do :\, \{mtype(Param)}\; end}) {\{for I, Param in Params limit (N - 1) do :\
 	\{ctype(Param)}V\{I} = ml_\{Param}_value(Args[\{I - 1}]);\; end}
 	int N = Count + \{1 - N};
-	Z3_\{Params[-1]} V\{N}[N];
+	\{ctype(Params[-1])} V\{N}[N];
 	for (int I = \{N - 1}; I < Count; ++I) {
-		ML_CHECK_ARG_TYPE(I, Z3\{Params[-1]:title}T);
+		ML_CHECK_ARG_TYPE(I, \{mtype(Params[-1])});
 		V\{N}[I + \{1 - N}] = ml_\{Params[-1]}_value(Args[I]);
 	}
 	\{ctype(Return)}R = Z3_\{Function}(Z3Context\{for I, Param in Params limit (N - 1) do :\, V\{I}\; end}, N, V\{N});
@@ -136,11 +141,16 @@ static Z3_context Z3Context;
 
 \{z3type("ast", Append is true, RC is true, Generic is true)}
 
+ML_TYPE(Z3NumberAstT, (Z3AstT), "ast::number");
+
 \{fun z3asttype(Kind) do
 	let Name := Kind:after("_"):before("_", -1):lower
 	let Title := sum(Name / "_", :title)
 :\
-ML_TYPE(Z3\{Title}AstT, (Z3AstT), "ast::\{Name}");\;
+ML_TYPE(Z3\{Title}AstT, (\{if ["int", "real"] find Name then "Z3NumberAstT" else "Z3AstT" end}), "ast::\{Name}");
+
+#define ml_\{Name}_ast_value ml_ast_value
+\;
 end}
 
 \{each SortKinds -> z3asttype}
@@ -164,6 +174,12 @@ static ml_value_t *z3_ast(Z3_context Z3Context, Z3_ast Handle) {
 }
 
 ML_UNION_TYPE(Z3ValueT, Z3AstT, MLNumberT);
+
+ML_UNION_TYPE(Z3NumberValueT, Z3NumberAstT, MLNumberT);
+#define ml_number_value_value ml_value_value
+
+ML_UNION_TYPE(Z3BitsValueT, Z3BvAstT, MLNumberT);
+#define ml_bits_value_value ml_value_value
 
 ML_METHOD(Z3AstT, MLIntegerT) {
 	return z3_ast(Z3Context, Z3_mk_int64(Z3Context, ml_integer_value(Args[0]), Z3_mk_int_sort(Z3Context)));
@@ -406,28 +422,40 @@ ML_METHODV("()", Z3FuncDeclT) {
 \{z3function("mk_const", "const", "ast", "name", "type")}
 \{z3function("mk_true", "true", "ast")}
 \{z3function("mk_false", "false", "ast")}
-\{z3method("mk_eq", "=", "ast", "ast", "value")}
+\{z3method("mk_eq", "=", "ast", "value", "value")}
 \{z3methodv("mk_distinct", "!=", "ast", "value")}
 \{z3method("mk_not", "!", "ast", "value")}
 \{z3method("mk_ite", "ite", "ast", "value", "value", "value")}
 \{z3method("mk_iff", "<=>", "ast", "value", "value")}
 \{z3method("mk_implies", "=>", "ast", "value", "value")}
-\{z3method("mk_xor", "><", "ast", "ast", "value")}
+\{z3method("mk_xor", "><", "ast", "value", "value")}
 \{z3methodv("mk_and", "/\\", "ast", "value")}
 \{z3methodv("mk_or", "\\/", "ast", "value")}
-\{z3methodv("mk_add", "+", "ast", "value")}
-\{z3methodv("mk_mul", "*", "ast", "value")}
-\{z3methodv("mk_sub", "-", "ast", "value")}
-\{z3method("mk_unary_minus", "-", "ast", "value")}
-\{z3method("mk_div", "/", "ast", "value", "value")}
-\{z3method("mk_mod", "%", "ast", "value", "value")}
-\{z3method("mk_rem", "rem", "ast", "value", "value")}
-\{z3method("mk_power", "^", "ast", "value", "value")}
-\{z3method("mk_lt", "<", "ast", "value", "value")}
-\{z3method("mk_le", "<=", "ast", "value", "value")}
-\{z3method("mk_gt", ">", "ast", "value", "value")}
-\{z3method("mk_ge", ">=", "ast", "value", "value")}
-\{z3method("mk_divides", "|", "ast", "value", "value")}
+\{z3methodv("mk_add", "+", "ast", "number_value")}
+\{z3methodv("mk_mul", "*", "ast", "number_value")}
+\{z3methodv("mk_sub", "-", "ast", "number_value")}
+\{z3method("mk_unary_minus", "-", "ast", "number_value")}
+\{z3method("mk_div", "/", "ast", "number_value", "number_value")}
+\{z3method("mk_mod", "%", "ast", "number_value", "number_value")}
+\{z3method("mk_rem", "rem", "ast", "number_value", "number_value")}
+\{z3method("mk_power", "^", "ast", "number_value", "number_value")}
+\{z3method("mk_lt", "<", "ast", "number_value", "number_value")}
+\{z3method("mk_le", "<=", "ast", "number_value", "number_value")}
+\{z3method("mk_gt", ">", "ast", "number_value", "number_value")}
+\{z3method("mk_ge", ">=", "ast", "number_value", "number_value")}
+\{z3method("mk_divides", "|", "ast", "number_value", "number_value")}
+\{z3method("mk_bvnot", "!", "ast", "bits_value")}
+\{z3method("mk_bvredand", "/\\", "ast", "bits_value")}
+\{z3method("mk_bvredor", "\\/", "ast", "bits_value")}
+\{z3method("mk_bvand", "/\\", "ast", "bits_value", "bits_value")}
+\{z3method("mk_bvor", "\\/", "ast", "bits_value", "bits_value")}
+\{z3method("mk_bvxor", "><", "ast", "bits_value", "bits_value")}
+\{z3method("mk_bvnand", "!/\\", "ast", "bits_value", "bits_value")}
+\{z3method("mk_bvnor", "!\\/", "ast", "bits_value", "bits_value")}
+\{z3method("mk_bvxnor", "!><", "ast", "bits_value", "bits_value")}
+\{z3method("mk_bvadd", "+", "ast", "bits_value", "bits_value")}
+\{z3method("mk_bvsub", "-", "ast", "bits_value", "bits_value")}
+\{z3method("mk_bvmul", "*", "ast", "bits_value", "bits_value")}
 
 static ml_logger_t *Logger = NULL;
 

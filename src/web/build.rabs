@@ -12,3 +12,17 @@ scope("onion";) do
 	LDFLAGS := old + [Lib, "-lgnutls"]
 	:>so_module("web/onion.so", [file("onion.o")])
 end
+
+scope("uwebsockets";) do
+	let AppH := file("include/uWebSockets/App.h") => fun() do
+		file("uWebSockets"):rmdir
+		execute("git clone --recursive --depth 1 --branch v20.74.0 https://github.com/uNetworking/uWebSockets.git")
+		file("uWebSockets"):chdir
+		execute('make -f GNUmakefile prefix={PATH} install')
+		execute('cp uSockets/src/libusockets.h {PATH / "include"}')
+		execute('make -C uSockets')
+	end
+	PREBUILDS := old + [AppH]
+	CFLAGS := old + ['-I{AppH:dir:dir}']
+	so_module("web/uwebsockets.so", [file("uwebsockets.o")], [file("uWebSockets/uSockets/uSockets.a")])
+end

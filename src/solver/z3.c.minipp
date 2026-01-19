@@ -419,6 +419,7 @@ ML_METHODV("()", Z3FuncDeclT) {
 }
 
 \{z3function("mk_bv_sort", "bits", "sort", "integer")}
+\{z3function("mk_array_sort", "array", "sort", "sort", "sort")}
 \{z3function("mk_const", "const", "ast", "name", "type")}
 \{z3function("mk_true", "true", "ast")}
 \{z3function("mk_false", "false", "ast")}
@@ -456,6 +457,7 @@ ML_METHODV("()", Z3FuncDeclT) {
 \{z3method("mk_bvadd", "+", "ast", "bits_value", "bits_value")}
 \{z3method("mk_bvsub", "-", "ast", "bits_value", "bits_value")}
 \{z3method("mk_bvmul", "*", "ast", "bits_value", "bits_value")}
+\{z3method("mk_select", "[]", "ast", "array_ast", "value")}
 
 static ml_logger_t *Logger = NULL;
 

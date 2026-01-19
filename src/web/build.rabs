@@ -13,7 +13,7 @@ scope("onion";) do
 	:>so_module("web/onion.so", [file("onion.o")])
 end
 
-scope("uwebsockets";) do
+:<scope("uwebsockets";) do
 	let AppH := file("include/uWebSockets/App.h") => fun() do
 		file("uWebSockets"):rmdir
 		execute("git clone --recursive --depth 1 --branch v20.74.0 https://github.com/uNetworking/uWebSockets.git")
@@ -54,4 +54,19 @@ scope("civetweb";) do
 	PREBUILDS := old + [Lib]
 	CFLAGS := old + ['-Iinclude']
 	so_module("web/civetweb.so", [file("civetweb.o")], [Lib])
-end
+end>:
+
+:<scope("libhttp";) do
+	let Dir := file("libhttp")
+	let Lib := file("lib/libhttp.a") => fun() do
+		Dir:rmdir
+		execute("git clone --recursive https://github.com/lammertb/libhttp.git", Dir)
+		Dir:chdir
+		execute('make -j4 PREFIX={PATH} install')
+	end
+	PREBUILDS := old + [Lib]
+	CFLAGS := old + ["-DGC_PTHREADS", '-I{file("include")}']
+	LDFLAGS := old + [Lib]
+	so_module("web/libhttp.so", [file("libhttp.o")])
+end>:
+

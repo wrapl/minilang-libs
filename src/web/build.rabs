@@ -24,5 +24,34 @@ scope("uwebsockets";) do
 	end
 	PREBUILDS := old + [AppH]
 	CFLAGS := old + ['-I{AppH:dir:dir}']
+	file("uwebsockets_init.cpp")[file("uwebsockets2.cpp")]
 	so_module("web/uwebsockets.so", [file("uwebsockets.o")], [file("uWebSockets/uSockets/uSockets.a")])
+end
+
+scope("h2o";) do
+	let Dir := file("h2o")
+	let Lib := file("lib/libh2o.a") => fun() do
+		Dir:rmdir
+		execute("git clone --recursive --depth 1 https://github.com/h2o/h2o.git")
+		Dir:chdir
+		execute('CFLAGS=-fpic cmake . -DCMAKE_INSTALL_PREFIX={PATH} -DCMAKE_BUILD_TYPE=Release')
+		execute("make -j4")
+		execute("make install")
+	end
+	PREBUILDS := old + [Lib]
+	so_module("web/h2o.so", [file("h2o.o")], [Lib])
+end
+
+scope("civetweb";) do
+	let Dir := file("civetweb")
+	let Lib := file("lib/libcivetweb.a") => fun() do
+		Dir:rmdir
+		execute("git clone --recursive --depth 1 https://github.com/civetweb/civetweb.git")
+		Dir:chdir
+		execute('make -j4 PREFIX={PATH} install-lib')
+		execute('make -j4 PREFIX={PATH} install-headers')
+	end
+	PREBUILDS := old + [Lib]
+	CFLAGS := old + ['-Iinclude']
+	so_module("web/civetweb.so", [file("civetweb.o")], [Lib])
 end

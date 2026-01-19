@@ -1,4 +1,5 @@
 so_module("util/bitset.so", [file("bitset.o"), file("roaring.o")])
+so_module("util/compare.so", [file("compare.o"), file("diff.o")])
 
 GIR := scope("gir";) do
 	CFLAGS := old + [

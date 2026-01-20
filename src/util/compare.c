@@ -30,7 +30,7 @@ static int diff_value0(void *Data, const void *A, const void *B) {
 	return diff_value(Data, *(ml_value_t **)A, *(ml_value_t **)B);
 }
 
-ML_ENUM(DiffT, "diff", "Add", "Delete", "Common");
+ML_ENUM(DiffT, "diff", "Insert", "Delete", "Common");
 
 ML_FUNCTION(Diff) {
 	ML_CHECK_ARG_COUNT(2);
@@ -42,15 +42,43 @@ ML_FUNCTION(Diff) {
 	if (diff(Diff, NULL, diff_value0, sizeof(ml_value_t *), A, ml_slice_length(Args[0]), B, ml_slice_length(Args[1])) < 0) {
 		return ml_error("DiffError", "Error computing difference");
 	}
-	ml_value_t *Result = ml_slice(Diff->sessz);
-	for (int I = 0; I < Diff->sessz; ++I) {
-		struct diff_ses *Ses = Diff->ses + I;
-		ml_value_t *Type = ml_enum_value(DiffT, Ses->type + 1);
-		ml_slice_put(Result, ml_tuplev(4,
-			Type, *(ml_value_t **)Ses->e,
-			ml_integer(Ses->originIdx),
-			ml_integer(Ses->targetIdx)
-		));
+	ml_value_t *DiffInsert = ml_enum_value(DiffT, 1);
+	ml_value_t *DiffDelete = ml_enum_value(DiffT, 2);
+	ml_value_t *DiffCommon = ml_enum_value(DiffT, 3);
+	ml_value_t *Result = ml_slice(4);
+	struct diff_ses *Ses = Diff->ses;
+	struct diff_ses *End = Ses + Diff->sessz;
+	while (Ses < End) {
+		struct diff_ses *Beg = Ses;
+		switch (Ses->type) {
+		case DIFF_ADD: {
+			int Target = Ses->targetIdx;
+			do { ++Target; ++Ses; } while (Ses < End && Ses->type == DIFF_ADD && Ses->targetIdx == Target);
+			ml_value_t *Slice = ml_slice(Ses - Beg);
+			while (Beg < Ses) ml_slice_put(Slice, *(ml_value_t **)((Beg++)->e));
+			ml_slice_put(Result, ml_tuplev(3, DiffInsert, Slice, MLNil));
+			break;
+		}
+		case DIFF_DELETE: {
+			int Origin = Ses->originIdx;
+			ml_value_t *OriginValue = ml_integer(Origin);
+			do { ++Origin; ++Ses; } while (Ses < End && Ses->type == DIFF_DELETE && Ses->originIdx == Origin);
+			ml_value_t *Slice = ml_slice(Ses - Beg);
+			while (Beg < Ses) ml_slice_put(Slice, *(ml_value_t **)((Beg++)->e));
+			ml_slice_put(Result, ml_tuplev(3, DiffDelete, Slice, OriginValue));
+			break;
+		}
+		case DIFF_COMMON: {
+			int Origin = Ses->originIdx;
+			int Target = Ses->targetIdx;
+			ml_value_t *OriginValue = ml_integer(Origin);
+			do { ++Origin; ++Target; ++Ses; } while (Ses < End && Ses->type == DIFF_COMMON && Ses->originIdx == Origin && Ses->targetIdx == Target);
+			ml_value_t *Slice = ml_slice(Ses - Beg);
+			while (Beg < Ses) ml_slice_put(Slice, *(ml_value_t **)((Beg++)->e));
+			ml_slice_put(Result, ml_tuplev(3, DiffCommon, Slice, OriginValue));
+			break;
+		}
+		}
 	}
 	return Result;
 }

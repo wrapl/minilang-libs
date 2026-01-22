@@ -4,7 +4,7 @@
 #include <minilang/ml_macros.h>
 #include "diff.h"
 
-ML_ENUM(DiffT, "diff", "Insert", "Delete", "Common");
+ML_ENUM(OpT, "compare::op", "Insert", "Delete", "Common");
 
 ML_METHOD_ANON(DiffMethod, "compare::diff");
 
@@ -23,9 +23,9 @@ ML_METHOD(DiffMethod, MLStringT, MLStringT) {
 	if (diff(Diff, NULL, diff_utf8, sizeof(uint32_t), A, ACount, B, BCount) < 0) {
 		return ml_error("DiffError", "Error computing difference");
 	}
-	ml_value_t *DiffInsert = ml_enum_value(DiffT, 1);
-	ml_value_t *DiffDelete = ml_enum_value(DiffT, 2);
-	ml_value_t *DiffCommon = ml_enum_value(DiffT, 3);
+	ml_value_t *DiffInsert = ml_enum_value(OpT, 1);
+	ml_value_t *DiffDelete = ml_enum_value(OpT, 2);
+	ml_value_t *DiffCommon = ml_enum_value(OpT, 3);
 	ml_value_t *Result = ml_list();
 	struct diff_ses *Ses = Diff->ses;
 	struct diff_ses *End = Ses + Diff->sessz;
@@ -95,9 +95,9 @@ ML_METHOD(DiffMethod, MLSliceT, MLSliceT) {
 	if (diff(Diff, NULL, diff_value0, sizeof(ml_value_t *), A, ml_slice_length(Args[0]), B, ml_slice_length(Args[1])) < 0) {
 		return ml_error("DiffError", "Error computing difference");
 	}
-	ml_value_t *DiffInsert = ml_enum_value(DiffT, 1);
-	ml_value_t *DiffDelete = ml_enum_value(DiffT, 2);
-	ml_value_t *DiffCommon = ml_enum_value(DiffT, 3);
+	ml_value_t *DiffInsert = ml_enum_value(OpT, 1);
+	ml_value_t *DiffDelete = ml_enum_value(OpT, 2);
+	ml_value_t *DiffCommon = ml_enum_value(OpT, 3);
 	ml_value_t *Result = ml_list();
 	struct diff_ses *Ses = Diff->ses;
 	struct diff_ses *End = Ses + Diff->sessz;
@@ -177,5 +177,6 @@ ML_LIBRARY_ENTRY0(util_compare) {
 #include "compare_init.c"
 	Slot[0] = ml_module("util/compare",
 		"diff", DiffMethod,
+		"op", OpT,
 	NULL);
 }

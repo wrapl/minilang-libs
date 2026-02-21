@@ -1,0 +1,12 @@
+--- Makefile	2026-02-21 09:13:01.155397017 +0000
++++ Makefile2	2026-02-21 09:11:10.845000000 +0000
+@@ -32,7 +32,8 @@
+ 
+ CFLAGS = $(OPT_FLAGS) $(MACHINE_FLAGS) $(WARN_FLAGS) \
+ 	 	-DMSIEVE_SVN_VERSION="\"$(SVN_VERSION)\"" \
+-		-I. -Iaprcl -Iinclude -Ignfs -Ignfs/poly -Ignfs/poly/stage1
++		-I. -Iaprcl -Iinclude -Ignfs -Ignfs/poly -Ignfs/poly/stage1 \
++		-fPIC
+ 
+ # tweak the compile flags
+ 

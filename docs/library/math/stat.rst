@@ -9,7 +9,19 @@ math/stat
 
 .. rst-class:: mini-api
 
+:mini:`fun correlationfunc()`
+   *TBD*
+
+
 :mini:`fun countinit()`
+   *TBD*
+
+
+:mini:`fun covariancefunc()`
+   *TBD*
+
+
+:mini:`fun variancefunc()`
    *TBD*
 
 

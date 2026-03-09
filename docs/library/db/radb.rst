@@ -153,6 +153,10 @@ db/radb
    Stores :mini:`Value` as the entry at :mini:`Index` in :mini:`Store` and returns :mini:`Value`.
 
 
+:mini:`meth (Arg₁: stringstore):truncate(Arg₂: integer, Arg₃: integer)`
+   *TBD*
+
+
 :mini:`meth (Arg₁: stringstore):write(Arg₂: integer)`
    *TBD*
 

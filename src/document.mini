@@ -49,7 +49,7 @@ end
 let Categories := {}
 
 fun emit(Category, Key, Docs) do
-	Categories[Category, fun util::pqueue(<)]:insert(Docs, Key)
+	Categories[Category, fun pqueue(<)]:insert(Docs, Key)
 end
 
 fun write_overview(Category, Description) do
@@ -147,7 +147,7 @@ fun write_examples(Buffer, Examples) do
 		Parser:reset:input(Example)
 		loop
 			let Next := Parser:evaluate(Compiler)
-			until type(Next) = any and Next = compiler::EOI
+			until Next = compiler::EOI
 			Result := image(Next)
 			print('\tResult = {Result}\n')
 		on Error do
@@ -181,7 +181,9 @@ fun write_method(Category, Kind, Method0, Params, Return, Description, Examples,
 	elseif let Match := Method0 % r"(\w+)T" then
 		Match[2]:lower
 	elseif Method0[1] = "\"" then
-		if is_symbol(Method0) or Method0:find("::") then
+		if let I := Method0:find("\" #") then
+			':{Method0[2, I]}{Method0[I + 3, 0]}'
+		elseif is_symbol(Method0) or Method0:find("::") then
 			Method0[2, -1]:replace("\\\\",  "\\")
 		else
 			':{Method0[2, -1]}'
@@ -370,16 +372,17 @@ fun write_type(Category, Name, Parents, Description, Examples, Location) do
 		Buffer:write(" < ")
 		var Seperator := ""
 		if Category != "internal" then
+			TypesGraph:write('      \"{TypeName}\" [href=\"/library/{Category}.html#{TypeName}\",target=\"_top\",tooltip=\"{Parents -> type_name, ","}\"];\n')
 			for Parent in Parents do
 				let ParentName := type_name(Parent)
-				TypesGraph:write('      \"{ParentName}\":e -> \"{TypeName}\":w;\n')
+				TypesGraph:write('      \"{ParentName}\":e -> \"{TypeName}\":w [color=\"{random(real), "%0.3f"},1,0.5\"];\n')
 				Buffer:write(Seperator, type_name(Parent))
 				Seperator := ", "
 			end
 		end
 	else
 		if Category != "internal" and Name != "MLAnyT" then
-			TypesGraph:write('      \"any\":e -> \"{TypeName}\":w;\n')
+			TypesGraph:write('      \"any\":e -> \"{TypeName}\":w [color=\"{random(real), "%0.3f"},1,0.5\"];\n')
 		end
 	end
 	Buffer:write("`\n")
@@ -664,6 +667,69 @@ fun process(FileName) do
 				else
 					write_function(Category, Kind, Name, Params, Return, Description, Examples, Location)
 				end
+			elseif Line % r"^ML_MINI_FUNCTION" then
+				let Location := (FileName, LineNo)
+				let I := Line:find("("), J := Line:find(",")
+				var Name := Line[I + 1, J]:lower
+				var Category := DefaultCategory
+				let Params := []
+				var Return := []
+				let Description := []
+				let Examples := []
+				let Example := string::buffer()
+				loop
+					let Line := while File:read
+					LineNo := old + 1
+					if Line % r"^/[/*]@" then
+						Name := Line[4, 0]:trim
+					elseif Line % r"^/[/*]<" then
+						if let J := Line:find(":", 4) then
+							let K := Line:find(" ", J + 2) or 0
+							Params:put([
+								Line[4, J]:trim:replace(Subscripts),
+								Line[J + 1, K]:trim,
+								Line[K, 0]:trim
+							])
+						else
+							let J := Line:find(" ", 4) or 0
+							Params:put([
+								Line[4, J]:trim:replace(Subscripts),
+								"MLAnyT",
+								Line[J, 0]:trim
+							])
+						end
+					elseif Line % r"^/[/*]>" then
+						Return := list(Line[4, 0] / "|", :trim, :replace(_, Subscripts))
+					elseif Line % r"^/[/*]!" then
+						Category := Line[4, 0]:trim
+					elseif Line % r"^/[/*] " then
+						Description:put(Line[4, 0]:replace(Subscripts))
+					elseif Line % r"^/[/*]\n" then
+						Description:put("\n")
+					elseif Line % r"^/[/*]\$- " then
+						Example:write("      ", Line[6, 0])
+					elseif Line % r"^/[/*]\$-" then
+						Example:write("      \n")
+					elseif Line % r"^/[/*]\$= " then
+						Example:write("      ", Line[6, -1])
+						Examples:put(Example:rest)
+					elseif let Match := Line % r"ML_CHECK(X?)_ARG_COUNT\(([0-9]+)\)" then
+						let Count := integer(Match[3])
+						for I in (Params:length + 1) .. Count do
+							Params:put(['Arg/{I}':replace(Subscripts), "any", ""])
+						end
+					elseif let Match := Line % r"ML_CHECK(X?)_ARG_TYPE\(([0-9]+), (\w+)\)" then
+						let Index := integer(Match[3]) + 1
+						Params[Index][2] := type_name(Match[4])
+					else
+						exit
+					end
+				end
+				if CurrentDefine then
+					CurrentDefine:put(write_function, [Category, "", Name, Params, Return, Description, Examples, Location])
+				else
+					write_function(Category, "", Name, Params, Return, Description, Examples, Location)
+				end
 			elseif Line % r"^ML_CONSTRUCTOR" then
 				let Location := (FileName, LineNo)
 				let I := Line:find("("), J := Line:find(")")
@@ -910,14 +976,18 @@ hierarchy
 =========
 
 .. graphviz::
+   :layout: dot
 
    digraph hierarchy \{
       rankdir="LR";
       fontsize="40pt"
-      concentrate=true;
-      overlap=false;
+      concentrate=false;
+      overlap=true;
+      splines=spline;
       packMode="node";
+      mode="hier";
       outputorder="edgesfirst";
+      mclimit=20;
       node [shape=box,fontsize=24];
 ')
 	File:write(TypesGraph:rest)

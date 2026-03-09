@@ -25,6 +25,74 @@ general
    *TBD*
 
 
+:mini:`type app`
+   *TBD*
+
+
+:mini:`meth (Arg₁: app):any(Arg₂: string, Arg₃: function)`
+   *TBD*
+
+
+:mini:`meth (Arg₁: app):connect(Arg₂: string, Arg₃: function)`
+   *TBD*
+
+
+:mini:`meth (Arg₁: app):del(Arg₂: string, Arg₃: function)`
+   *TBD*
+
+
+:mini:`meth (Arg₁: app):get(Arg₂: string, Arg₃: function)`
+   *TBD*
+
+
+:mini:`meth (Arg₁: app):get(Arg₂: string, Arg₃: function)`
+   *TBD*
+
+
+:mini:`meth (Arg₁: app):head(Arg₂: string, Arg₃: function)`
+   *TBD*
+
+
+:mini:`meth (Arg₁: app):listen(Arg₂: integer)`
+   *TBD*
+
+
+:mini:`meth (Arg₁: app):options(Arg₂: string, Arg₃: function)`
+   *TBD*
+
+
+:mini:`meth (Arg₁: app):patch(Arg₂: string, Arg₃: function)`
+   *TBD*
+
+
+:mini:`meth (Arg₁: app):post(Arg₂: string, Arg₃: function)`
+   *TBD*
+
+
+:mini:`meth (Arg₁: app):put(Arg₂: string, Arg₃: function)`
+   *TBD*
+
+
+:mini:`meth (Arg₁: app):run`
+   *TBD*
+
+
+:mini:`meth (Arg₁: app):trace(Arg₂: string, Arg₃: function)`
+   *TBD*
+
+
+:mini:`type civetweb`
+   *TBD*
+
+
+:mini:`meth civetweb()`
+   *TBD*
+
+
+:mini:`meth (Arg₁: civetweb):handle(Arg₂: string, Arg₃: function)`
+   *TBD*
+
+
 :mini:`type context`
    *TBD*
 
@@ -109,6 +177,10 @@ general
    *TBD*
 
 
+:mini:`type op < enum`
+   *TBD*
+
+
 :mini:`type rainstance`
    *TBD*
 
@@ -134,6 +206,38 @@ general
 
 
 :mini:`type raschemaindex`
+   *TBD*
+
+
+:mini:`type response`
+   *TBD*
+
+
+:mini:`meth (Arg₁: response):end(Arg₂: string)`
+   *TBD*
+
+
+:mini:`meth (Arg₁: response):header(Arg₂: string, Arg₃: string)`
+   *TBD*
+
+
+:mini:`meth (Arg₁: response):status(Arg₂: string)`
+   *TBD*
+
+
+:mini:`meth (Arg₁: response):write(Arg₂: address)`
+   *TBD*
+
+
+:mini:`meth (Arg₁: sequence):DiffMethod(Arg₂: sequence)`
+   *TBD*
+
+
+:mini:`meth (Arg₁: slice):DiffMethod(Arg₂: slice)`
+   *TBD*
+
+
+:mini:`meth (Arg₁: string):DiffMethod(Arg₂: string)`
    *TBD*
 
 

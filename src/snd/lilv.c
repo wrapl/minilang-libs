@@ -15,24 +15,27 @@ typedef struct {
 ML_TYPE(PluginT, (), "lilv::plugin");
 
 static ml_value_t *ml_node_as_string(LilvNode *Node) {
-	ml_value_t *Result = ml_string_unchecked(lilv_node_as_string(Node), -1);
+	ml_value_t *Result = ml_string_copy(lilv_node_as_string(Node), -1);
 	lilv_node_free(Node);
 	return Result;
 }
 
 static ml_value_t *ml_node_as_float(LilvNode *Node) {
+	if (!Node) return MLNil;
 	ml_value_t *Result = ml_real(lilv_node_as_float(Node));
 	lilv_node_free(Node);
 	return Result;
 }
 
 static ml_value_t *ml_node_as_int(LilvNode *Node) {
+	if (!Node) return MLNil;
 	ml_value_t *Result = ml_integer(lilv_node_as_int(Node));
 	lilv_node_free(Node);
 	return Result;
 }
 
 static ml_value_t *ml_node_as_bool(LilvNode *Node) {
+	if (!Node) return MLNil;
 	ml_value_t *Result = ml_boolean(lilv_node_as_bool(Node));
 	lilv_node_free(Node);
 	return Result;
@@ -42,7 +45,7 @@ static ml_value_t *ml_nodes_as_strings(LilvNodes *Nodes) {
 	ml_value_t *Result = ml_list();
 	for (LilvIter *Iter = lilv_nodes_begin(Nodes); !lilv_nodes_is_end(Nodes, Iter); Iter = lilv_nodes_next(Nodes, Iter)) {
 		const LilvNode *Node = lilv_nodes_get(Nodes, Iter);
-		ml_list_put(Result, ml_string_unchecked(lilv_node_as_string(Node), -1));
+		ml_list_put(Result, ml_string_copy(lilv_node_as_string(Node), -1));
 	}
 	lilv_nodes_free(Nodes);
 	return Result;
@@ -55,7 +58,7 @@ ML_METHOD("name", PluginT) {
 
 ML_METHOD("uri", PluginT) {
 	const LilvPlugin *Handle = ((plugin_t *)Args[0])->Handle;
-	return ml_string_unchecked(lilv_node_as_string(lilv_plugin_get_uri(Handle)), -1);
+	return ml_string_copy(lilv_node_as_string(lilv_plugin_get_uri(Handle)), -1);
 }
 
 ML_METHOD("extension_data", PluginT) {
@@ -133,7 +136,7 @@ ML_METHOD("name", PortT) {
 ML_METHOD("symbol", PortT) {
 	const LilvPlugin *Plugin = ((port_t *)Args[0])->Plugin;
 	const LilvPort *Handle = ((port_t *)Args[0])->Handle;
-	return ml_string_unchecked(lilv_node_as_string(lilv_port_get_name(Plugin, Handle)), -1);
+	return ml_string_copy(lilv_node_as_string(lilv_port_get_symbol(Plugin, Handle)), -1);
 }
 
 ML_METHOD("range", PortT) {
@@ -155,7 +158,7 @@ ML_METHOD("classes", PortT) {
 	ml_value_t *Result = ml_list();
 	for (LilvIter *Iter = lilv_nodes_begin(Nodes); !lilv_nodes_is_end(Nodes, Iter); Iter = lilv_nodes_next(Nodes, Iter)) {
 		const LilvNode *Node = lilv_nodes_get(Nodes, Iter);
-		ml_list_put(Result, ml_string_unchecked(lilv_node_as_string(Node), -1));
+		ml_list_put(Result, ml_string_copy(lilv_node_as_string(Node), -1));
 	}
 	return Result;
 }
@@ -167,7 +170,7 @@ ML_METHOD("properties", PortT) {
 	ml_value_t *Result = ml_list();
 	for (LilvIter *Iter = lilv_nodes_begin(Nodes); !lilv_nodes_is_end(Nodes, Iter); Iter = lilv_nodes_next(Nodes, Iter)) {
 		const LilvNode *Node = lilv_nodes_get(Nodes, Iter);
-		ml_list_put(Result, ml_string_unchecked(lilv_node_as_string(Node), -1));
+		ml_list_put(Result, ml_string_copy(lilv_node_as_string(Node), -1));
 	}
 	return Result;
 }
@@ -180,10 +183,10 @@ ML_METHOD("scale_points", PortT) {
 	ml_value_t *Result = ml_map();
 	for (LilvIter *Iter = lilv_scale_points_begin(ScalePoints); !lilv_scale_points_is_end(ScalePoints, Iter); Iter = lilv_scale_points_next(ScalePoints, Iter)) {
 		const LilvScalePoint *ScalePoint = lilv_scale_points_get(ScalePoints, Iter);
-		ml_value_t *Label = ml_string_unchecked(lilv_node_as_string(lilv_scale_point_get_label(ScalePoint)), -1);
+		ml_value_t *Label = ml_string_copy(lilv_node_as_string(lilv_scale_point_get_label(ScalePoint)), -1);
 		const LilvNode *Value = lilv_scale_point_get_value(ScalePoint);
 		if (lilv_node_is_string(Value)) {
-			ml_map_insert(Result, Label, ml_string_unchecked(lilv_node_as_string(Value), -1));
+			ml_map_insert(Result, Label, ml_string_copy(lilv_node_as_string(Value), -1));
 		} else if (lilv_node_is_int(Value)) {
 			ml_map_insert(Result, Label, ml_integer(lilv_node_as_int(Value)));
 		} else if (lilv_node_is_float(Value)) {
@@ -212,7 +215,19 @@ ML_METHOD("class", PluginT) {
 
 ML_METHOD("label", PluginClassT) {
 	const LilvPluginClass *Handle = ((plugin_class_t *)Args[0])->Handle;
-	return ml_string_unchecked(lilv_node_as_string(lilv_plugin_class_get_label(Handle)), -1);
+	return ml_string_copy(lilv_node_as_string(lilv_plugin_class_get_label(Handle)), -1);
+}
+
+static const LV2_Feature **Features = NULL;
+
+void lilv_feature_add(const char *Uri, void *Data) {
+	LV2_Feature *Feature = new(LV2_Feature);
+	Feature->URI = Uri;
+	Feature->data = Data;
+	size_t Count = 0;
+	while (Features[Count]) ++Count;
+	Features = (const LV2_Feature **)GC_realloc(Features, (Count + 2) * sizeof(LV2_Feature *));
+	Features[Count] = Feature;
 }
 
 typedef struct {
@@ -220,12 +235,16 @@ typedef struct {
 	LilvInstance *Handle;
 } instance_t;
 
+LilvInstance *lilv_instance_handle(ml_value_t *Instance) {
+	return ((instance_t *)Instance)->Handle;
+}
+
 ML_TYPE(InstanceT, (), "lilv::instance");
 
 ML_METHOD("instantiate", PluginT, MLRealT) {
 	const LilvPlugin *Plugin = ((plugin_t *)Args[0])->Handle;
 	double SampleRate = ml_real_value(Args[1]);
-	LilvInstance *Handle = lilv_plugin_instantiate(Plugin, SampleRate, NULL);
+	LilvInstance *Handle = lilv_plugin_instantiate(Plugin, SampleRate, Features);
 	if (!Handle) return ml_error("LilvError", "Failed to instantiate plugin");
 	instance_t *Instance = new(instance_t);
 	Instance->Type = InstanceT;
@@ -269,6 +288,7 @@ ML_FUNCTION(GetAllPlugins) {
 
 ML_LIBRARY_ENTRY0(snd_lilv) {
 	World = lilv_world_new();
+	Features = anew(const LV2_Feature *, 1);
 	lilv_world_load_all(World);
 #include "lilv_init.c"
 	stringmap_insert(PluginT->Exports, "all", GetAllPlugins);

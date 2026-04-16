@@ -1,0 +1,2 @@
+so_module("crypto/bcrypt.so", [file("bcrypt.o")], ["-lnettle"], Tags is ["standard"])
+so_module("crypto/cipher.so", [file("cipher.o")], ["-lnettle"], Tags is ["standard"])

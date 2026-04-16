@@ -37,11 +37,43 @@ img/cairo
    *TBD*
 
 
+:mini:`meth (Arg₁: cairocontext):get_antialias`
+   *TBD*
+
+
+:mini:`meth (Arg₁: cairocontext):get_fill_rule`
+   *TBD*
+
+
+:mini:`meth (Arg₁: cairocontext):get_line_cap`
+   *TBD*
+
+
+:mini:`meth (Arg₁: cairocontext):get_line_join`
+   *TBD*
+
+
+:mini:`meth (Arg₁: cairocontext):get_line_width`
+   *TBD*
+
+
+:mini:`meth (Arg₁: cairocontext):get_matrix`
+   *TBD*
+
+
+:mini:`meth (Arg₁: cairocontext):get_miter_limit`
+   *TBD*
+
+
 :mini:`meth (Arg₁: cairocontext):get_operator`
    *TBD*
 
 
 :mini:`meth (Arg₁: cairocontext):has_current_point`
+   *TBD*
+
+
+:mini:`meth (Arg₁: cairocontext):identity_matrix`
    *TBD*
 
 
@@ -89,7 +121,7 @@ img/cairo
    *TBD*
 
 
-:mini:`meth (Arg₁: cairocontext):rotate(Arg₂: real, Arg₃: real)`
+:mini:`meth (Arg₁: cairocontext):rotate(Arg₂: real)`
    *TBD*
 
 
@@ -105,7 +137,35 @@ img/cairo
    *TBD*
 
 
+:mini:`meth (Arg₁: cairocontext):set_antialias(Arg₂: cairoantialias)`
+   *TBD*
+
+
+:mini:`meth (Arg₁: cairocontext):set_fill_rule(Arg₂: cairofillrule)`
+   *TBD*
+
+
 :mini:`meth (Arg₁: cairocontext):set_font_size(Arg₂: real, Arg₃: real)`
+   *TBD*
+
+
+:mini:`meth (Arg₁: cairocontext):set_line_cap(Arg₂: cairolinecap)`
+   *TBD*
+
+
+:mini:`meth (Arg₁: cairocontext):set_line_join(Arg₂: cairolinejoin)`
+   *TBD*
+
+
+:mini:`meth (Arg₁: cairocontext):set_line_width(Arg₂: real)`
+   *TBD*
+
+
+:mini:`meth (Arg₁: cairocontext):set_matrix(Arg₂: matrix)`
+   *TBD*
+
+
+:mini:`meth (Arg₁: cairocontext):set_miter_limit(Arg₂: real)`
    *TBD*
 
 
@@ -113,11 +173,15 @@ img/cairo
    *TBD*
 
 
+:mini:`meth (Arg₁: cairocontext):set_source(Arg₂: cairopattern)`
+   *TBD*
+
+
 :mini:`meth (Arg₁: cairocontext):set_source_rgb(Arg₂: real, Arg₃: real, Arg₄: real)`
    *TBD*
 
 
-:mini:`meth (Arg₁: cairocontext):set_source_rgba(Arg₂: real, Arg₃: real, Arg₄: real)`
+:mini:`meth (Arg₁: cairocontext):set_source_rgba(Arg₂: real, Arg₃: real, Arg₄: real, Arg₅: real)`
    *TBD*
 
 
@@ -137,6 +201,10 @@ img/cairo
    *TBD*
 
 
+:mini:`meth (Arg₁: cairocontext):transform(Arg₂: matrix)`
+   *TBD*
+
+
 :mini:`meth (Arg₁: cairocontext):translate(Arg₂: real, Arg₃: real)`
    *TBD*
 
@@ -145,7 +213,19 @@ img/cairo
    *TBD*
 
 
+:mini:`meth (Arg₁: cairopattern):add_color_stop_rgb(Arg₂: real, Arg₃: real, Arg₄: real, Arg₅: real)`
+   *TBD*
+
+
+:mini:`meth (Arg₁: cairopattern):add_color_stop_rgba(Arg₂: real, Arg₃: real, Arg₄: real, Arg₅: real, Arg₆: real)`
+   *TBD*
+
+
 :mini:`fun cairocreate(Arg₁: cairosurface)`
+   *TBD*
+
+
+:mini:`fun cairopatterncreateforsurface(Arg₁: cairosurface)`
    *TBD*
 
 
@@ -158,6 +238,22 @@ img/cairo
 
 
 :mini:`meth (Arg₁: cairosurface):write_to_png_stream(Arg₂: stream)`
+   *TBD*
+
+
+:mini:`fun cairopatterncreatelinear(Arg₁: real, Arg₂: real, Arg₃: real, Arg₄: real)`
+   *TBD*
+
+
+:mini:`fun cairopatterncreateradial(Arg₁: real, Arg₂: real, Arg₃: real, Arg₄: real, Arg₅: real, Arg₆: real)`
+   *TBD*
+
+
+:mini:`fun cairopatterncreatergb(Arg₁: real, Arg₂: real, Arg₃: real)`
+   *TBD*
+
+
+:mini:`fun cairopatterncreatergba(Arg₁: real, Arg₂: real, Arg₃: real, Arg₄: real)`
    *TBD*
 
 

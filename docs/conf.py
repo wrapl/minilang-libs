@@ -73,10 +73,7 @@ github_url = "https://github.com/wrapl/minilang-libs"
 extensions = [
 	'sphinx.ext.graphviz',
 	'sphinx.ext.viewcode',
-	'sphinx_toolbox.collapse',
-	'sphinxcontrib.ansi',
-	#"sphinxawesome_theme"
-	#'sphinx_design'
+	"sphinx_syntax"
 ]
 
 graphviz_output_format = "svg"

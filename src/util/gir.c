@@ -340,25 +340,24 @@ FIELD_REF(Utf8, utf8, gchar *, ml_string(Value, -1), (char *)ml_string_value(Val
 
 static ml_value_t *struct_field_ref(GIFieldInfo *Info, int Count, ml_value_t **Args) {
 	struct_instance_t *Instance = (struct_instance_t *)Args[0];
-	field_ref_t *Ref = new(field_ref_t);
-	Ref->Address = (char *)Instance->Value + g_field_info_get_offset(Info);
+	void *Address = (void *)Instance->Value + g_field_info_get_offset(Info);
 	GITypeInfo *TypeInfo = g_field_info_get_type(Info);
 	switch (g_type_info_get_tag(TypeInfo)) {
 	case GI_TYPE_TAG_VOID: return ml_error("TodoError", "Field ref not implemented yet");
-	case GI_TYPE_TAG_BOOLEAN: Ref->Type = GirFieldRefBooleanT; break;
-	case GI_TYPE_TAG_INT8: Ref->Type = GirFieldRefInt8T; break;
-	case GI_TYPE_TAG_UINT8: Ref->Type = GirFieldRefUInt8T; break;
-	case GI_TYPE_TAG_INT16: Ref->Type = GirFieldRefInt16T; break;
-	case GI_TYPE_TAG_UINT16: Ref->Type = GirFieldRefUInt16T; break;
-	case GI_TYPE_TAG_INT32: Ref->Type = GirFieldRefInt32T; break;
-	case GI_TYPE_TAG_UINT32: Ref->Type = GirFieldRefUInt32T; break;
-	case GI_TYPE_TAG_INT64: Ref->Type = GirFieldRefInt64T; break;
-	case GI_TYPE_TAG_UINT64: Ref->Type = GirFieldRefUInt64T; break;
-	case GI_TYPE_TAG_FLOAT: Ref->Type = GirFieldRefFloatT; break;
-	case GI_TYPE_TAG_DOUBLE: Ref->Type = GirFieldRefDoubleT; break;
+	case GI_TYPE_TAG_BOOLEAN: return ml_boolean_value_ref(Address); break;
+	case GI_TYPE_TAG_INT8: return ml_int8_value_ref(Address); break;
+	case GI_TYPE_TAG_UINT8: return ml_uint8_value_ref(Address); break;
+	case GI_TYPE_TAG_INT16: return ml_int16_value_ref(Address); break;
+	case GI_TYPE_TAG_UINT16: return ml_uint16_value_ref(Address); break;
+	case GI_TYPE_TAG_INT32: return ml_int32_value_ref(Address); break;
+	case GI_TYPE_TAG_UINT32: return ml_uint32_value_ref(Address); break;
+	case GI_TYPE_TAG_INT64: return ml_int64_value_ref(Address); break;
+	case GI_TYPE_TAG_UINT64: return ml_uint64_value_ref(Address); break;
+	case GI_TYPE_TAG_FLOAT: return ml_float_value_ref(Address); break;
+	case GI_TYPE_TAG_DOUBLE: return ml_double_value_ref(Address); break;
 	case GI_TYPE_TAG_GTYPE: return ml_error("TodoError", "Field ref not implemented yet");
-	case GI_TYPE_TAG_UTF8: Ref->Type = GirFieldRefUtf8T; break;
-	case GI_TYPE_TAG_FILENAME: Ref->Type = GirFieldRefUtf8T; break;
+	case GI_TYPE_TAG_UTF8: return ml_utf8_value_ref(Address); break;
+	case GI_TYPE_TAG_FILENAME: return ml_utf8_value_ref(Address); break;
 	case GI_TYPE_TAG_ARRAY: return ml_error("TodoError", "Field ref not implemented yet");
 	case GI_TYPE_TAG_INTERFACE: {
 		GIBaseInfo *InterfaceInfo = g_type_info_get_interface(TypeInfo);
@@ -392,7 +391,7 @@ static ml_value_t *struct_field_ref(GIFieldInfo *Info, int Count, ml_value_t **A
 	case GI_TYPE_TAG_ERROR: return ml_error("TodoError", "Field ref not implemented yet");
 	case GI_TYPE_TAG_UNICHAR: return ml_error("TodoError", "Field ref not implemented yet");
 	}
-	return (ml_value_t *)Ref;
+	return ml_error("TodoError", "Field ref not implemented yet");
 }
 
 static ml_value_t *union_field_ref(GIFieldInfo *Info, int Count, ml_value_t **Args) {

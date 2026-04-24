@@ -2,6 +2,7 @@
 #include <minilang/ml_macros.h>
 #include <minilang/ml_stream.h>
 #include <minilang/ml_object.h>
+#include <minilang/ml_array.h>
 #include <sndfile.h>
 
 #undef ML_CATEGORY
@@ -11,15 +12,15 @@ typedef struct {
 	ml_state_t Base;
 	SNDFILE *Handle;
 	ml_value_t *Stream;
-	ml_value_t *SampleRate, *Channels, *Format;
 	ml_value_t *Result;
 	void (*read)(ml_state_t *, ml_value_t *, void *, int );
 	void (*write)(ml_state_t *, ml_value_t *, const void *, int );
 	void (*seek)(ml_state_t *, ml_value_t *, int64_t Offset, int Mode);
 	void (*tell)(ml_state_t *, ml_value_t *);
+	int SampleRate, Channels, Format;
 } sndfile_t;
 
-ML_TYPE(SndFileT, (MLStreamT), "sndfile");
+ML_TYPE(SndFileT, (), "sndfile");
 
 static sf_count_t sndfile_seek(sf_count_t Offset, int Whence, sndfile_t *SndFile) {
 	SndFile->Result = NULL;
@@ -119,12 +120,15 @@ static void sndfile_run(sndfile_t *SndFile, ml_value_t *Value) {
 	SndFile->Result = Value;
 }
 
-ML_METHODV(SndFileT, MLStreamT, MLStringT, MLNamesT) {
+ML_METHODVX(SndFileT, MLStreamT, MLStringT, MLNamesT) {
 //>sndfile
-	ML_NAMES_CHECK_ARG_COUNT(2);
+	ML_NAMES_CHECKX_ARG_COUNT(2);
 	ml_value_t *Stream = Args[0];
 	sndfile_t *SndFile = new(sndfile_t);
 	SndFile->Base.Type = SndFileT;
+	SndFile->Base.Caller = Caller;
+	SndFile->Base.Context = Caller->Context;
+	SndFile->Base.run = (ml_state_fn)sndfile_run;
 	SndFile->Stream = Stream;
 	SndFile->read = ml_typed_fn_get(Stream->Type, ml_stream_read) ?: ml_stream_read_method;
 	SndFile->write = ml_typed_fn_get(Stream->Type, ml_stream_write) ?: ml_stream_write_method;
@@ -147,33 +151,35 @@ ML_METHODV(SndFileT, MLStreamT, MLStringT, MLNamesT) {
 	ML_NAMES_FOREACH(Args[2], Iter) {
 		++I;
 		const char *Name = ml_string_value(Iter->Value);
-		if (!strcmp(Name, "rate")) {
+		if (!strcmp(Name, "sample_rate")) {
 			Info.samplerate = ml_integer_value(Args[I]);
 		} else if (!strcmp(Name, "channels")) {
 			Info.channels = ml_integer_value(Args[I]);
 		} else if (!strcmp(Name, "format")) {
-			ML_CHECK_ARG_TYPE(I, SndFileFormatT);
+			ML_CHECKX_ARG_TYPE(I, SndFileFormatT);
 			Info.format = ml_flags_value_value(Args[I]);
 		} else if (!strcmp(Name, "seekable")) {
 			Info.seekable = ml_boolean_value(Args[I]);
 		}
 	}
 	if ((SndFile->Handle = sf_open_virtual(&VirtualIO, Mode, &Info, SndFile))) {
-		SndFile->SampleRate = ml_integer(Info.samplerate);
-		SndFile->Channels = ml_integer(Info.channels);
-		SndFile->Format = ml_flags_value(SndFileFormatT, Info.format);
-		return (ml_value_t *)SndFile;
+		SndFile->SampleRate = Info.samplerate;
+		SndFile->Channels = Info.channels;
+		SndFile->Format = Info.format;
+		ML_RETURN(SndFile);
 	} else {
-		return ml_error("SndFileError", "%s", sf_strerror(0));
+		ML_ERROR("SndFileError", "%s", sf_strerror(0));
 	}
 }
 
-ML_METHODV(SndFileT, MLStreamT, MLStringT) {
+ML_METHODVX(SndFileT, MLStreamT, MLStringT) {
 //>sndfile
-	ML_NAMES_CHECK_ARG_COUNT(2);
 	ml_value_t *Stream = Args[0];
 	sndfile_t *SndFile = new(sndfile_t);
 	SndFile->Base.Type = SndFileT;
+	SndFile->Base.Caller = Caller;
+	SndFile->Base.Context = Caller->Context;
+	SndFile->Base.run = (ml_state_fn)sndfile_run;
 	SndFile->Stream = Stream;
 	SndFile->read = ml_typed_fn_get(Stream->Type, ml_stream_read) ?: ml_stream_read_method;
 	SndFile->write = ml_typed_fn_get(Stream->Type, ml_stream_write) ?: ml_stream_write_method;
@@ -193,28 +199,28 @@ ML_METHODV(SndFileT, MLStreamT, MLStringT) {
 	}
 	SF_INFO Info = {0,};
 	if ((SndFile->Handle = sf_open_virtual(&VirtualIO, Mode, &Info, SndFile))) {
-		SndFile->SampleRate = ml_integer(Info.samplerate);
-		SndFile->Channels = ml_integer(Info.channels);
-		SndFile->Format = ml_flags_value(SndFileFormatT, Info.format);
-		return (ml_value_t *)SndFile;
+		SndFile->SampleRate = Info.samplerate;
+		SndFile->Channels = Info.channels;
+		SndFile->Format = Info.format;
+		ML_RETURN(SndFile);
 	} else {
-		return ml_error("SndFileError", "%s", sf_strerror(0));
+		ML_ERROR("SndFileError", "%s", sf_strerror(0));
 	}
 }
 
 ML_METHOD("rate", SndFileT) {
 	sndfile_t *SndFile = (sndfile_t *)Args[0];
-	return SndFile->SampleRate;
+	return ml_integer(SndFile->SampleRate);
 }
 
 ML_METHOD("channels", SndFileT) {
 	sndfile_t *SndFile = (sndfile_t *)Args[0];
-	return SndFile->Channels;
+	return ml_integer(SndFile->Channels);
 }
 
 ML_METHOD("format", SndFileT) {
 	sndfile_t *SndFile = (sndfile_t *)Args[0];
-	return SndFile->Format;
+	return ml_flags_value(SndFileFormatT, SndFile->Format);
 }
 
 ML_METHOD("strerror", SndFileT) {
@@ -222,22 +228,149 @@ ML_METHOD("strerror", SndFileT) {
 	return ml_string_copy(sf_strerror(SndFile->Handle), -1);
 }
 
-static void ML_TYPED_FN(ml_stream_read, SndFileT, ml_state_t *Caller, sndfile_t *SndFile, void *Buffer, int Count) {
-	ML_RETURN(ml_integer(sf_read_raw(SndFile->Handle, Buffer, Count)));
+ML_METHOD("read", SndFileT, MLVectorT) {
+	sndfile_t *SndFile = (sndfile_t *)Args[0];
+	ml_array_t *Vector = (ml_array_t *)Args[1];
+	if (Vector->Dimensions->Indices) return ml_error("ValueError", "Sparse vectors not supported");
+	sf_count_t Actual = 0;
+	switch (Vector->Format) {
+	case ML_ARRAY_FORMAT_I16:
+	case ML_ARRAY_FORMAT_U16:
+		if (Vector->Dimensions->Stride != sizeof(short)) return ml_error("ValueError", "Sparse vectors not supported");
+		Actual = sf_read_short(SndFile->Handle, (short *)Vector->Base.Value, Vector->Dimensions->Size);
+		break;
+	case ML_ARRAY_FORMAT_I32:
+	case ML_ARRAY_FORMAT_U32:
+		if (Vector->Dimensions->Stride != sizeof(int)) return ml_error("ValueError", "Sparse vectors not supported");
+		Actual = sf_read_int(SndFile->Handle, (int *)Vector->Base.Value, Vector->Dimensions->Size);
+		break;
+	case ML_ARRAY_FORMAT_F32:
+		if (Vector->Dimensions->Stride != sizeof(float)) return ml_error("ValueError", "Sparse vectors not supported");
+		Actual = sf_read_float(SndFile->Handle, (float *)Vector->Base.Value, Vector->Dimensions->Size);
+		break;
+	case ML_ARRAY_FORMAT_F64:
+		if (Vector->Dimensions->Stride != sizeof(double)) return ml_error("ValueError", "Sparse vectors not supported");
+		Actual = sf_read_double(SndFile->Handle, (double *)Vector->Base.Value, Vector->Dimensions->Size);
+		break;
+	default:
+		return ml_error("TypeError", "Array format not supported");
+	}
+	return ml_integer(Actual);
 }
 
-static void ML_TYPED_FN(ml_stream_write, SndFileT, ml_state_t *Caller, sndfile_t *SndFile, const void *Buffer, int Count) {
-	ML_RETURN(ml_integer(sf_write_raw(SndFile->Handle, Buffer, Count)));
+ML_METHOD("read", SndFileT, MLMatrixT) {
+	sndfile_t *SndFile = (sndfile_t *)Args[0];
+	ml_array_t *Matrix = (ml_array_t *)Args[1];
+	if (Matrix->Dimensions[0].Indices) return ml_error("ValueError", "Sparse vectors not supported");
+	if (Matrix->Dimensions[1].Indices) return ml_error("ValueError", "Sparse vectors not supported");
+	if (Matrix->Dimensions[1].Size != SndFile->Channels) return ml_error("ShapeError", "Number of channels do not match");
+	sf_count_t Actual = 0;
+	switch (Matrix->Format) {
+	case ML_ARRAY_FORMAT_I16:
+	case ML_ARRAY_FORMAT_U16:
+		if (Matrix->Dimensions[1].Stride != sizeof(short)) return ml_error("ValueError", "Sparse vectors not supported");
+		if (Matrix->Dimensions[0].Stride != SndFile->Channels * sizeof(short)) return ml_error("ValueError", "Sparse vectors not supported");
+		Actual = sf_readf_short(SndFile->Handle, (short *)Matrix->Base.Value, Matrix->Dimensions[0].Size);
+		break;
+	case ML_ARRAY_FORMAT_I32:
+	case ML_ARRAY_FORMAT_U32:
+		if (Matrix->Dimensions[1].Stride != sizeof(int)) return ml_error("ValueError", "Sparse vectors not supported");
+		if (Matrix->Dimensions[0].Stride != SndFile->Channels * sizeof(int)) return ml_error("ValueError", "Sparse vectors not supported");
+		Actual = sf_readf_int(SndFile->Handle, (int *)Matrix->Base.Value, Matrix->Dimensions[0].Size);
+		break;
+	case ML_ARRAY_FORMAT_F32:
+		if (Matrix->Dimensions[1].Stride != sizeof(float)) return ml_error("ValueError", "Sparse vectors not supported");
+		if (Matrix->Dimensions[0].Stride != SndFile->Channels * sizeof(float)) return ml_error("ValueError", "Sparse vectors not supported");
+		Actual = sf_readf_float(SndFile->Handle, (float *)Matrix->Base.Value, Matrix->Dimensions[0].Size);
+		break;
+	case ML_ARRAY_FORMAT_F64:
+		if (Matrix->Dimensions[1].Stride != sizeof(double)) return ml_error("ValueError", "Sparse vectors not supported");
+		if (Matrix->Dimensions[0].Stride != SndFile->Channels * sizeof(double)) return ml_error("ValueError", "Sparse vectors not supported");
+		Actual = sf_readf_double(SndFile->Handle, (double *)Matrix->Base.Value, Matrix->Dimensions[0].Size);
+		break;
+	default:
+		return ml_error("TypeError", "Array format not supported");
+	}
+	return ml_integer(Actual);
 }
 
-static void ML_TYPED_FN(ml_stream_flush, SndFileT, ml_state_t *Caller, sndfile_t *SndFile) {
+ML_METHOD("write", SndFileT, MLVectorT) {
+	sndfile_t *SndFile = (sndfile_t *)Args[0];
+	ml_array_t *Vector = (ml_array_t *)Args[1];
+	if (Vector->Dimensions->Indices) return ml_error("ValueError", "Sparse vectors not supported");
+	sf_count_t Actual = 0;
+	switch (Vector->Format) {
+	case ML_ARRAY_FORMAT_I16:
+	case ML_ARRAY_FORMAT_U16:
+		if (Vector->Dimensions->Stride != sizeof(short)) return ml_error("ValueError", "Sparse vectors not supported");
+		Actual = sf_write_short(SndFile->Handle, (short *)Vector->Base.Value, Vector->Dimensions->Size);
+		break;
+	case ML_ARRAY_FORMAT_I32:
+	case ML_ARRAY_FORMAT_U32:
+		if (Vector->Dimensions->Stride != sizeof(int)) return ml_error("ValueError", "Sparse vectors not supported");
+		Actual = sf_write_int(SndFile->Handle, (int *)Vector->Base.Value, Vector->Dimensions->Size);
+		break;
+	case ML_ARRAY_FORMAT_F32:
+		if (Vector->Dimensions->Stride != sizeof(float)) return ml_error("ValueError", "Sparse vectors not supported");
+		Actual = sf_write_float(SndFile->Handle, (float *)Vector->Base.Value, Vector->Dimensions->Size);
+		break;
+	case ML_ARRAY_FORMAT_F64:
+		if (Vector->Dimensions->Stride != sizeof(double)) return ml_error("ValueError", "Sparse vectors not supported");
+		Actual = sf_write_double(SndFile->Handle, (double *)Vector->Base.Value, Vector->Dimensions->Size);
+		break;
+	default:
+		return ml_error("TypeError", "Array format not supported");
+	}
+	return ml_integer(Actual);
+}
+
+ML_METHOD("write", SndFileT, MLMatrixT) {
+	sndfile_t *SndFile = (sndfile_t *)Args[0];
+	ml_array_t *Matrix = (ml_array_t *)Args[1];
+	if (Matrix->Dimensions[0].Indices) return ml_error("ValueError", "Sparse vectors not supported");
+	if (Matrix->Dimensions[1].Indices) return ml_error("ValueError", "Sparse vectors not supported");
+	if (Matrix->Dimensions[1].Size != SndFile->Channels) return ml_error("ShapeError", "Number of channels do not match");
+	sf_count_t Actual = 0;
+	switch (Matrix->Format) {
+	case ML_ARRAY_FORMAT_I16:
+	case ML_ARRAY_FORMAT_U16:
+		if (Matrix->Dimensions[1].Stride != sizeof(short)) return ml_error("ValueError", "Sparse vectors not supported");
+		if (Matrix->Dimensions[0].Stride != SndFile->Channels * sizeof(short)) return ml_error("ValueError", "Sparse vectors not supported");
+		Actual = sf_writef_short(SndFile->Handle, (short *)Matrix->Base.Value, Matrix->Dimensions[0].Size);
+		break;
+	case ML_ARRAY_FORMAT_I32:
+	case ML_ARRAY_FORMAT_U32:
+		if (Matrix->Dimensions[1].Stride != sizeof(int)) return ml_error("ValueError", "Sparse vectors not supported");
+		if (Matrix->Dimensions[0].Stride != SndFile->Channels * sizeof(int)) return ml_error("ValueError", "Sparse vectors not supported");
+		Actual = sf_writef_int(SndFile->Handle, (int *)Matrix->Base.Value, Matrix->Dimensions[0].Size);
+		break;
+	case ML_ARRAY_FORMAT_F32:
+		if (Matrix->Dimensions[1].Stride != sizeof(float)) return ml_error("ValueError", "Sparse vectors not supported");
+		if (Matrix->Dimensions[0].Stride != SndFile->Channels * sizeof(float)) return ml_error("ValueError", "Sparse vectors not supported");
+		Actual = sf_writef_float(SndFile->Handle, (float *)Matrix->Base.Value, Matrix->Dimensions[0].Size);
+		break;
+	case ML_ARRAY_FORMAT_F64:
+		if (Matrix->Dimensions[1].Stride != sizeof(double)) return ml_error("ValueError", "Sparse vectors not supported");
+		if (Matrix->Dimensions[0].Stride != SndFile->Channels * sizeof(double)) return ml_error("ValueError", "Sparse vectors not supported");
+		Actual = sf_writef_double(SndFile->Handle, (double *)Matrix->Base.Value, Matrix->Dimensions[0].Size);
+		break;
+	default:
+		return ml_error("TypeError", "Array format not supported");
+	}
+	return ml_integer(Actual);
+}
+
+
+ML_METHOD("flush", SndFileT) {
+	sndfile_t *SndFile = (sndfile_t *)Args[0];
 	sf_write_sync(SndFile->Handle);
-	ML_RETURN(MLNil);
+	return MLNil;
 }
 
-static void ML_TYPED_FN(ml_stream_close, SndFileT, ml_state_t *Caller, sndfile_t *SndFile) {
-	if (sf_close(SndFile->Handle)) ML_ERROR("SndFileError", "%s", sf_strerror(SndFile->Handle));
-	ML_RETURN(MLNil);
+ML_METHOD("close", SndFileT) {
+	sndfile_t *SndFile = (sndfile_t *)Args[0];
+	if (sf_close(SndFile->Handle)) return ml_error("SndFileError", "%s", sf_strerror(SndFile->Handle));
+	return MLNil;
 }
 
 ML_ENUM2(SndFileStringT, "sndfile::string",
@@ -277,5 +410,7 @@ ML_METHOD("set", SndFileT, SndFileStringT, MLStringT) {
 
 ML_LIBRARY_ENTRY0(snd_sndfile) {
 #include "sndfile_init.c"
+	stringmap_insert(SndFileT->Exports, "format", SndFileFormatT);
+	stringmap_insert(SndFileT->Exports, "string", SndFileStringT);
 	Slot[0] = (ml_value_t *)SndFileT;
 }

@@ -2120,6 +2120,85 @@ static ml_value_t *convert_gtype(void *Arg) {
 	return MLNil;
 }*/
 
+typedef ml_value_t *(*ptr_to_value_fn)(void *);
+
+typedef struct {
+	ml_value_t *(*to_value)(void *, void *);
+	void *Aux;
+	int Size;
+} ptr_to_value_t;
+
+static void ptr_to_value(gi_inst_t **Inst, void **Aux, ptr_to_value_t *Convert) {
+	gi_opcode_t Opcode = ((*Inst)++)->Opcode;
+	switch (Opcode) {
+	case GIB_BOOLEAN:
+		Convert->to_value = boolean_to_value;
+		Convert->Size = sizeof(gboolean);
+		break;
+	case GIB_INT8:
+		Convert->to_value = int8_to_value;
+		Convert->Size = sizeof(gint8);
+		break;
+	case GIB_UINT8:
+		Convert->to_value = uint8_to_value;
+		Convert->Size = sizeof(guint8);
+		break;
+	case GIB_INT16:
+		Convert->to_value = int16_to_value;
+		Convert->Size = sizeof(gint16);
+		break;
+	case GIB_UINT16:
+		Convert->to_value = uint16_to_value;
+		Convert->Size = sizeof(guint16);
+		break;
+	case GIB_INT32:
+		Convert->to_value = int32_to_value;
+		Convert->Size = sizeof(gint32);
+		break;
+	case GIB_UINT32:
+		Convert->to_value = uint32_to_value;
+		Convert->Size = sizeof(guint32);
+		break;
+	case GIB_INT64:
+		Convert->to_value = int64_to_value;
+		Convert->Size = sizeof(gint64);
+		break;
+	case GIB_UINT64:
+		Convert->to_value = uint64_to_value;
+		Convert->Size = sizeof(guint64);
+		break;
+	case GIB_FLOAT:
+		Convert->to_value = float_to_value;
+		Convert->Size = sizeof(gfloat);
+		break;
+	case GIB_DOUBLE:
+		Convert->to_value = double_to_value;
+		Convert->Size = sizeof(gdouble);
+		break;
+	case GIB_STRING:
+		Convert->to_value = string_to_value;
+		Convert->Size = sizeof(gchararray);
+		break;
+	case GIB_GTYPE:
+		Convert->to_value = gtype_to_value;
+		Convert->Size = sizeof(GType);
+		break;
+	}
+}
+
+typedef struct {
+	ml_value_t *Map;
+	ptr_to_value_t Key[1];
+	ptr_to_value_t Value[1];
+} ghash_to_map_t;
+
+static void ghash_to_map(gpointer Key, gpointer Value, ghash_to_map_t *Convert) {
+	ml_map_insert(Convert->Map,
+		Convert->Key->to_value(Key, Convert->Key->Aux),
+		Convert->Value->to_value(Value, Convert->Value->Aux)
+	);
+}
+
 static void callable_invoke(ffi_cif *Cif, void *Return, void **Params, callable_instance_t *Instance) {
 	callable_t *Callback = (callable_t *)Instance->Type;
 	ml_value_t *Args[Callback->Provided];
@@ -2315,10 +2394,15 @@ static void callable_invoke(ffi_cif *Cif, void *Return, void **Params, callable_
 		break;
 	}
 	case GIB_HASH: {
-		ml_value_t *Map = ml_map();
-		GHashTable *Node;
-		++Param; // TODO: Populate Map properly
-		*Arg++ = Map;
+		GHashTable *Node = (GHashTable *)(*(void **)(*Param++));
+		// TODO: Populate Map properly
+		ghash_to_map_t Convert[1];
+		Convert->Map = ml_map();
+		ptr_to_value(&Inst, Callback->Aux, Convert->Key);
+		ptr_to_value(&Inst, Callback->Aux, Convert->Value);
+		if (Node) g_hash_table_foreach(Node, (GHFunc)ghash_to_map, Convert);
+		// TODO: Free Node if required
+		*Arg++ = Convert->Map;
 		break;
 	}
 	}
@@ -2500,8 +2584,10 @@ static ml_type_t *callable_info_compile(const char *TypeName, GICallableInfo *In
 			}
 			case GI_TYPE_TAG_GLIST:
 			case GI_TYPE_TAG_GSLIST:
-			case GI_TYPE_TAG_GHASH:
 				InSize += 2;
+				break;
+			case GI_TYPE_TAG_GHASH:
+				InSize += 3;
 				break;
 			default:
 				InSize += 1;
@@ -2635,6 +2721,11 @@ static ml_type_t *callable_info_compile(const char *TypeName, GICallableInfo *In
 		BASIC_CASES_INST(InstOut)
 		default: // TODO: handle this.
 		}
+		ElementInfo = g_type_info_get_param_type(Return, 1);
+		switch (g_type_info_get_tag(ElementInfo)) {
+		BASIC_CASES_INST(InstOut)
+		default: // TODO: handle this.
+		}
 		g_base_info_unref(ElementInfo);
 		break;
 	}
@@ -2752,6 +2843,11 @@ static ml_type_t *callable_info_compile(const char *TypeName, GICallableInfo *In
 			BASIC_CASES_INST(InstIn)
 			default: // TODO: handle this.
 			}
+			ElementInfo = g_type_info_get_param_type(Args[I].Type, 1);
+			switch (g_type_info_get_tag(ElementInfo)) {
+			BASIC_CASES_INST(InstIn)
+			default: // TODO: handle this.
+			}
 			g_base_info_unref(ElementInfo);
 			break;
 		}
@@ -2769,72 +2865,6 @@ static ml_type_t *callable_info_lookup(GICallableInfo *Info) {
 	return Slot[0];
 }
 
-typedef ml_value_t *(*ptr_to_value_fn)(void *);
-
-typedef struct {
-	ml_value_t *(*to_value)(void *, void *);
-	void *Aux;
-	int Size;
-} ptr_to_value_t;
-
-static void ptr_to_value(gi_inst_t **Inst, void **Aux, ptr_to_value_t *Convert) {
-	gi_opcode_t Opcode = ((*Inst)++)->Opcode;
-	switch (Opcode) {
-	case GIB_BOOLEAN:
-		Convert->to_value = boolean_to_value;
-		Convert->Size = sizeof(gboolean);
-		break;
-	case GIB_INT8:
-		Convert->to_value = int8_to_value;
-		Convert->Size = sizeof(gint8);
-		break;
-	case GIB_UINT8:
-		Convert->to_value = uint8_to_value;
-		Convert->Size = sizeof(guint8);
-		break;
-	case GIB_INT16:
-		Convert->to_value = int16_to_value;
-		Convert->Size = sizeof(gint16);
-		break;
-	case GIB_UINT16:
-		Convert->to_value = uint16_to_value;
-		Convert->Size = sizeof(guint16);
-		break;
-	case GIB_INT32:
-		Convert->to_value = int32_to_value;
-		Convert->Size = sizeof(gint32);
-		break;
-	case GIB_UINT32:
-		Convert->to_value = uint32_to_value;
-		Convert->Size = sizeof(guint32);
-		break;
-	case GIB_INT64:
-		Convert->to_value = int64_to_value;
-		Convert->Size = sizeof(gint64);
-		break;
-	case GIB_UINT64:
-		Convert->to_value = uint64_to_value;
-		Convert->Size = sizeof(guint64);
-		break;
-	case GIB_FLOAT:
-		Convert->to_value = float_to_value;
-		Convert->Size = sizeof(gfloat);
-		break;
-	case GIB_DOUBLE:
-		Convert->to_value = double_to_value;
-		Convert->Size = sizeof(gdouble);
-		break;
-	case GIB_STRING:
-		Convert->to_value = string_to_value;
-		Convert->Size = sizeof(gchararray);
-		break;
-	case GIB_GTYPE:
-		Convert->to_value = gtype_to_value;
-		Convert->Size = sizeof(GType);
-		break;
-	}
-}
-
 typedef struct {
 	ml_type_t *Type;
 	GIFunctionInfo *Info;
@@ -2844,19 +2874,6 @@ typedef struct {
 	int NumOutputs, NumResults;
 	void *Aux[];
 } gir_function_t;
-
-typedef struct {
-	ml_value_t *Map;
-	ptr_to_value_t Key[1];
-	ptr_to_value_t Value[1];
-} ghash_to_map_t;
-
-static void ghash_to_map(gpointer Key, gpointer Value, ghash_to_map_t *Convert) {
-	ml_map_insert(Convert->Map,
-		Convert->Key->to_value(Key, Convert->Key->Aux),
-		Convert->Value->to_value(Value, Convert->Value->Aux)
-	);
-}
 
 static void gir_function_call(ml_state_t *Caller, gir_function_t *Function, int Count, ml_value_t **Args) {
 	ML_CHECKX_ARG_COUNT(Function->NumInputs);
@@ -3343,7 +3360,7 @@ static void gir_function_call(ml_state_t *Caller, gir_function_t *Function, int 
 		ptr_to_value(&Inst, Function->Aux, Convert->Key);
 		ptr_to_value(&Inst, Function->Aux, Convert->Value);
 		GHashTable *Hash = (GHashTable *)((ArgOut++)->v_pointer);
-		g_hash_table_foreach(Hash, (GHFunc)ghash_to_map, Convert);
+		if (Hash) g_hash_table_foreach(Hash, (GHFunc)ghash_to_map, Convert);
 		*Result++ = Convert->Map;
 		if (Free) {
 			g_hash_table_destroy(Hash);

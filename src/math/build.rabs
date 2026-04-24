@@ -7,10 +7,11 @@ scope("symengine";) do
 end
 
 scope("msieve";) do
-	let Lib := file("msieve/libmsieve.a") => fun() do
+	let Patch := file("msieve.patch")
+	let Lib := file("msieve/libmsieve.a")[Patch] => fun() do
 		file("msieve"):rmdir:mkdir:chdir
 		execute("wget https://github.com/upiter/msieve/archive/refs/tags/v1.54.tar.gz -O- | tar xvzP --strip-components=1")
-		execute("patch Makefile <", file("msieve.patch"))
+		execute("patch Makefile <", Patch)
 		execute("make -j8 NO_ZLIB=1 all")
 	end
 	CFLAGS := old + ['-I{file("msieve/include")}']

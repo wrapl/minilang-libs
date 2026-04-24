@@ -3,6 +3,7 @@
 #include <minilang/ml_object.h>
 #include <minilang/ml_stream.h>
 #include <nettle/hmac.h>
+#include <nettle/version.h>
 
 #undef ML_CATEGORY
 #define ML_CATEGORY "digest/hmac"

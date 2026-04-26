@@ -27,6 +27,14 @@ fmt/markdown
    * :mini:`::HardSoftBreaks`
 
 
+:mini:`type markdown < string`
+   *TBD*
+
+
+:mini:`fun markdown(Arg₁: string)`
+   *TBD*
+
+
 :mini:`meth (Markdown: string):Parse: xml`
    *TBD*
 

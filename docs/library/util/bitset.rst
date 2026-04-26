@@ -17,11 +17,19 @@ util/bitset
    *TBD*
 
 
+:mini:`meth (Arg₁: bitset):count`
+   *TBD*
+
+
 :mini:`meth (Arg₁: bitset):set(Arg₂: integer::range)`
    *TBD*
 
 
 :mini:`meth (Arg₁: bitset):set(Arg₂: integer)`
+   *TBD*
+
+
+:mini:`meth (Arg₁: bitset):size`
    *TBD*
 
 

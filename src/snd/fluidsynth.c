@@ -14,7 +14,7 @@ typedef struct {
 
 extern ml_cfunction_t Settings[];
 
-ML_TYPE(SettingsT, (), "fluidsynth::settings",
+ML_TYPE(FluidSettingsT, (), "fluidsynth::settings",
 	.Constructor = (ml_value_t *)Settings
 );
 
@@ -23,10 +23,10 @@ typedef struct {
 	fluid_synth_t *Handle;
 } synth_t;
 
-extern ml_cfunction_t Synth[];
+extern ml_cfunction_t FluidSynth[];
 
-ML_TYPE(SynthT, (), "fluidsynth::synth",
-	.Constructor = (ml_value_t *)Synth
+ML_TYPE(FluidSynthT, (), "fluidsynth::synth",
+	.Constructor = (ml_value_t *)FluidSynth
 );
 
 typedef struct {
@@ -36,7 +36,7 @@ typedef struct {
 
 extern ml_cfunction_t Sequencer[];
 
-ML_TYPE(SequencerT, (), "fluidsynth::sequencer",
+ML_TYPE(FluidSequencerT, (), "fluidsynth::sequencer",
 	.Constructor = (ml_value_t *)Sequencer
 );
 
@@ -47,7 +47,7 @@ typedef struct {
 
 extern ml_cfunction_t Event[];
 
-ML_TYPE(EventT, (), "fluidsynth::event",
+ML_TYPE(FluidEventT, (), "fluidsynth::event",
 	.Constructor = (ml_value_t *)Event
 );
 
@@ -85,13 +85,13 @@ static void settings_finalize(settings_t *Settings, void *Data) {
 ML_FUNCTION(Settings) {
 //>settings
 	settings_t *Settings = new(settings_t);
-	Settings->Type = SettingsT;
+	Settings->Type = FluidSettingsT;
 	Settings->Handle = new_fluid_settings();
 	GC_register_finalizer(Settings->Handle, (void *)settings_finalize, NULL, NULL, NULL);
 	return (ml_value_t *)Settings;
 }
 
-ML_METHOD("get", SettingsT, MLStringT) {
+ML_METHOD("get", FluidSettingsT, MLStringT) {
 	fluid_settings_t *Handle = ((settings_t *)Args[0])->Handle;
 	const char *Name = ml_string_value(Args[1]);
 	switch (fluid_settings_get_type(Handle, Name)) {
@@ -127,7 +127,7 @@ ML_METHOD("get", SettingsT, MLStringT) {
 	return ml_error("FluidSynthError", "Error getting %s", Name);
 }
 
-ML_METHOD("set", SettingsT, MLStringT, MLAnyT) {
+ML_METHOD("set", FluidSettingsT, MLStringT, MLAnyT) {
 	fluid_settings_t *Handle = ((settings_t *)Args[0])->Handle;
 	const char *Name = ml_string_value(Args[1]);
 	int Result;
@@ -148,18 +148,18 @@ static void synth_finalize(synth_t *Synth, void *Data) {
 	delete_fluid_synth(Synth->Handle);
 }
 
-ML_FUNCTION(Synth) {
+ML_FUNCTION(FluidSynth) {
 	ML_CHECK_ARG_COUNT(1);
-	ML_CHECK_ARG_TYPE(0, SettingsT);
+	ML_CHECK_ARG_TYPE(0, FluidSettingsT);
 	settings_t *Settings = (settings_t *)Args[0];
 	synth_t *Synth = new(synth_t);
-	Synth->Type = SynthT;
+	Synth->Type = FluidSynthT;
 	Synth->Handle = new_fluid_synth(Settings->Handle);
 	GC_register_finalizer(Synth->Handle, (void *)synth_finalize, NULL, NULL, NULL);
 	return (ml_value_t *)Synth;
 }
 
-ML_METHOD("bank_select", SynthT, MLIntegerT, MLIntegerT) {
+ML_METHOD("bank_select", FluidSynthT, MLIntegerT, MLIntegerT) {
 	fluid_synth_t *Handle = ((synth_t *)Args[0])->Handle;
 	int Chan = ml_integer_value(Args[1]);
 	unsigned int Bank = ml_integer_value(Args[2]);
@@ -167,7 +167,7 @@ ML_METHOD("bank_select", SynthT, MLIntegerT, MLIntegerT) {
 	return ml_error("FluidSynthError", "Error selecting bank");
 }
 
-ML_METHOD("sfont_select", SynthT, MLIntegerT, MLIntegerT) {
+ML_METHOD("sfont_select", FluidSynthT, MLIntegerT, MLIntegerT) {
 	fluid_synth_t *Handle = ((synth_t *)Args[0])->Handle;
 	int Chan = ml_integer_value(Args[1]);
 	unsigned int SFontID = ml_integer_value(Args[2]);
@@ -175,7 +175,7 @@ ML_METHOD("sfont_select", SynthT, MLIntegerT, MLIntegerT) {
 	return ml_error("FluidSynthError", "Error selecting font");
 }
 
-ML_METHOD("program_select", SynthT, MLIntegerT, MLIntegerT, MLIntegerT, MLIntegerT) {
+ML_METHOD("program_select", FluidSynthT, MLIntegerT, MLIntegerT, MLIntegerT, MLIntegerT) {
 	fluid_synth_t *Handle = ((synth_t *)Args[0])->Handle;
 	int Chan = ml_integer_value(Args[1]);
 	unsigned int SFontID = ml_integer_value(Args[2]);
@@ -185,26 +185,26 @@ ML_METHOD("program_select", SynthT, MLIntegerT, MLIntegerT, MLIntegerT, MLIntege
 	return ml_error("FluidSynthError", "Error selecting program");
 }
 
-ML_METHOD("unset_program", SynthT, MLIntegerT) {
+ML_METHOD("unset_program", FluidSynthT, MLIntegerT) {
 	fluid_synth_t *Handle = ((synth_t *)Args[0])->Handle;
 	int Chan = ml_integer_value(Args[1]);
 	if (fluid_synth_unset_program(Handle, Chan) == FLUID_OK) return Args[0];
 	return ml_error("FluidSynthError", "Error unsetting program");
 }
 
-ML_METHOD("program_reset", SynthT) {
+ML_METHOD("program_reset", FluidSynthT) {
 	fluid_synth_t *Handle = ((synth_t *)Args[0])->Handle;
 	if (fluid_synth_program_reset(Handle) == FLUID_OK) return Args[0];
 	return ml_error("FluidSynthError", "Error resetting program");
 }
 
-ML_METHOD("system_reset", SynthT) {
+ML_METHOD("system_reset", FluidSynthT) {
 	fluid_synth_t *Handle = ((synth_t *)Args[0])->Handle;
 	if (fluid_synth_system_reset(Handle) == FLUID_OK) return Args[0];
 	return ml_error("FluidSynthError", "Error resetting system");
 }
 
-ML_METHOD("sfload", SynthT, MLStringT, MLBooleanT) {
+ML_METHOD("sfload", FluidSynthT, MLStringT, MLBooleanT) {
 	fluid_synth_t *Handle = ((synth_t *)Args[0])->Handle;
 	const char *FileName = ml_string_value(Args[1]);
 	int ResetPresets = Args[2] == (ml_value_t *)MLTrue;
@@ -213,7 +213,7 @@ ML_METHOD("sfload", SynthT, MLStringT, MLBooleanT) {
 	return ml_integer(SFontID);
 }
 
-ML_METHOD("add_sfont", SynthT, SoundFontT) {
+ML_METHOD("add_sfont", FluidSynthT, SoundFontT) {
 	fluid_synth_t *Synth = ((synth_t *)Args[0])->Handle;
 	fluid_sfont_t *SFont = ((sound_font_t *)Args[1])->Handle;
 	int SFontID = fluid_synth_add_sfont(Synth, SFont);
@@ -221,14 +221,14 @@ ML_METHOD("add_sfont", SynthT, SoundFontT) {
 	return ml_integer(SFontID);
 }
 
-ML_METHOD("sfreload", SynthT, MLStringT, MLBooleanT) {
+ML_METHOD("sfreload", FluidSynthT, MLStringT, MLBooleanT) {
 	fluid_synth_t *Handle = ((synth_t *)Args[0])->Handle;
 	int SFontID = ml_integer_value(Args[1]);
 	if (fluid_synth_sfreload(Handle, SFontID) == FLUID_OK) return Args[0];
 	return ml_error("FluidSynthError", "Error reloading font");
 }
 
-ML_METHOD("sfunload", SynthT, MLStringT, MLBooleanT) {
+ML_METHOD("sfunload", FluidSynthT, MLStringT, MLBooleanT) {
 	fluid_synth_t *Handle = ((synth_t *)Args[0])->Handle;
 	int SFontID = ml_integer_value(Args[1]);
 	int ResetPresets = Args[2] == (ml_value_t *)MLTrue;
@@ -236,7 +236,7 @@ ML_METHOD("sfunload", SynthT, MLStringT, MLBooleanT) {
 	return ml_error("FluidSynthError", "Error unloading font");
 }
 
-ML_METHOD("get_sfont", SynthT, MLIntegerT) {
+ML_METHOD("get_sfont", FluidSynthT, MLIntegerT) {
 	fluid_synth_t *Synth = ((synth_t *)Args[0])->Handle;
 	int SFontID = ml_integer_value(Args[1]);
 	sound_font_t *SFont = new(sound_font_t);
@@ -245,7 +245,7 @@ ML_METHOD("get_sfont", SynthT, MLIntegerT) {
 	return (ml_value_t *)SFont;
 }
 
-ML_METHOD("reverb", SynthT, MLRealT, MLRealT, MLRealT, MLRealT) {
+ML_METHOD("reverb", FluidSynthT, MLRealT, MLRealT, MLRealT, MLRealT) {
 	fluid_synth_set_reverb(
 		((synth_t *)Args[0])->Handle,
 		ml_real_value(Args[1]),
@@ -256,12 +256,12 @@ ML_METHOD("reverb", SynthT, MLRealT, MLRealT, MLRealT, MLRealT) {
 	return Args[0];
 }
 
-ML_METHOD("reverb_on", SynthT, MLBooleanT) {
+ML_METHOD("reverb_on", FluidSynthT, MLBooleanT) {
 	fluid_synth_set_reverb_on(((synth_t *)Args[0])->Handle, Args[1] == (ml_value_t *)MLTrue);
 	return Args[0];
 }
 
-ML_METHOD("chorus", SynthT, MLIntegerT, MLRealT, MLRealT, MLRealT, MLIntegerT) {
+ML_METHOD("chorus", FluidSynthT, MLIntegerT, MLRealT, MLRealT, MLRealT, MLIntegerT) {
 	fluid_synth_set_chorus(
 		((synth_t *)Args[0])->Handle,
 		ml_integer_value(Args[1]),
@@ -273,27 +273,27 @@ ML_METHOD("chorus", SynthT, MLIntegerT, MLRealT, MLRealT, MLRealT, MLIntegerT) {
 	return Args[0];
 }
 
-ML_METHOD("chorus_on", SynthT, MLBooleanT) {
+ML_METHOD("chorus_on", FluidSynthT, MLBooleanT) {
 	fluid_synth_set_chorus_on(((synth_t *)Args[0])->Handle, Args[1] == (ml_value_t *)MLTrue);
 	return Args[0];
 }
 
-ML_METHOD("sample_rate", SynthT, MLRealT) {
+ML_METHOD("sample_rate", FluidSynthT, MLRealT) {
 	fluid_synth_set_sample_rate(((synth_t *)Args[0])->Handle, ml_real_value(Args[1]));
 	return Args[0];
 }
 
-ML_METHOD("gain", SynthT, MLRealT) {
+ML_METHOD("gain", FluidSynthT, MLRealT) {
 	fluid_synth_set_gain(((synth_t *)Args[0])->Handle, ml_real_value(Args[1]));
 	return Args[0];
 }
 
-ML_METHOD("polyphony", SynthT, MLIntegerT) {
+ML_METHOD("polyphony", FluidSynthT, MLIntegerT) {
 	fluid_synth_set_polyphony(((synth_t *)Args[0])->Handle, ml_integer_value(Args[1]));
 	return Args[0];
 }
 
-ML_METHOD("write_float", SynthT, MLIntegerT, MLBufferT, MLIntegerT, MLIntegerT, MLBufferT, MLIntegerT, MLIntegerT) {
+ML_METHOD("write_float", FluidSynthT, MLIntegerT, MLBufferT, MLIntegerT, MLIntegerT, MLBufferT, MLIntegerT, MLIntegerT) {
 	fluid_synth_t *Synth = ((synth_t *)Args[0])->Handle;
 	int Len = ml_integer_value(Args[1]);
 	void *Lout = ml_buffer_value(Args[2]);
@@ -327,7 +327,7 @@ ML_FUNCTION(FloatBlock) {
 	return (ml_value_t *)Block;
 }
 
-ML_METHOD("write_float", SynthT, FloatBlockT) {
+ML_METHOD("write_float", FluidSynthT, FloatBlockT) {
 	fluid_synth_t *Synth = ((synth_t *)Args[0])->Handle;
 	float_block_t *Block = (float_block_t *)Args[1];
 	if (fluid_synth_write_float(Synth, Block->Len, Block->Lout, Block->Loff, Block->Lincr, Block->Rout, Block->Roff, Block->Rincr) == FLUID_OK) return Args[0];
@@ -380,7 +380,7 @@ ML_FUNCTION(Sequencer) {
 //<UseSystemTimer?:boolean
 //>sequencer
 	sequencer_t *Sequencer = new(sequencer_t);
-	Sequencer->Type = SequencerT;
+	Sequencer->Type = FluidSequencerT;
 	if (Count > 0) {
 		Sequencer->Handle = new_fluid_sequencer2(Args[0] == (ml_value_t *)MLTrue);
 	} else {
@@ -390,31 +390,31 @@ ML_FUNCTION(Sequencer) {
 	return (ml_value_t *)Sequencer;
 }
 
-ML_METHOD("tick", SequencerT) {
+ML_METHOD("tick", FluidSequencerT) {
 	fluid_sequencer_t *Sequencer = ((sequencer_t *)Args[0])->Handle;
 	return ml_integer(fluid_sequencer_get_tick(Sequencer));
 }
 
-ML_METHOD("time_scale", SequencerT) {
+ML_METHOD("time_scale", FluidSequencerT) {
 	fluid_sequencer_t *Sequencer = ((sequencer_t *)Args[0])->Handle;
 	return ml_real(fluid_sequencer_get_time_scale(Sequencer));
 }
 
-ML_METHOD("time_scale", SequencerT, MLRealT) {
+ML_METHOD("time_scale", FluidSequencerT, MLRealT) {
 	fluid_sequencer_t *Sequencer = ((sequencer_t *)Args[0])->Handle;
 	double Scale = ml_real_value(Args[1]);
 	fluid_sequencer_set_time_scale(Sequencer, Scale);
 	return Args[0];
 }
 
-ML_METHOD("send_now", SequencerT, EventT) {
+ML_METHOD("send_now", FluidSequencerT, FluidEventT) {
 	fluid_sequencer_t *Sequencer = ((sequencer_t *)Args[0])->Handle;
 	fluid_event_t *Event = ((event_t *)Args[1])->Handle;
 	fluid_sequencer_send_now(Sequencer, Event);
 	return Args[0];
 }
 
-ML_METHOD("send_at", SequencerT, EventT, MLIntegerT, MLBooleanT) {
+ML_METHOD("send_at", FluidSequencerT, FluidEventT, MLIntegerT, MLBooleanT) {
 	fluid_sequencer_t *Sequencer = ((sequencer_t *)Args[0])->Handle;
 	fluid_event_t *Event = ((event_t *)Args[1])->Handle;
 	unsigned int Time = ml_integer_value(Args[2]);
@@ -423,7 +423,7 @@ ML_METHOD("send_at", SequencerT, EventT, MLIntegerT, MLBooleanT) {
 	return Args[0];
 }
 
-ML_METHOD("register", SequencerT, SynthT) {
+ML_METHOD("register", FluidSequencerT, FluidSynthT) {
 	fluid_sequencer_t *Sequencer = ((sequencer_t *)Args[0])->Handle;
 	fluid_synth_t *Synth = ((synth_t *)Args[1])->Handle;
 	short ClientID = fluid_sequencer_register_fluidsynth(Sequencer, Synth);
@@ -431,7 +431,7 @@ ML_METHOD("register", SequencerT, SynthT) {
 	return ml_integer(ClientID);
 }
 
-ML_METHODX("register", SequencerT, MLStringT) {
+ML_METHODX("register", FluidSequencerT, MLStringT) {
 	fluid_sequencer_t *Sequencer = ((sequencer_t *)Args[0])->Handle;
 	const char *Name = ml_string_value(Args[1]);
 	short ClientID;
@@ -451,17 +451,17 @@ static void event_callback_run(event_callback_t *Callback, ml_value_t *Value) {
 
 static void event_callback(unsigned int Time, fluid_event_t *Event, fluid_sequencer_t *Sequencer, event_callback_t *Callback) {
 	event_t *EventArg = new(event_t);
-	EventArg->Type = EventT;
+	EventArg->Type = FluidEventT;
 	EventArg->Handle = Event;
 	sequencer_t *SequencerArg = new(sequencer_t);
-	SequencerArg->Type = SequencerT;
+	SequencerArg->Type = FluidSequencerT;
 	SequencerArg->Handle = Sequencer;
 	Callback->Args[1] = ml_integer(Time);
 	Callback->Args[2] = (ml_value_t *)EventArg;
 	ml_call((ml_state_t *)Callback, Callback->Function, 3, Callback->Args);
 }
 
-ML_METHODX("register", SequencerT, MLStringT, MLFunctionT) {
+ML_METHODX("register", FluidSequencerT, MLStringT, MLFunctionT) {
 	fluid_sequencer_t *Sequencer = ((sequencer_t *)Args[0])->Handle;
 	const char *Name = ml_string_value(Args[1]);
 	short ClientID;
@@ -483,44 +483,44 @@ static void event_finalize(event_t *Event, void *Data) {
 ML_FUNCTION(Event) {
 //>event
 	event_t *Event = new(event_t);
-	Event->Type = EventT;
+	Event->Type = FluidEventT;
 	Event->Handle = new_fluid_event();
 	GC_register_finalizer((char *)Event->Handle, (void *)event_finalize, NULL, NULL, NULL);
 	return (ml_value_t *)Event;
 }
 
-ML_METHOD("data", EventT) {
+ML_METHOD("data", FluidEventT) {
 	fluid_event_t *Event = ((event_t *)Args[0])->Handle;
 	return (ml_value_t *)fluid_event_get_data(Event) ?: MLNil;
 }
 
-ML_METHOD("source", EventT, MLIntegerT) {
+ML_METHOD("source", FluidEventT, MLIntegerT) {
 	fluid_event_t *Event = ((event_t *)Args[0])->Handle;
 	short Src = ml_integer_value(Args[1]);
 	fluid_event_set_source(Event, Src);
 	return Args[0];
 }
 
-ML_METHOD("dest", EventT, MLIntegerT) {
+ML_METHOD("dest", FluidEventT, MLIntegerT) {
 	fluid_event_t *Event = ((event_t *)Args[0])->Handle;
 	short Dest = ml_integer_value(Args[1]);
 	fluid_event_set_dest(Event, Dest);
 	return Args[0];
 }
 
-ML_METHOD("timer", EventT) {
+ML_METHOD("timer", FluidEventT) {
 	fluid_event_t *Event = ((event_t *)Args[0])->Handle;
 	fluid_event_timer(Event, MLNil);
 	return Args[0];
 }
 
-ML_METHOD("timer", EventT, MLAnyT) {
+ML_METHOD("timer", FluidEventT, MLAnyT) {
 	fluid_event_t *Event = ((event_t *)Args[0])->Handle;
 	fluid_event_timer(Event, Args[1]);
 	return Args[0];
 }
 
-ML_METHOD("note", EventT, MLIntegerT, MLIntegerT, MLIntegerT, MLIntegerT) {
+ML_METHOD("note", FluidEventT, MLIntegerT, MLIntegerT, MLIntegerT, MLIntegerT) {
 	fluid_event_t *Event = ((event_t *)Args[0])->Handle;
 	int Channel = ml_integer_value(Args[1]);
 	short Key = ml_integer_value(Args[2]);
@@ -530,7 +530,7 @@ ML_METHOD("note", EventT, MLIntegerT, MLIntegerT, MLIntegerT, MLIntegerT) {
 	return Args[0];
 }
 
-ML_METHOD("noteon", EventT, MLIntegerT, MLIntegerT, MLIntegerT) {
+ML_METHOD("noteon", FluidEventT, MLIntegerT, MLIntegerT, MLIntegerT) {
 	fluid_event_t *Event = ((event_t *)Args[0])->Handle;
 	int Channel = ml_integer_value(Args[1]);
 	short Key = ml_integer_value(Args[2]);
@@ -539,7 +539,7 @@ ML_METHOD("noteon", EventT, MLIntegerT, MLIntegerT, MLIntegerT) {
 	return Args[0];
 }
 
-ML_METHOD("noteoff", EventT, MLIntegerT, MLIntegerT) {
+ML_METHOD("noteoff", FluidEventT, MLIntegerT, MLIntegerT) {
 	fluid_event_t *Event = ((event_t *)Args[0])->Handle;
 	int Channel = ml_integer_value(Args[1]);
 	short Key = ml_integer_value(Args[2]);
@@ -547,21 +547,21 @@ ML_METHOD("noteoff", EventT, MLIntegerT, MLIntegerT) {
 	return Args[0];
 }
 
-ML_METHOD("all_notes_off", EventT, MLIntegerT) {
+ML_METHOD("all_notes_off", FluidEventT, MLIntegerT) {
 	fluid_event_t *Event = ((event_t *)Args[0])->Handle;
 	int Channel = ml_integer_value(Args[1]);
 	fluid_event_all_notes_off(Event, Channel);
 	return Args[0];
 }
 
-ML_METHOD("all_sounds_off", EventT, MLIntegerT) {
+ML_METHOD("all_sounds_off", FluidEventT, MLIntegerT) {
 	fluid_event_t *Event = ((event_t *)Args[0])->Handle;
 	int Channel = ml_integer_value(Args[1]);
 	fluid_event_all_sounds_off(Event, Channel);
 	return Args[0];
 }
 
-ML_METHOD("pitch_bend", EventT, MLIntegerT, MLIntegerT) {
+ML_METHOD("pitch_bend", FluidEventT, MLIntegerT, MLIntegerT) {
 	fluid_event_t *Event = ((event_t *)Args[0])->Handle;
 	int Channel = ml_integer_value(Args[1]);
 	int Pitch = ml_integer_value(Args[2]);
@@ -569,7 +569,7 @@ ML_METHOD("pitch_bend", EventT, MLIntegerT, MLIntegerT) {
 	return Args[0];
 }
 
-ML_METHOD("pitch_wheelsens", EventT, MLIntegerT, MLIntegerT) {
+ML_METHOD("pitch_wheelsens", FluidEventT, MLIntegerT, MLIntegerT) {
 	fluid_event_t *Event = ((event_t *)Args[0])->Handle;
 	int Channel = ml_integer_value(Args[1]);
 	short Val = ml_integer_value(Args[2]);
@@ -577,7 +577,7 @@ ML_METHOD("pitch_wheelsens", EventT, MLIntegerT, MLIntegerT) {
 	return Args[0];
 }
 
-ML_METHOD("modulation", EventT, MLIntegerT, MLIntegerT) {
+ML_METHOD("modulation", FluidEventT, MLIntegerT, MLIntegerT) {
 	fluid_event_t *Event = ((event_t *)Args[0])->Handle;
 	int Channel = ml_integer_value(Args[1]);
 	short Val = ml_integer_value(Args[2]);
@@ -585,7 +585,7 @@ ML_METHOD("modulation", EventT, MLIntegerT, MLIntegerT) {
 	return Args[0];
 }
 
-ML_METHOD("sustain", EventT, MLIntegerT, MLIntegerT) {
+ML_METHOD("sustain", FluidEventT, MLIntegerT, MLIntegerT) {
 	fluid_event_t *Event = ((event_t *)Args[0])->Handle;
 	int Channel = ml_integer_value(Args[1]);
 	short Val = ml_integer_value(Args[2]);
@@ -593,7 +593,7 @@ ML_METHOD("sustain", EventT, MLIntegerT, MLIntegerT) {
 	return Args[0];
 }
 
-ML_METHOD("volume", EventT, MLIntegerT, MLIntegerT) {
+ML_METHOD("volume", FluidEventT, MLIntegerT, MLIntegerT) {
 	fluid_event_t *Event = ((event_t *)Args[0])->Handle;
 	int Channel = ml_integer_value(Args[1]);
 	short Val = ml_integer_value(Args[2]);
@@ -601,7 +601,7 @@ ML_METHOD("volume", EventT, MLIntegerT, MLIntegerT) {
 	return Args[0];
 }
 
-ML_METHOD("pan", EventT, MLIntegerT, MLIntegerT) {
+ML_METHOD("pan", FluidEventT, MLIntegerT, MLIntegerT) {
 	fluid_event_t *Event = ((event_t *)Args[0])->Handle;
 	int Channel = ml_integer_value(Args[1]);
 	short Val = ml_integer_value(Args[2]);
@@ -609,7 +609,7 @@ ML_METHOD("pan", EventT, MLIntegerT, MLIntegerT) {
 	return Args[0];
 }
 
-ML_METHOD("reverb", EventT, MLIntegerT, MLIntegerT) {
+ML_METHOD("reverb", FluidEventT, MLIntegerT, MLIntegerT) {
 	fluid_event_t *Event = ((event_t *)Args[0])->Handle;
 	int Channel = ml_integer_value(Args[1]);
 	short Val = ml_integer_value(Args[2]);
@@ -617,7 +617,7 @@ ML_METHOD("reverb", EventT, MLIntegerT, MLIntegerT) {
 	return Args[0];
 }
 
-ML_METHOD("chorus", EventT, MLIntegerT, MLIntegerT) {
+ML_METHOD("chorus", FluidEventT, MLIntegerT, MLIntegerT) {
 	fluid_event_t *Event = ((event_t *)Args[0])->Handle;
 	int Channel = ml_integer_value(Args[1]);
 	short Val = ml_integer_value(Args[2]);
@@ -625,7 +625,7 @@ ML_METHOD("chorus", EventT, MLIntegerT, MLIntegerT) {
 	return Args[0];
 }
 
-ML_METHOD("pressure", EventT, MLIntegerT, MLIntegerT) {
+ML_METHOD("pressure", FluidEventT, MLIntegerT, MLIntegerT) {
 	fluid_event_t *Event = ((event_t *)Args[0])->Handle;
 	int Channel = ml_integer_value(Args[1]);
 	short Val = ml_integer_value(Args[2]);
@@ -633,7 +633,7 @@ ML_METHOD("pressure", EventT, MLIntegerT, MLIntegerT) {
 	return Args[0];
 }
 
-ML_METHOD("system_reset", EventT) {
+ML_METHOD("system_reset", FluidEventT) {
 	fluid_event_t *Event = ((event_t *)Args[0])->Handle;
 	fluid_event_system_reset(Event);
 	return Args[0];
@@ -648,8 +648,8 @@ ML_FUNCTION(AudioDriver) {
 //<Synth
 //>audiodriver
 	ML_CHECK_ARG_COUNT(2);
-	ML_CHECK_ARG_TYPE(0, SettingsT);
-	ML_CHECK_ARG_TYPE(1, SynthT);
+	ML_CHECK_ARG_TYPE(0, FluidSettingsT);
+	ML_CHECK_ARG_TYPE(1, FluidSynthT);
 	settings_t *Settings = (settings_t *)Args[0];
 	synth_t *Synth = (synth_t *)Args[1];
 	audio_driver_t *AudioDriver = new(audio_driver_t);
@@ -660,14 +660,12 @@ ML_FUNCTION(AudioDriver) {
 }
 
 ML_LIBRARY_ENTRY0(snd_fluidsynth) {
+	stringmap_insert(FluidSequencerT->Exports, "settings", FluidSettingsT);
+	stringmap_insert(FluidSequencerT->Exports, "sequencer", FluidSequencerT);
+	stringmap_insert(FluidSequencerT->Exports, "event", FluidEventT);
+	stringmap_insert(FluidSequencerT->Exports, "audiodriver", AudioDriverT);
+	stringmap_insert(FluidSequencerT->Exports, "soundfont", SoundFontT);
+	stringmap_insert(FluidSequencerT->Exports, "floatblock", FloatBlockT);
 #include "fluidsynth_init.c"
-	Slot[0] = ml_module("fluidsynth",
-		"settings", SettingsT,
-		"synth", SynthT,
-		"sequencer", SequencerT,
-		"event", EventT,
-		"audiodriver", AudioDriverT,
-		"soundfont", SoundFontT,
-		"floatblock", FloatBlockT,
-	NULL);
+	Slot[0] = (ml_value_t *)FluidSynthT;
 }

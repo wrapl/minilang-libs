@@ -1,5 +1,5 @@
---- Makefile	2026-02-21 09:13:01.155397017 +0000
-+++ Makefile2	2026-02-21 09:11:10.845000000 +0000
+--- a/Makefile	2026-02-21 09:13:01.155397017 +0000
++++ b/Makefile	2026-02-21 09:11:10.845000000 +0000
 @@ -32,7 +32,8 @@
 
  CFLAGS = $(OPT_FLAGS) $(MACHINE_FLAGS) $(WARN_FLAGS) \
@@ -10,3 +10,18 @@
 
  # tweak the compile flags
 
+--- a/include/mp.h	2026-02-25 08:32:32.615644741 +0000
++++ b/include/mp.h	2026-02-25 08:25:58.773000000 +0000
+@@ -649,7 +649,11 @@
+ 	   Reading it in as a uint64 makes this process
+ 	   endian-independent */
+
+-	int_mant = *(uint64 *)(d);
++	union { uint64_t i; double d; } u;
++	u.d = *d;
++	int_mant = u.i;
++
++	//int_mant = *(uint64 *)(d);
+ 	exponent = ((int32)(int_mant >> 52) & 0x7ff) - 1023;
+ 	int_mant &= ~((uint64)(0xfff) << 52);
+ 	int_mant |= (uint64)(1) << 52;

@@ -15,7 +15,7 @@ end>:
 scope("gumbo";) do
 	let GUMBO := file("gumbo/src/gumbo.h") => fun() do
 		file("gumbo"):rmdir:mkdir:chdir
-		execute("wget -nv https://codeberg.org/grisha/gumbo-parser/archive/0.13.0.tar.gz -O- | tar xvzP --strip-components=1")
+		execute("wget -nv https://codeberg.org/gumbo-parser/gumbo-parser/archive/0.13.2.tar.gz -O- | tar xvzP --strip-components=1")
 	end
 	CFLAGS := old + ["-I", GUMBO:dir]
 	let Objects := [

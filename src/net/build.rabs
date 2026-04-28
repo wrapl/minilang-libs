@@ -1,3 +1,5 @@
+CFLAGS := old + [pkgconfig("--cflags libcurl")]
+
 let CurlHeader := expr("curl_header";) do
 	var Lines := shell(CC, '-c', CFLAGS, '-M -MG', file("curl.c"))
 	Lines := Lines:replace("\\\n ", "")

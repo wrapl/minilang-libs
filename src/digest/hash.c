@@ -5,6 +5,7 @@
 #include <nettle/sha.h>
 #include <nettle/md5.h>
 #include <nettle/ripemd160.h>
+#include <nettle/version.h>
 
 #undef ML_CATEGORY
 #define ML_CATEGORY "digest/hash"

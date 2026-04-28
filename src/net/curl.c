@@ -50,6 +50,7 @@ typedef struct {
 	ml_scheduler_t *Scheduler;
 	ptrset_t Handlers[1];
 	int Pause, Abort;
+	char Error[CURL_ERROR_SIZE];
 } curl_t;
 
 struct callback_state_t {
@@ -71,6 +72,8 @@ static void curl_state_run(curl_t *Curl, ml_value_t *Value) {
 }
 
 ML_FUNCTIONX(Curl) {
+//>curl
+// Returns a new Curl easy instance.
 	curl_t *Curl = new(curl_t);
 	Curl->Base.Type = CurlT;
 	Curl->Base.Context = Caller->Context;
@@ -81,6 +84,7 @@ ML_FUNCTIONX(Curl) {
 	curl_easy_setopt(Curl->Handle, CURLOPT_XFERINFOFUNCTION, progress_callback);
 	curl_easy_setopt(Curl->Handle, CURLOPT_XFERINFODATA, Curl);
 	curl_easy_setopt(Curl->Handle, CURLOPT_NOPROGRESS, 0);
+	curl_easy_setopt(Curl->Handle, CURLOPT_ERRORBUFFER, Curl->Error);
 	ML_RETURN(Curl);
 }
 
@@ -91,6 +95,11 @@ ML_TYPE(CurlT, (), "curl",
 #include "curl_options.c"
 
 ML_METHOD("set", CurlT, CurlOptionT, MLNilT) {
+//<Curl
+//<Option
+//<nil
+//>curl
+// Sets :mini:`Option` in :mini:`Curl` to :mini:`nil`.
 	curl_t *Curl = (curl_t *)Args[0];
 	CURLoption Option = ml_enum_value_value(Args[1]);
 	curl_easy_setopt(Curl->Handle, Option, 0);
@@ -98,13 +107,35 @@ ML_METHOD("set", CurlT, CurlOptionT, MLNilT) {
 }
 
 ML_METHOD("set", CurlT, CurlOptionIntegerT, MLIntegerT) {
+//<Curl
+//<Option
+//<Value
+//>curl
+// Sets :mini:`Option` in :mini:`Curl` to :mini:`Value`.
 	curl_t *Curl = (curl_t *)Args[0];
 	CURLoption Option = ml_enum_value_value(Args[1]);
 	curl_easy_setopt(Curl->Handle, Option, ml_integer_value(Args[2]));
 	return (ml_value_t *)Curl;
 }
 
+ML_METHOD("set", CurlT, CurlOptionEnumT, MLEnumValueT) {
+//<Curl
+//<Option
+//<Value
+//>curl
+// Sets :mini:`Option` in :mini:`Curl` to :mini:`Value`.
+	curl_t *Curl = (curl_t *)Args[0];
+	CURLoption Option = ml_enum_value_value(Args[1]);
+	curl_easy_setopt(Curl->Handle, Option, ml_enum_value_value(Args[2]));
+	return (ml_value_t *)Curl;
+}
+
 ML_METHOD("set", CurlT, CurlOptionIntegerT, MLBooleanT) {
+//<Curl
+//<Option
+//<Value
+//>curl
+// Sets :mini:`Option` in :mini:`Curl` to :mini:`Value`.
 	curl_t *Curl = (curl_t *)Args[0];
 	CURLoption Option = ml_enum_value_value(Args[1]);
 	curl_easy_setopt(Curl->Handle, Option, ml_boolean_value(Args[2]));
@@ -112,6 +143,11 @@ ML_METHOD("set", CurlT, CurlOptionIntegerT, MLBooleanT) {
 }
 
 ML_METHOD("set", CurlT, CurlOptionStringT, MLStringT) {
+//<Curl
+//<Option
+//<Value
+//>curl
+// Sets :mini:`Option` in :mini:`Curl` to :mini:`Value`.
 	curl_t *Curl = (curl_t *)Args[0];
 	CURLoption Option = ml_enum_value_value(Args[1]);
 	curl_easy_setopt(Curl->Handle, Option, ml_string_value(Args[2]));
@@ -119,6 +155,11 @@ ML_METHOD("set", CurlT, CurlOptionStringT, MLStringT) {
 }
 
 ML_METHOD("set", CurlT, CurlOptionSetT, MLListT) {
+//<Curl
+//<Option
+//<Value
+//>curl
+// Sets :mini:`Option` in :mini:`Curl` to :mini:`Value`.
 	curl_t *Curl = (curl_t *)Args[0];
 	ML_LIST_FOREACH(Args[2], Iter) {
 		if (!ml_is(Iter->Value, MLStringT)) return ml_error("CurlError", "Expected list of strings");
@@ -191,6 +232,11 @@ static size_t stream_write_callback(char *Buffer, size_t Size, size_t N, callbac
 }
 
 ML_METHODX("set", CurlT, CurlOptionFunctionT, MLStreamT) {
+//<Curl
+//<Option
+//<Value
+//>curl
+// Sets :mini:`Option` in :mini:`Curl` to :mini:`Value`.
 	curl_t *Curl = (curl_t *)Args[0];
 	CURLoption Option = ml_enum_value_value(Args[1]);
 	callback_state_t *State = new(callback_state_t);
@@ -263,6 +309,11 @@ static size_t function_write_callback(char *Buffer, size_t Size, size_t N, callb
 }
 
 ML_METHODX("set", CurlT, CurlOptionFunctionT, MLFunctionT) {
+//<Curl
+//<Option
+//<Value
+//>curl
+// Sets :mini:`Option` in :mini:`Curl` to :mini:`Value`.
 	curl_t *Curl = (curl_t *)Args[0];
 	CURLoption Option = ml_enum_value_value(Args[1]);
 	callback_state_t *State = new(callback_state_t);
@@ -297,11 +348,56 @@ ML_METHODX("perform", CurlT) {
 	if (Curl->Scheduler) ML_ERROR("CurlError", "Curl handle cannot be used concurrently");
 	Curl->Scheduler = ml_context_get_scheduler(Caller->Context);
 	ml_scheduler_split(Curl->Scheduler);
-	curl_easy_perform(Curl->Handle);
+	CURLcode Code = curl_easy_perform(Curl->Handle);
 	ml_scheduler_join(Curl->Scheduler);
 	Curl->Scheduler = NULL;
+	if (Code != CURLE_OK) ML_ERROR("CurlError", "%s", Curl->Error);
 	ML_RETURN(Curl);
 }
+
+ML_METHOD("get", CurlT, CurlInfoIntegerT) {
+	curl_t *Curl = (curl_t *)Args[0];
+	CURLINFO Info = ml_enum_value_value(Args[1]);
+	long Value;
+	if (curl_easy_getinfo(Curl->Handle, Info, &Value) != CURLE_OK) return ml_error("CurlError", "Error fetching info");
+	return ml_integer(Value);
+}
+
+ML_METHOD("get", CurlT, CurlInfoRealT) {
+	curl_t *Curl = (curl_t *)Args[0];
+	CURLINFO Info = ml_enum_value_value(Args[1]);
+	double Value;
+	if (curl_easy_getinfo(Curl->Handle, Info, &Value) != CURLE_OK) return ml_error("CurlError", "Error fetching info");
+	return ml_real(Value);
+}
+
+ML_METHOD("get", CurlT, CurlInfoStringT) {
+	curl_t *Curl = (curl_t *)Args[0];
+	CURLINFO Info = ml_enum_value_value(Args[1]);
+	const char *Value;
+	if (curl_easy_getinfo(Curl->Handle, Info, &Value) != CURLE_OK) return ml_error("CurlError", "Error fetching info");
+	return ml_string_copy(Value, -1);
+}
+
+ML_METHOD("get", CurlT, CurlInfoSetT) {
+	curl_t *Curl = (curl_t *)Args[0];
+	CURLINFO Info = ml_enum_value_value(Args[1]);
+	struct curl_slist *Value;
+	if (curl_easy_getinfo(Curl->Handle, Info, &Value) != CURLE_OK) return ml_error("CurlError", "Error fetching info");
+	ml_value_t *Result = ml_list();
+	for (struct curl_slist *Node = Value; Node; Node = Node->next) {
+		ml_list_put(Result, ml_string_copy(Node->data, -1));
+	}
+	curl_slist_free_all(Value);
+	return Result;
+}
+
+ML_ENUM2(CurlUseSslT, "curl::usessl",
+	"None", CURLUSESSL_NONE,
+	"Try", CURLUSESSL_TRY,
+	"Control", CURLUSESSL_CONTROL,
+	"All", CURLUSESSL_ALL
+);
 
 static void nop_free(void *Ptr) {}
 
@@ -316,6 +412,8 @@ ML_LIBRARY_ENTRY0(net_curl) {
 	);
 #include "curl_init.c"
 	stringmap_insert(CurlT->Exports, "option", CurlOptionT);
+	stringmap_insert(CurlT->Exports, "info", CurlInfoT);
+	stringmap_insert(CurlT->Exports, "usessl", CurlUseSslT);
 	Slot[0] = (ml_value_t *)CurlT;
 }
 

@@ -9,7 +9,7 @@ snd/sndfile
 
 .. rst-class:: mini-api
 
-:mini:`type sndfile < stream`
+:mini:`type sndfile`
    *TBD*
 
 
@@ -25,6 +25,14 @@ snd/sndfile
    *TBD*
 
 
+:mini:`meth (Arg₁: sndfile):close`
+   *TBD*
+
+
+:mini:`meth (Arg₁: sndfile):flush`
+   *TBD*
+
+
 :mini:`meth (Arg₁: sndfile):format`
    *TBD*
 
@@ -37,11 +45,27 @@ snd/sndfile
    *TBD*
 
 
+:mini:`meth (Arg₁: sndfile):read(Arg₂: matrix)`
+   *TBD*
+
+
+:mini:`meth (Arg₁: sndfile):read(Arg₂: vector)`
+   *TBD*
+
+
 :mini:`meth (SndFile: sndfile):set(Name: sndfile::string, Value: string)`
    *TBD*
 
 
 :mini:`meth (Arg₁: sndfile):strerror`
+   *TBD*
+
+
+:mini:`meth (Arg₁: sndfile):write(Arg₂: matrix)`
+   *TBD*
+
+
+:mini:`meth (Arg₁: sndfile):write(Arg₂: vector)`
    *TBD*
 
 

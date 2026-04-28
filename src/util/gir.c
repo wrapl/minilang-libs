@@ -3209,7 +3209,8 @@ static void gir_function_call(ml_state_t *Caller, gir_function_t *Function, int 
 		break;
 	}
 	case GIB_HASH: {
-		ML_ERROR("TypeError", "Hash arguments not supported yet");
+		ml_value_t *Value = *Arg++;
+		if (Value != MLNil) ML_ERROR("TypeError", "Hash arguments not supported yet");
 		break;
 	}
 	case GIB_OUTPUT_VALUE: {

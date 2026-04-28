@@ -10,25 +10,42 @@ file("curl_options.c")[CurlHeader] => fun(Target) do
 	print('CurlHeader = {CurlHeader}\n')
 	let Input := open(CurlHeader, "r")
 	let Options := {}, Infos := {}
+	let Buffer := string::buffer()
+	let Comments := {}
 	loop
 		let Line := while Input:read
 		if let (_, Value, Type) := Line % r"CURLOPT\(CURLOPT_([A-Z_]+), CURLOPTTYPE_([A-Z_]+), [0-9]+\)" then
 			Options[Type, /list]:put(Value)
+			Comments[Value] := Buffer:rest
 		elseif let (_, Value, Type) := Line % r"CURLINFO_([A-Z_]+)\s+=\s+CURLINFO_([A-Z_]+)\s+\+\s+[0-9]+" then
 			Infos[Type, /list]:put(Value)
+			Comments[Value] := Buffer:rest
+		elseif Line:trim = "" or Line:starts("typedef") or Line:find("CURLOPTDEPRECATED") then
+			Buffer:rest
+		elseif Line:find("/*") then
+			Buffer:write(" " + Line:replace("/*", ""):replace("*/", ""):trim)
 		end
 	end
 	Input:close
 	let Output := Target:open("w")
-	Output:write('ML_ENUM2(CurlOptionT, "curl::option"')
+	Output:write('#undef ML_CATEGORY\n#define ML_CATEGORY \"net/curl\"\n\n')
+	Output:write('ML_ENUM2(CurlOptionT, "curl::option",\n//@curl::option\n')
+	let LastOption := last(last(Options))
 	for Type, Values in Options do
 		for Value in Values do
 			let Name := Value:replace("_", " "):lower:title:replace(" ", "")
-			Output:write(',\n\t"{Name}", CURLOPT_{Value}')
+			Output:write('\t"{Name}", CURLOPT_{Value}')
+			Value = LastOption or Output:write(",")
+			Output:write(' //{Comments[Value]}\n')
 		end
 	end
-	Output:write('\n);\n\nML_SUB_ENUM(CurlOptionIntegerT, "curl::option::integer", CurlOptionT')
+	Output:write(');\n\nML_SUB_ENUM(CurlOptionIntegerT, "curl::option::integer", CurlOptionT')
 	for Value in Options["LONG"] & Options["OFF_T"] do
+		let Name := Value:replace("_", " "):lower:title:replace(" ", "")
+		Output:write(',\n\t"{Name}"')
+	end
+	Output:write('\n);\n\nML_SUB_ENUM(CurlOptionEnumT, "curl::option::enum", CurlOptionT')
+	for Value in Options["VALUES"] do
 		let Name := Value:replace("_", " "):lower:title:replace(" ", "")
 		Output:write(',\n\t"{Name}"')
 	end
@@ -48,11 +65,13 @@ file("curl_options.c")[CurlHeader] => fun(Target) do
 		Output:write(',\n\t"{Name}"')
 	end
 	Output:write('\n);\n\n')
-	Output:write('ML_ENUM2(CurlInfoT, "curl::info"')
+	Output:write('ML_ENUM2(CurlInfoT, "curl::info",\n//@curl::info\n')
+	let LastInfo := last(last(Infos))
 	for Type, Values in Infos do
 		for Value in Values do
 			let Name := Value:replace("_", " "):lower:title:replace(" ", "")
-			Output:write(',\n\t"{Name}", CURLINFO_{Value}')
+			Output:write('\t"{Name}", CURLINFO_{Value}')
+			Value = LastInfo or Output:write(",\n")
 		end
 	end
 	Output:write('\n);\n\nML_SUB_ENUM(CurlInfoIntegerT, "curl::info::integer", CurlInfoT')

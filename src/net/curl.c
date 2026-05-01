@@ -43,15 +43,26 @@ static void ptrset_remove(ptrset_t *Set, void *Ptr) {
 }
 
 typedef struct callback_state_t callback_state_t;
+typedef struct curl_t curl_t;
 
-typedef struct {
+typedef enum {
+	CURL_ACTION_NONE,
+	CURL_ACTION_ADD,
+	CURL_ACTION_REMOVE,
+	CURL_ACTION_PAUSE,
+	CURL_ACTION_RESUME,
+	CURL_ACTION_ABORT
+} curl_action_t;
+
+struct curl_t {
 	ml_state_t Base;
+	curl_t *Next;
 	CURL *Handle;
 	ml_scheduler_t *Scheduler;
 	ptrset_t Handlers[1];
-	int Pause, Abort;
+	curl_action_t Action;
 	char Error[CURL_ERROR_SIZE];
-} curl_t;
+};
 
 struct callback_state_t {
 	ml_state_t Base;
@@ -101,6 +112,7 @@ ML_METHOD("set", CurlT, CurlOptionT, MLNilT) {
 //>curl
 // Sets :mini:`Option` in :mini:`Curl` to :mini:`nil`.
 	curl_t *Curl = (curl_t *)Args[0];
+	if (!Curl->Handle) return ml_error("CurlError", "Curl handle already closed");
 	CURLoption Option = ml_enum_value_value(Args[1]);
 	curl_easy_setopt(Curl->Handle, Option, 0);
 	return (ml_value_t *)Curl;
@@ -113,6 +125,7 @@ ML_METHOD("set", CurlT, CurlOptionIntegerT, MLIntegerT) {
 //>curl
 // Sets :mini:`Option` in :mini:`Curl` to :mini:`Value`.
 	curl_t *Curl = (curl_t *)Args[0];
+	if (!Curl->Handle) return ml_error("CurlError", "Curl handle already closed");
 	CURLoption Option = ml_enum_value_value(Args[1]);
 	curl_easy_setopt(Curl->Handle, Option, ml_integer_value(Args[2]));
 	return (ml_value_t *)Curl;
@@ -125,6 +138,7 @@ ML_METHOD("set", CurlT, CurlOptionEnumT, MLEnumValueT) {
 //>curl
 // Sets :mini:`Option` in :mini:`Curl` to :mini:`Value`.
 	curl_t *Curl = (curl_t *)Args[0];
+	if (!Curl->Handle) return ml_error("CurlError", "Curl handle already closed");
 	CURLoption Option = ml_enum_value_value(Args[1]);
 	curl_easy_setopt(Curl->Handle, Option, ml_enum_value_value(Args[2]));
 	return (ml_value_t *)Curl;
@@ -137,6 +151,7 @@ ML_METHOD("set", CurlT, CurlOptionIntegerT, MLBooleanT) {
 //>curl
 // Sets :mini:`Option` in :mini:`Curl` to :mini:`Value`.
 	curl_t *Curl = (curl_t *)Args[0];
+	if (!Curl->Handle) return ml_error("CurlError", "Curl handle already closed");
 	CURLoption Option = ml_enum_value_value(Args[1]);
 	curl_easy_setopt(Curl->Handle, Option, ml_boolean_value(Args[2]));
 	return (ml_value_t *)Curl;
@@ -149,6 +164,7 @@ ML_METHOD("set", CurlT, CurlOptionStringT, MLStringT) {
 //>curl
 // Sets :mini:`Option` in :mini:`Curl` to :mini:`Value`.
 	curl_t *Curl = (curl_t *)Args[0];
+	if (!Curl->Handle) return ml_error("CurlError", "Curl handle already closed");
 	CURLoption Option = ml_enum_value_value(Args[1]);
 	curl_easy_setopt(Curl->Handle, Option, ml_string_value(Args[2]));
 	return (ml_value_t *)Curl;
@@ -161,6 +177,7 @@ ML_METHOD("set", CurlT, CurlOptionSetT, MLListT) {
 //>curl
 // Sets :mini:`Option` in :mini:`Curl` to :mini:`Value`.
 	curl_t *Curl = (curl_t *)Args[0];
+	if (!Curl->Handle) return ml_error("CurlError", "Curl handle already closed");
 	ML_LIST_FOREACH(Args[2], Iter) {
 		if (!ml_is(Iter->Value, MLStringT)) return ml_error("CurlError", "Expected list of strings");
 	}
@@ -196,9 +213,9 @@ static void write_state_run(callback_state_t *State, ml_value_t *Value) {
 static size_t stream_read_callback(char *Buffer, size_t Size, size_t N, callback_state_t *State) {
 	ml_value_t *Result = State->Result;
 	if (!Result) {
-		ml_scheduler_join(State->Curl->Scheduler);
+		//ml_scheduler_join(State->Curl->Scheduler);
 		ml_stream_read((ml_state_t *)State, State->Fn, Buffer, Size * N);
-		ml_scheduler_split(State->Curl->Scheduler);
+		//ml_scheduler_split(State->Curl->Scheduler);
 		if (!State->Result) {
 			State->Curl->Pause |= CURLPAUSE_SEND;
 			return CURL_READFUNC_PAUSE;
@@ -215,9 +232,9 @@ static size_t stream_read_callback(char *Buffer, size_t Size, size_t N, callback
 static size_t stream_write_callback(char *Buffer, size_t Size, size_t N, callback_state_t *State) {
 	ml_value_t *Result = State->Result;
 	if (!Result) {
-		ml_scheduler_join(State->Curl->Scheduler);
+		//ml_scheduler_join(State->Curl->Scheduler);
 		ml_stream_write((ml_state_t *)State, State->Fn, Buffer, Size * N);
-		ml_scheduler_split(State->Curl->Scheduler);
+		//ml_scheduler_split(State->Curl->Scheduler);
 		if (!State->Result) {
 			State->Curl->Pause |= CURLPAUSE_RECV;
 			return CURL_WRITEFUNC_PAUSE;
@@ -238,6 +255,7 @@ ML_METHODX("set", CurlT, CurlOptionFunctionT, MLStreamT) {
 //>curl
 // Sets :mini:`Option` in :mini:`Curl` to :mini:`Value`.
 	curl_t *Curl = (curl_t *)Args[0];
+	if (!Curl->Handle) ML_ERROR("CurlError", "Curl handle already closed");
 	CURLoption Option = ml_enum_value_value(Args[1]);
 	callback_state_t *State = new(callback_state_t);
 	State->Base.Context = Caller->Context;
@@ -266,14 +284,51 @@ ML_METHODX("set", CurlT, CurlOptionFunctionT, MLStreamT) {
 	ML_RETURN(Curl);
 }
 
+static size_t stringbuffer_read_callback(char *Buffer, size_t Size, size_t N, ml_stringbuffer_t *StringBuffer) {
+	return ml_stringbuffer_read(StringBuffer, Buffer, Size * N);
+}
+
+static size_t stringbuffer_write_callback(char *Buffer, size_t Size, size_t N, ml_stringbuffer_t *StringBuffer) {
+	return ml_stringbuffer_write(StringBuffer, Buffer, Size * N);
+}
+
+ML_METHODX("set", CurlT, CurlOptionFunctionT, MLStringBufferT) {
+//<Curl
+//<Option
+//<Value
+//>curl
+// Sets :mini:`Option` in :mini:`Curl` to :mini:`Value`.
+	curl_t *Curl = (curl_t *)Args[0];
+	if (!Curl->Handle) ML_ERROR("CurlError", "Curl handle already closed");
+	CURLoption Option = ml_enum_value_value(Args[1]);
+	switch (Option) {
+	case CURLOPT_WRITEFUNCTION:
+		curl_easy_setopt(Curl->Handle, CURLOPT_WRITEFUNCTION, stringbuffer_write_callback);
+		curl_easy_setopt(Curl->Handle, CURLOPT_WRITEDATA, Args[2]);
+		break;
+	case CURLOPT_HEADERFUNCTION:
+		curl_easy_setopt(Curl->Handle, CURLOPT_HEADERFUNCTION, stringbuffer_write_callback);
+		curl_easy_setopt(Curl->Handle, CURLOPT_HEADERDATA, Args[2]);
+		break;
+	case CURLOPT_READFUNCTION:
+		curl_easy_setopt(Curl->Handle, CURLOPT_READFUNCTION, stringbuffer_read_callback);
+		curl_easy_setopt(Curl->Handle, CURLOPT_READDATA, Args[2]);
+		break;
+	default:
+		ML_ERROR("CurlError", "Unsupported option for stream");
+	}
+	ptrset_insert(Curl->Handlers, Args[2]);
+	ML_RETURN(Curl);
+}
+
 static size_t function_read_callback(char *Buffer, size_t Size, size_t N, callback_state_t *State) {
 	ml_value_t *Result = State->Result;
 	if (!Result) {
 		ml_value_t **Args = ml_alloc_args(1);
 		Args[0] = ml_buffer(Buffer, Size * N);
-		ml_scheduler_join(State->Curl->Scheduler);
+		//ml_scheduler_join(State->Curl->Scheduler);
 		ml_call((ml_state_t *)State, State->Fn, 1, Args);
-		ml_scheduler_split(State->Curl->Scheduler);
+		//ml_scheduler_split(State->Curl->Scheduler);
 		if (!State->Result) {
 			State->Curl->Pause |= CURLPAUSE_SEND;
 			return CURL_READFUNC_PAUSE;
@@ -292,9 +347,9 @@ static size_t function_write_callback(char *Buffer, size_t Size, size_t N, callb
 	if (!Result) {
 		ml_value_t **Args = ml_alloc_args(1);
 		Args[0] = ml_string_unchecked(Buffer, Size * N);
-		ml_scheduler_join(State->Curl->Scheduler);
+		//ml_scheduler_join(State->Curl->Scheduler);
 		ml_call((ml_state_t *)State, State->Fn, 1, Args);
-		ml_scheduler_split(State->Curl->Scheduler);
+		//ml_scheduler_split(State->Curl->Scheduler);
 		if (!State->Result) {
 			State->Curl->Pause |= CURLPAUSE_RECV;
 			return CURL_WRITEFUNC_PAUSE;
@@ -315,6 +370,7 @@ ML_METHODX("set", CurlT, CurlOptionFunctionT, MLFunctionT) {
 //>curl
 // Sets :mini:`Option` in :mini:`Curl` to :mini:`Value`.
 	curl_t *Curl = (curl_t *)Args[0];
+	if (!Curl->Handle) ML_ERROR("CurlError", "Curl handle already closed");
 	CURLoption Option = ml_enum_value_value(Args[1]);
 	callback_state_t *State = new(callback_state_t);
 	State->Base.Context = Caller->Context;
@@ -345,18 +401,36 @@ ML_METHODX("set", CurlT, CurlOptionFunctionT, MLFunctionT) {
 
 ML_METHODX("perform", CurlT) {
 	curl_t *Curl = (curl_t *)Args[0];
+	if (!Curl->Handle) ML_ERROR("CurlError", "Curl handle already closed");
 	if (Curl->Scheduler) ML_ERROR("CurlError", "Curl handle cannot be used concurrently");
 	Curl->Scheduler = ml_context_get_scheduler(Caller->Context);
-	ml_scheduler_split(Curl->Scheduler);
+	//ml_scheduler_split(Curl->Scheduler);
 	CURLcode Code = curl_easy_perform(Curl->Handle);
-	ml_scheduler_join(Curl->Scheduler);
+	//ml_scheduler_join(Curl->Scheduler);
 	Curl->Scheduler = NULL;
 	if (Code != CURLE_OK) ML_ERROR("CurlError", "%s", Curl->Error);
 	ML_RETURN(Curl);
 }
 
+ML_METHOD("reset", CurlT) {
+	curl_t *Curl = (curl_t *)Args[0];
+	if (!Curl->Handle) return ml_error("CurlError", "Curl handle already closed");
+	if (Curl->Scheduler) return ml_error("CurlError", "Curl handle cannot be used concurrently");
+	curl_easy_reset(Curl->Handle);
+	return (ml_value_t *)Curl;
+}
+
+ML_METHOD("cleanup", CurlT) {
+	curl_t *Curl = (curl_t *)Args[0];
+	if (Curl->Scheduler) return ml_error("CurlError", "Curl handle cannot be used concurrently");
+	curl_easy_cleanup(Curl->Handle);
+	Curl->Handle = NULL;
+	return MLNil;
+}
+
 ML_METHOD("get", CurlT, CurlInfoIntegerT) {
 	curl_t *Curl = (curl_t *)Args[0];
+	if (!Curl->Handle) return ml_error("CurlError", "Curl handle already closed");
 	CURLINFO Info = ml_enum_value_value(Args[1]);
 	long Value;
 	if (curl_easy_getinfo(Curl->Handle, Info, &Value) != CURLE_OK) return ml_error("CurlError", "Error fetching info");
@@ -365,6 +439,7 @@ ML_METHOD("get", CurlT, CurlInfoIntegerT) {
 
 ML_METHOD("get", CurlT, CurlInfoRealT) {
 	curl_t *Curl = (curl_t *)Args[0];
+	if (!Curl->Handle) return ml_error("CurlError", "Curl handle already closed");
 	CURLINFO Info = ml_enum_value_value(Args[1]);
 	double Value;
 	if (curl_easy_getinfo(Curl->Handle, Info, &Value) != CURLE_OK) return ml_error("CurlError", "Error fetching info");
@@ -373,6 +448,7 @@ ML_METHOD("get", CurlT, CurlInfoRealT) {
 
 ML_METHOD("get", CurlT, CurlInfoStringT) {
 	curl_t *Curl = (curl_t *)Args[0];
+	if (!Curl->Handle) return ml_error("CurlError", "Curl handle already closed");
 	CURLINFO Info = ml_enum_value_value(Args[1]);
 	const char *Value;
 	if (curl_easy_getinfo(Curl->Handle, Info, &Value) != CURLE_OK) return ml_error("CurlError", "Error fetching info");
@@ -381,6 +457,7 @@ ML_METHOD("get", CurlT, CurlInfoStringT) {
 
 ML_METHOD("get", CurlT, CurlInfoSetT) {
 	curl_t *Curl = (curl_t *)Args[0];
+	if (!Curl->Handle) return ml_error("CurlError", "Curl handle already closed");
 	CURLINFO Info = ml_enum_value_value(Args[1]);
 	struct curl_slist *Value;
 	if (curl_easy_getinfo(Curl->Handle, Info, &Value) != CURLE_OK) return ml_error("CurlError", "Error fetching info");

@@ -2,6 +2,8 @@
 #include <minilang/ml_macros.h>
 #include <minilang/ml_object.h>
 #include <minilang/ml_stream.h>
+#include <minilang/ml_logging.h>
+#include <semaphore.h>
 #include <curl/curl.h>
 
 #undef ML_CATEGORY
@@ -42,7 +44,7 @@ static void ptrset_remove(ptrset_t *Set, void *Ptr) {
 	}
 }
 
-typedef struct callback_state_t callback_state_t;
+typedef struct curl_multi_t curl_multi_t;
 typedef struct curl_t curl_t;
 
 typedef enum {
@@ -54,25 +56,28 @@ typedef enum {
 	CURL_ACTION_ABORT
 } curl_action_t;
 
+struct curl_multi_t {
+	ml_type_t *Type;
+	CURLM *Handle;
+	curl_t *Queue;
+	ml_scheduler_t *Scheduler;
+	pthread_mutex_t Lock[1];
+};
+
 struct curl_t {
-	ml_state_t Base;
+	ml_type_t *Type;
+	ml_state_t *Caller;
 	curl_t *Next;
 	CURL *Handle;
-	ml_scheduler_t *Scheduler;
-	ptrset_t Handlers[1];
+	curl_multi_t *Multi;
+	//ptrset_t Handlers[1];
 	curl_action_t Action;
 	char Error[CURL_ERROR_SIZE];
 };
 
-struct callback_state_t {
-	ml_state_t Base;
-	curl_t *Curl;
-	ml_value_t *Fn, *Result;
-};
-
 extern ml_type_t CurlT[];
 
-static int progress_callback(curl_t *Curl, curl_off_t DLTotal, curl_off_t DLNow, curl_off_t ULTotal, curl_off_t ULNow) {
+/*static int progress_callback(curl_t *Curl, curl_off_t DLTotal, curl_off_t DLNow, curl_off_t ULTotal, curl_off_t ULNow) {
 	// TODO: Check and call different progress fn
 	curl_easy_pause(Curl->Handle, Curl->Pause);
 	return Curl->Abort;
@@ -80,21 +85,19 @@ static int progress_callback(curl_t *Curl, curl_off_t DLTotal, curl_off_t DLNow,
 
 static void curl_state_run(curl_t *Curl, ml_value_t *Value) {
 	if (ml_is_error(Value)) Curl->Abort = 1;
-}
+}*/
 
 ML_FUNCTIONX(Curl) {
 //>curl
 // Returns a new Curl easy instance.
 	curl_t *Curl = new(curl_t);
-	Curl->Base.Type = CurlT;
-	Curl->Base.Context = Caller->Context;
-	Curl->Base.run = (ml_state_fn)curl_state_run;
+	Curl->Type = CurlT;
 	Curl->Handle = curl_easy_init();
-	Curl->Pause = CURLPAUSE_CONT;
+	Curl->Action = CURL_ACTION_NONE;
 	curl_easy_setopt(Curl->Handle, CURLOPT_PRIVATE, Curl);
-	curl_easy_setopt(Curl->Handle, CURLOPT_XFERINFOFUNCTION, progress_callback);
-	curl_easy_setopt(Curl->Handle, CURLOPT_XFERINFODATA, Curl);
-	curl_easy_setopt(Curl->Handle, CURLOPT_NOPROGRESS, 0);
+	//curl_easy_setopt(Curl->Handle, CURLOPT_XFERINFOFUNCTION, progress_callback);
+	//curl_easy_setopt(Curl->Handle, CURLOPT_XFERINFODATA, Curl);
+	curl_easy_setopt(Curl->Handle, CURLOPT_NOPROGRESS, 1);
 	curl_easy_setopt(Curl->Handle, CURLOPT_ERRORBUFFER, Curl->Error);
 	ML_RETURN(Curl);
 }
@@ -190,62 +193,56 @@ ML_METHOD("set", CurlT, CurlOptionSetT, MLListT) {
 	return (ml_value_t *)Curl;
 }
 
-static void read_state_run(callback_state_t *State, ml_value_t *Value) {
-	curl_t *Curl = State->Curl;
-	if (ml_is_error(Value)) {
-		Curl->Abort = 1;
-	} else {
-		Curl->Pause &= ~CURLPAUSE_SEND;
-		State->Result = Value;
-	}
+typedef struct {
+	ml_state_t Base;
+	curl_t *Curl;
+	ml_value_t *Stream, *Result;
+	char *Buffer;
+	union {
+		typeof(ml_stream_read) *read;
+		typeof(ml_stream_write) *write;
+	};
+	sem_t Ready[1];
+	size_t Size;
+} stream_callback_t;
+
+static void stream_done(stream_callback_t *State, ml_value_t *Value) {
+	State->Result = Value;
+	sem_post(State->Ready);
 }
 
-static void write_state_run(callback_state_t *State, ml_value_t *Value) {
-	curl_t *Curl = State->Curl;
-	if (ml_is_error(Value)) {
-		Curl->Abort = 1;
-	} else {
-		Curl->Pause &= ~CURLPAUSE_RECV;
-		State->Result = Value;
-	}
+static void stream_read_start(stream_callback_t *State, ml_value_t *Value) {
+	State->Base.run = (ml_state_fn)stream_done;
+	return State->read((ml_state_t *)State, State->Stream, State->Buffer, State->Size);
 }
 
-static size_t stream_read_callback(char *Buffer, size_t Size, size_t N, callback_state_t *State) {
-	ml_value_t *Result = State->Result;
-	if (!Result) {
-		//ml_scheduler_join(State->Curl->Scheduler);
-		ml_stream_read((ml_state_t *)State, State->Fn, Buffer, Size * N);
-		//ml_scheduler_split(State->Curl->Scheduler);
-		if (!State->Result) {
-			State->Curl->Pause |= CURLPAUSE_SEND;
-			return CURL_READFUNC_PAUSE;
-		} else {
-			Result = State->Result;
-		}
-	}
-	State->Result = NULL;
-	if (ml_is_error(Result)) return CURL_READFUNC_ABORT;
-	if (Result == MLNil) return 0;
-	return ml_integer_value(Result);
+static void stream_write_start(stream_callback_t *State, ml_value_t *Value) {
+	State->Base.run = (ml_state_fn)stream_done;
+	return State->write((ml_state_t *)State, State->Stream, State->Buffer, State->Size);
 }
 
-static size_t stream_write_callback(char *Buffer, size_t Size, size_t N, callback_state_t *State) {
-	ml_value_t *Result = State->Result;
-	if (!Result) {
-		//ml_scheduler_join(State->Curl->Scheduler);
-		ml_stream_write((ml_state_t *)State, State->Fn, Buffer, Size * N);
-		//ml_scheduler_split(State->Curl->Scheduler);
-		if (!State->Result) {
-			State->Curl->Pause |= CURLPAUSE_RECV;
-			return CURL_WRITEFUNC_PAUSE;
-		} else {
-			Result = State->Result;
-		}
-	}
-	State->Result = NULL;
-	if (ml_is_error(Result)) return CURL_WRITEFUNC_ERROR;
-	if (Result == MLNil) return 0;
-	return ml_integer_value(Result);
+static size_t stream_read_callback(char *Buffer, size_t Size, size_t N, stream_callback_t *State) {
+	State->Base.run = (ml_state_fn)stream_read_start;
+	State->Buffer = Buffer;
+	State->Size = Size * N;
+	ml_scheduler_t *Scheduler = State->Curl->Multi->Scheduler;
+	Scheduler->add(Scheduler, (ml_state_t *)State, MLNil);
+	sem_wait(State->Ready);
+	if (ml_is_error(State->Result)) return CURL_READFUNC_ABORT;
+	if (State->Result == MLNil) return 0;
+	return ml_integer_value(State->Result);
+}
+
+static size_t stream_write_callback(char *Buffer, size_t Size, size_t N, stream_callback_t *State) {
+	State->Base.run = (ml_state_fn)stream_write_start;
+	State->Buffer = Buffer;
+	State->Size = Size * N;
+	ml_scheduler_t *Scheduler = State->Curl->Multi->Scheduler;
+	Scheduler->add(Scheduler, (ml_state_t *)State, MLNil);
+	sem_wait(State->Ready);
+	if (ml_is_error(State->Result)) return CURL_WRITEFUNC_ERROR;
+	if (State->Result == MLNil) return 0;
+	return ml_integer_value(State->Result);
 }
 
 ML_METHODX("set", CurlT, CurlOptionFunctionT, MLStreamT) {
@@ -257,30 +254,31 @@ ML_METHODX("set", CurlT, CurlOptionFunctionT, MLStreamT) {
 	curl_t *Curl = (curl_t *)Args[0];
 	if (!Curl->Handle) ML_ERROR("CurlError", "Curl handle already closed");
 	CURLoption Option = ml_enum_value_value(Args[1]);
-	callback_state_t *State = new(callback_state_t);
+	stream_callback_t *State = new(stream_callback_t);
 	State->Base.Context = Caller->Context;
 	State->Curl = Curl;
-	State->Fn = Args[2];
+	State->Stream = Args[2];
+	sem_init(State->Ready, 0, 0);
 	switch (Option) {
 	case CURLOPT_WRITEFUNCTION:
-		State->Base.run = (ml_state_fn)write_state_run;
+		State->write = ml_typed_fn_get(ml_typeof(State->Stream), ml_stream_write);
 		curl_easy_setopt(Curl->Handle, CURLOPT_WRITEFUNCTION, stream_write_callback);
 		curl_easy_setopt(Curl->Handle, CURLOPT_WRITEDATA, State);
 		break;
 	case CURLOPT_HEADERFUNCTION:
-		State->Base.run = (ml_state_fn)write_state_run;
+		State->write = ml_typed_fn_get(ml_typeof(State->Stream), ml_stream_write);
 		curl_easy_setopt(Curl->Handle, CURLOPT_HEADERFUNCTION, stream_write_callback);
 		curl_easy_setopt(Curl->Handle, CURLOPT_HEADERDATA, State);
 		break;
 	case CURLOPT_READFUNCTION:
-		State->Base.run = (ml_state_fn)read_state_run;
+		State->read = ml_typed_fn_get(ml_typeof(State->Stream), ml_stream_read);
 		curl_easy_setopt(Curl->Handle, CURLOPT_READFUNCTION, stream_read_callback);
 		curl_easy_setopt(Curl->Handle, CURLOPT_READDATA, State);
 		break;
 	default:
 		ML_ERROR("CurlError", "Unsupported option for stream");
 	}
-	ptrset_insert(Curl->Handlers, State);
+	//ptrset_insert(Curl->Handlers, State);
 	ML_RETURN(Curl);
 }
 
@@ -317,50 +315,47 @@ ML_METHODX("set", CurlT, CurlOptionFunctionT, MLStringBufferT) {
 	default:
 		ML_ERROR("CurlError", "Unsupported option for stream");
 	}
-	ptrset_insert(Curl->Handlers, Args[2]);
+	//ptrset_insert(Curl->Handlers, Args[2]);
 	ML_RETURN(Curl);
 }
 
-static size_t function_read_callback(char *Buffer, size_t Size, size_t N, callback_state_t *State) {
-	ml_value_t *Result = State->Result;
-	if (!Result) {
-		ml_value_t **Args = ml_alloc_args(1);
-		Args[0] = ml_buffer(Buffer, Size * N);
-		//ml_scheduler_join(State->Curl->Scheduler);
-		ml_call((ml_state_t *)State, State->Fn, 1, Args);
-		//ml_scheduler_split(State->Curl->Scheduler);
-		if (!State->Result) {
-			State->Curl->Pause |= CURLPAUSE_SEND;
-			return CURL_READFUNC_PAUSE;
-		} else {
-			Result = State->Result;
-		}
-	}
-	State->Result = NULL;
-	if (ml_is_error(Result)) return CURL_READFUNC_ABORT;
-	if (Result == MLNil) return 0;
-	return ml_integer_value(Result);
+typedef struct {
+	ml_state_t Base;
+	curl_t *Curl;
+	ml_value_t *Fn, *Result;
+	sem_t Ready[1];
+} function_callback_t;
+
+static void function_done(function_callback_t *State, ml_value_t *Value) {
+	State->Result = Value;
+	sem_post(State->Ready);
 }
 
-static size_t function_write_callback(char *Buffer, size_t Size, size_t N, callback_state_t *State) {
-	ml_value_t *Result = State->Result;
-	if (!Result) {
-		ml_value_t **Args = ml_alloc_args(1);
-		Args[0] = ml_string_unchecked(Buffer, Size * N);
-		//ml_scheduler_join(State->Curl->Scheduler);
-		ml_call((ml_state_t *)State, State->Fn, 1, Args);
-		//ml_scheduler_split(State->Curl->Scheduler);
-		if (!State->Result) {
-			State->Curl->Pause |= CURLPAUSE_RECV;
-			return CURL_WRITEFUNC_PAUSE;
-		} else {
-			Result = State->Result;
-		}
-	}
-	State->Result = NULL;
-	if (ml_is_error(Result)) return CURL_WRITEFUNC_ERROR;
-	if (Result == MLNil) return 0;
-	return ml_integer_value(Result);
+static void function_start(function_callback_t *State, ml_value_t *Value) {
+	State->Base.run = (ml_state_fn)function_done;
+	return ml_call((ml_state_t *)State, State->Fn, 1, &State->Result);
+}
+
+static size_t function_read_callback(char *Buffer, size_t Size, size_t N, function_callback_t *State) {
+	State->Base.run = (ml_state_fn)function_start;
+	State->Result = ml_address(Buffer, Size * N);
+	ml_scheduler_t *Scheduler = State->Curl->Multi->Scheduler;
+	Scheduler->add(Scheduler, (ml_state_t *)State, MLNil);
+	sem_wait(State->Ready);
+	if (ml_is_error(State->Result)) return CURL_READFUNC_ABORT;
+	if (State->Result == MLNil) return 0;
+	return ml_integer_value(State->Result);
+}
+
+static size_t function_write_callback(char *Buffer, size_t Size, size_t N, function_callback_t *State) {
+	State->Base.run = (ml_state_fn)function_start;
+	State->Result = ml_buffer(Buffer, Size * N);
+	ml_scheduler_t *Scheduler = State->Curl->Multi->Scheduler;
+	Scheduler->add(Scheduler, (ml_state_t *)State, MLNil);
+	sem_wait(State->Ready);
+	if (ml_is_error(State->Result)) return CURL_WRITEFUNC_ERROR;
+	if (State->Result == MLNil) return 0;
+	return ml_integer_value(State->Result);
 }
 
 ML_METHODX("set", CurlT, CurlOptionFunctionT, MLFunctionT) {
@@ -372,57 +367,124 @@ ML_METHODX("set", CurlT, CurlOptionFunctionT, MLFunctionT) {
 	curl_t *Curl = (curl_t *)Args[0];
 	if (!Curl->Handle) ML_ERROR("CurlError", "Curl handle already closed");
 	CURLoption Option = ml_enum_value_value(Args[1]);
-	callback_state_t *State = new(callback_state_t);
+	function_callback_t *State = new(function_callback_t);
 	State->Base.Context = Caller->Context;
 	State->Curl = Curl;
 	State->Fn = Args[2];
+	sem_init(State->Ready, 0, 0);
 	switch (Option) {
 	case CURLOPT_WRITEFUNCTION:
-		State->Base.run = (ml_state_fn)write_state_run;
 		curl_easy_setopt(Curl->Handle, CURLOPT_WRITEFUNCTION, function_write_callback);
 		curl_easy_setopt(Curl->Handle, CURLOPT_WRITEDATA, State);
 		break;
 	case CURLOPT_HEADERFUNCTION:
-		State->Base.run = (ml_state_fn)write_state_run;
 		curl_easy_setopt(Curl->Handle, CURLOPT_HEADERFUNCTION, function_write_callback);
 		curl_easy_setopt(Curl->Handle, CURLOPT_HEADERDATA, State);
 		break;
 	case CURLOPT_READFUNCTION:
-		State->Base.run = (ml_state_fn)read_state_run;
 		curl_easy_setopt(Curl->Handle, CURLOPT_READFUNCTION, function_read_callback);
 		curl_easy_setopt(Curl->Handle, CURLOPT_READDATA, State);
 		break;
 	default:
 		ML_ERROR("CurlError", "Unsupported option for callback");
 	}
-	ptrset_insert(Curl->Handlers, State);
+	//ptrset_insert(Curl->Handlers, State);
 	ML_RETURN(Curl);
+}
+
+static curl_multi_t DefaultMulti[1];
+
+static void *multi_thread_fn(void *Arg) {
+	curl_multi_t *Multi = (curl_multi_t *)Arg;
+	for (;;) {
+		CURLMcode Result = curl_multi_poll(Multi->Handle, NULL, 0, 1000, NULL);
+		if (Result != CURLM_OK) {
+			ML_LOG_ERROR(NULL, "Error polling curl handle: %d", Result);
+			return NULL;
+		}
+		pthread_mutex_lock(Multi->Lock);
+		curl_t *Queue = Multi->Queue;
+		Multi->Queue = NULL;
+		pthread_mutex_unlock(Multi->Lock);
+		for (curl_t *Curl = Queue; Curl; Curl = Curl->Next) {
+			//ML_LOG_INFO(NULL, "Updating Curl instance in multi: %lx -> %d", Curl, Curl->Action);
+			switch (Curl->Action) {
+			case CURL_ACTION_NONE:
+				break;
+			case CURL_ACTION_ADD:
+				curl_multi_add_handle(Multi->Handle, Curl->Handle);
+				Curl->Multi = Multi;
+				break;
+			case CURL_ACTION_REMOVE:
+				curl_multi_remove_handle(Multi->Handle, Curl->Handle);
+				Curl->Multi = NULL;
+				// Possibly scheduler Curl->Caller with an error.
+				break;
+			case CURL_ACTION_PAUSE:
+				curl_easy_pause(Curl->Handle, CURLPAUSE_ALL);
+				break;
+			case CURL_ACTION_RESUME:
+				curl_easy_pause(Curl->Handle, CURLPAUSE_CONT);
+				break;
+			case CURL_ACTION_ABORT:
+				curl_multi_remove_handle(Multi->Handle, Curl->Handle);
+				Curl->Multi = NULL;
+				// Possibly scheduler Curl->Caller with an error.
+				break;
+			}
+		}
+		int Running;
+		Result = curl_multi_perform(Multi->Handle, &Running);
+		if (Result != CURLM_OK) {
+			ML_LOG_ERROR(NULL, "Error polling curl handle: %d", Result);
+			return NULL;
+		}
+		int Remaining;
+		CURLMsg *Message;
+		ml_scheduler_t *Scheduler = Multi->Scheduler;
+		while ((Message = curl_multi_info_read(Multi->Handle, &Remaining))) {
+			if (Message->msg == CURLMSG_DONE) {
+				curl_t *Curl = NULL;
+				curl_easy_getinfo(Message->easy_handle, CURLINFO_PRIVATE, &Curl);
+				ml_value_t *Result = MLNil;
+				if (Message->data.result != CURLE_OK) {
+					Result = ml_error("CurlError", "%s", Curl->Error);
+				}
+				Scheduler->add(Scheduler, Curl->Caller, Result);
+				Curl->Caller = NULL;
+				curl_multi_remove_handle(Multi->Handle, Curl->Handle);
+			}
+		}
+	}
+	return NULL;
 }
 
 ML_METHODX("perform", CurlT) {
 	curl_t *Curl = (curl_t *)Args[0];
 	if (!Curl->Handle) ML_ERROR("CurlError", "Curl handle already closed");
-	if (Curl->Scheduler) ML_ERROR("CurlError", "Curl handle cannot be used concurrently");
-	Curl->Scheduler = ml_context_get_scheduler(Caller->Context);
-	//ml_scheduler_split(Curl->Scheduler);
-	CURLcode Code = curl_easy_perform(Curl->Handle);
-	//ml_scheduler_join(Curl->Scheduler);
-	Curl->Scheduler = NULL;
-	if (Code != CURLE_OK) ML_ERROR("CurlError", "%s", Curl->Error);
-	ML_RETURN(Curl);
+	if (Curl->Caller) ML_ERROR("CurlError", "Curl handle cannot be used concurrently");
+	Curl->Caller = Caller;
+	Curl->Action = CURL_ACTION_ADD;
+	pthread_mutex_lock(DefaultMulti->Lock);
+	Curl->Next = DefaultMulti->Queue;
+	DefaultMulti->Queue = Curl;
+	DefaultMulti->Scheduler = ml_context_get_scheduler(Caller->Context);
+	pthread_mutex_unlock(DefaultMulti->Lock);
+	curl_multi_wakeup(DefaultMulti->Handle);
 }
 
 ML_METHOD("reset", CurlT) {
 	curl_t *Curl = (curl_t *)Args[0];
 	if (!Curl->Handle) return ml_error("CurlError", "Curl handle already closed");
-	if (Curl->Scheduler) return ml_error("CurlError", "Curl handle cannot be used concurrently");
+	if (Curl->Caller) return ml_error("CurlError", "Curl handle cannot be used concurrently");
 	curl_easy_reset(Curl->Handle);
 	return (ml_value_t *)Curl;
 }
 
 ML_METHOD("cleanup", CurlT) {
 	curl_t *Curl = (curl_t *)Args[0];
-	if (Curl->Scheduler) return ml_error("CurlError", "Curl handle cannot be used concurrently");
+	if (!Curl->Handle) return ml_error("CurlError", "Curl handle already closed");
+	if (Curl->Caller) return ml_error("CurlError", "Curl handle cannot be used concurrently");
 	curl_easy_cleanup(Curl->Handle);
 	Curl->Handle = NULL;
 	return MLNil;
@@ -487,6 +549,12 @@ ML_LIBRARY_ENTRY0(net_curl) {
 		GC_malloc, nop_free, GC_realloc,
 		GC_strdup, GC_calloc
 	);
+	DefaultMulti->Handle = curl_multi_init();
+	pthread_mutex_init(DefaultMulti->Lock, NULL);
+	DefaultMulti->Queue = NULL;
+	pthread_t Thread;
+	pthread_create(&Thread, NULL, multi_thread_fn, DefaultMulti);
+	pthread_setname_np(Thread, "curl");
 #include "curl_init.c"
 	stringmap_insert(CurlT->Exports, "option", CurlOptionT);
 	stringmap_insert(CurlT->Exports, "info", CurlInfoT);

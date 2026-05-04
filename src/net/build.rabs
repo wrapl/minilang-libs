@@ -102,5 +102,6 @@ file("curl_options.c")[CurlHeader] => fun(Target) do
 	print("Info types = ", list(key(Infos)), "\n")
 end
 
+so_module("net/uri.so", [file("uri.o")], ["-luriparser"], Tags is ["standard"])
 so_module("net/curl.so", [file("curl.o")], ["-lcurl"], Tags is ["standard"])
 so_module("net/zeromq.so", [file("zeromq.o")], ["-lczmq"], Tags is ["zeromq", "jupyter"])

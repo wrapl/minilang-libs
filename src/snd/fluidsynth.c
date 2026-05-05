@@ -25,7 +25,7 @@ typedef struct {
 
 extern ml_cfunction_t FluidSynth[];
 
-ML_TYPE(FluidSynthT, (), "fluidsynth::synth",
+ML_TYPE(FluidSynthT, (), "fluidsynth",
 	.Constructor = (ml_value_t *)FluidSynth
 );
 
@@ -660,12 +660,12 @@ ML_FUNCTION(AudioDriver) {
 }
 
 ML_LIBRARY_ENTRY0(snd_fluidsynth) {
-	stringmap_insert(FluidSequencerT->Exports, "settings", FluidSettingsT);
-	stringmap_insert(FluidSequencerT->Exports, "sequencer", FluidSequencerT);
-	stringmap_insert(FluidSequencerT->Exports, "event", FluidEventT);
-	stringmap_insert(FluidSequencerT->Exports, "audiodriver", AudioDriverT);
-	stringmap_insert(FluidSequencerT->Exports, "soundfont", SoundFontT);
-	stringmap_insert(FluidSequencerT->Exports, "floatblock", FloatBlockT);
+	stringmap_insert(FluidSynthT->Exports, "settings", FluidSettingsT);
+	stringmap_insert(FluidSynthT->Exports, "sequencer", FluidSequencerT);
+	stringmap_insert(FluidSynthT->Exports, "event", FluidEventT);
+	stringmap_insert(FluidSynthT->Exports, "audiodriver", AudioDriverT);
+	stringmap_insert(FluidSynthT->Exports, "soundfont", SoundFontT);
+	stringmap_insert(FluidSynthT->Exports, "floatblock", FloatBlockT);
 #include "fluidsynth_init.c"
 	Slot[0] = (ml_value_t *)FluidSynthT;
 }

@@ -20,9 +20,22 @@ end
 	so_module("event/uev.so", [file("uev.o"), LIBUEV])
 end>:
 
+LIBEVENT := file("lib/libevent.a") => fun() do
+	let Dir := file("libevent"):rmdir:mkdir:chdir
+	execute("wget -nv https://github.com/libevent/libevent/releases/download/release-2.2.1-alpha/libevent-2.2.1-alpha-dev.tar.gz -O- | tar xzP --strip-components=1")
+	execute('CFLAGS=-fpic cmake . -DCMAKE_POLICY_VERSION_MINIMUM=3.5 -DCMAKE_INSTALL_PREFIX={PATH} -DCMAKE_BUILD_TYPE=Release')
+	execute("make -j4")
+	execute("make install")
+end
+
+LIBEVENT_PTHREADS := file("lib/libevent_pthreads.a")[LIBEVENT]
+LIBEVENT_OPENSSL := file("lib/libevent_openssl.a")[LIBEVENT]
+
 scope("libevent";) do
-	LDFLAGS := old + ["-levent"]
-	so_module("event/libevent.so", [file("libevent.o")])
+	CFLAGS := old + ['-I{file("include")}']
+	PREBUILDS := old + [LIBEVENT]
+	LDFLAGS := old + ["-lssl"]
+	so_module("event/libevent.so", [file("libevent.o")], [LIBEVENT, LIBEVENT_PTHREADS, LIBEVENT_OPENSSL])
 end
 
 so_module("event.so", [file("event.o")], Tags is ["standard"])

@@ -53,3 +53,6 @@ scope("yaml";) do
 	LDFLAGS := old + ["-lyaml"]
 	so_module("fmt/yaml.so", [file("yaml.o")], Tags is ["standard"])
 end
+
+file("multipart-parser"):mkdir
+so_module("fmt/multipart.so", [file("multipart.o"), file("multipart-parser/multipartparser.o")], Tags is ["standard"])

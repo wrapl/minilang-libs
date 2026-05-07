@@ -1,0 +1,9 @@
+[submodule "src/fmt/multipart-parser"]
+	path = src/fmt/multipart-parser
+	url = https://github.com/francoiscolas/multipart-parser
+[submodule "src/web/llhttp"]
+	path = src/web/llhttp
+	url = https://github.com/nodejs/llhttp
+[submodule "src/web/multipart-parser"]
+	path = src/web/multipart-parser
+	url = https://github.com/francoiscolas/multipart-parser

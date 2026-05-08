@@ -91,9 +91,9 @@ static void request_finalize(evhttp_request_t *Request, void *Data) {
 	ML_LOG_INFO(NULL, "Finalizing request");
 	if (Request->State != REQUEST_STATE_CLOSED) {
 		evhttp_send_error(Request->Handle, 500, "Internal Server Error");
+		evhttp_request_free(Request->Handle);
+		Request->Handle = NULL;
 	}
-	evhttp_request_free(Request->Handle);
-	Request->Handle = NULL;
 }
 
 static evhttp_request_t *event_request(struct evhttp_request *Handle) {

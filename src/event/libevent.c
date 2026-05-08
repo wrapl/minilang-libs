@@ -117,6 +117,15 @@ ML_ENUM2(HttpMethodT, "http-method",
 	"PATCH", EVHTTP_REQ_PATCH
 );
 
+ML_METHOD("peer", HttpRequestT) {
+	evhttp_request_t *Request = (evhttp_request_t *)Args[0];
+	struct evhttp_connection *Conn = evhttp_request_get_connection(Request->Handle);
+	const char *Address = NULL;
+	uint16_t Port = 0;
+	evhttp_connection_get_peer(Conn, &Address, &Port);
+	return ml_tuplev(2, ml_string(Address, -1), ml_integer(Port));
+}
+
 ML_METHOD("method", HttpRequestT) {
 	evhttp_request_t *Request = (evhttp_request_t *)Args[0];
 	return ml_enum_value(HttpMethodT, evhttp_request_get_command(Request->Handle));
@@ -225,7 +234,6 @@ static void ML_TYPED_FN(ml_stream_close, HttpRequestT, ml_state_t *Caller, evhtt
 	if (Request->Caller) ML_ERROR("StateError", "Invalid request state");
 	evhttp_send_reply_end(Request->Handle);
 	Request->State = REQUEST_STATE_CLOSED;
-	evhttp_request_free(Request->Handle);
 	Request->Handle = NULL;
 	ML_RETURN(MLNil);
 }

@@ -4,7 +4,7 @@
 #include <uriparser/Uri.h>
 
 #undef ML_CATEGORY
-#define ML_CATEGORY "net/uri"
+#define ML_CATEGORY "web/uri"
 
 typedef struct {
 	ml_type_t *Type;
@@ -165,7 +165,7 @@ static void ML_TYPED_FN(ml_iter_value, QueryT, ml_state_t *Caller, query_t *Quer
 	ML_RETURN(MLNil);
 }
 
-ML_LIBRARY_ENTRY0(net_uri) {
+ML_LIBRARY_ENTRY0(web_uri) {
 #include "uri_init.c"
 	stringmap_insert(UriT->Exports, "query", QueryT);
 	Slot[0] = (ml_value_t *)UriT;

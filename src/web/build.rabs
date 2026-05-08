@@ -70,3 +70,5 @@ end>:
 	so_module("web/libhttp.so", [file("libhttp.o")])
 end>:
 
+so_module("web/uri.so", [file("uri.o")], ["-luriparser"], Tags is ["standard"])
+

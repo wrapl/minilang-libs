@@ -36,6 +36,7 @@ scope("libevent";) do
 	PREBUILDS := old + [LIBEVENT]
 	LDFLAGS := old + ["-lssl"]
 	so_module("event/libevent.so", [file("libevent.o")], [LIBEVENT, LIBEVENT_PTHREADS, LIBEVENT_OPENSSL])
+	so_module("event/libevent2.so", [file("libevent2.o")], [LIBEVENT, LIBEVENT_PTHREADS, LIBEVENT_OPENSSL])
 end
 
 so_module("event.so", [file("event.o")], Tags is ["standard"])

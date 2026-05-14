@@ -12,9 +12,9 @@ typedef struct {
 	ml_type_t *Type;
 	zlog_category_t *Category;
 	int Level;
-} ml_logger_t;
+} zlog_logger_t;
 
-static void ml_logger_call(ml_state_t *Caller, ml_logger_t *Logger, int Count, ml_value_t **Args) {
+static void ml_logger_call(ml_state_t *Caller, zlog_logger_t *Logger, int Count, ml_value_t **Args) {
 	if (!zlog_category_needless_level(Logger->Category, Logger->Level)) {
 		ml_stringbuffer_t Buffer[1] = {ML_STRINGBUFFER_INIT};
 		for (int I = 0; I < Count; ++I) {
@@ -32,8 +32,8 @@ ML_TYPE(MLLoggerT, (MLFunctionT), "logger",
 	.call = (void *)ml_logger_call
 );
 
-static ml_logger_t *ml_logger(zlog_category_t *Category, int Level) {
-	ml_logger_t *Logger = new(ml_logger_t);
+static zlog_logger_t *ml_logger(zlog_category_t *Category, int Level) {
+	zlog_logger_t *Logger = new(zlog_logger_t);
 	Logger->Type = MLLoggerT;
 	Logger->Category = Category;
 	Logger->Level = Level;
@@ -82,7 +82,7 @@ ML_METHOD("::", CategoryT, MLStringT) {
 //>logger
 // Returns the logger for :mini:`Category` with level :mini:`Level`.
 	ml_category_t *Category = (ml_category_t *)Args[0];
-	ml_logger_t *Logger = (ml_logger_t *)stringmap_search(Category->Loggers, ml_string_value(Args[1]));
+	zlog_logger_t *Logger = (zlog_logger_t *)stringmap_search(Category->Loggers, ml_string_value(Args[1]));
 	if (!Logger) return ml_error("NameError", "Unknown logging level");
 	return (ml_value_t *)Logger;
 }

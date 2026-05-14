@@ -10,3 +10,34 @@ scope("zlog";) do
 	CFLAGS := old + ["-I", file("zlog/src")]
 	so_module("log/zlog.so", [file("zlog.o")], [Lib])
 end
+
+scope("fluent-bit";) do
+	let Dir := file("fluent-bit")
+	let Lib := file("fluent-bit/library/libfluent-bit.a") => fun(Lib) do
+		Dir:rmdir:mkdir:chdir
+		execute("wget https://github.com/fluent/fluent-bit/archive/refs/tags/v5.0.5.tar.gz -O- | tar xvzP --strip-components=1")
+		execute(
+			'CFLAGS=-fpic cmake .',
+			'-DCMAKE_INSTALL_PREFIX={PATH}',
+			'-DCMAKE_BUILD_TYPE=Release',
+			'-DFLB_BINARY=OFF',
+			'-DFLB_OUT_PGSQL=ON',
+			'-DFLB_SHARED_LIB=ON'
+		)
+		execute("make -j4")
+		execute("make install")
+		execute("cd lib/cfl && make PREFIX={PATH} install")
+		execute("cd lib/cmetrics && make PREFIX={PATH} install")
+	end
+	PREBUILDS := old + [Lib]
+	let Plugins := Lib:scan("PLUGINS") => fun(Lib) do
+		ret file("fluent-bit/library"):ls(r"lib.*\.a")
+	end
+	let Onigmo := file("fluent-bit/lib/onigmo/library/libonigmo-static.a")[Lib]
+	let Monkey := Lib:scan("MONKEY") => fun(Lib) do
+		ret file("fluent-bit/lib/monkey/library"):ls(r".*\.a")
+	end
+	CFLAGS := old + ["-I", file("include"), "-I", file("include/monkey")]
+	LDFLAGS := old + ["-lssl"]
+	so_module("log/fluent_bit.so", [file("fluent_bit.o")], [Lib, Onigmo, Monkey, Plugins])
+end

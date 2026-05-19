@@ -13,7 +13,11 @@ general
    *TBD*
 
 
-:mini:`fun eventbasenew()`
+:mini:`fun eventsleep()`
+   *TBD*
+
+
+:mini:`fun eventsleep()`
    *TBD*
 
 
@@ -121,23 +125,63 @@ general
    *TBD*
 
 
-:mini:`type eventbase`
+:mini:`type event`
    *TBD*
 
 
-:mini:`meth (Arg₁: eventbase):dispatch`
-   *TBD*
-
-
-:mini:`meth (Arg₁: eventbase):http`
-   *TBD*
-
-
-:mini:`meth (Arg₁: eventbase):new(Arg₂: file)`
+:mini:`type event`
    *TBD*
 
 
 :mini:`type eventhttp`
+   *TBD*
+
+
+:mini:`type eventhttp`
+   *TBD*
+
+
+:mini:`type eventhttp`
+   *TBD*
+
+
+:mini:`meth eventhttp()`
+   *TBD*
+
+
+:mini:`meth eventhttp()`
+   *TBD*
+
+
+:mini:`meth eventhttp()`
+   *TBD*
+
+
+:mini:`meth (Arg₁: eventhttp):bind(Arg₂: string, Arg₃: integer)`
+   *TBD*
+
+
+:mini:`meth (Arg₁: eventhttp):bind(Arg₂: string, Arg₃: integer)`
+   *TBD*
+
+
+:mini:`meth (Arg₁: eventhttp):bind(Arg₂: string, Arg₃: integer)`
+   *TBD*
+
+
+:mini:`meth (Arg₁: eventhttp):enable_ssl(Arg₂: string, Arg₃: string)`
+   *TBD*
+
+
+:mini:`meth (Arg₁: eventhttp):enable_ssl(Arg₂: string, Arg₃: string)`
+   *TBD*
+
+
+:mini:`type eventtimer`
+   *TBD*
+
+
+:mini:`meth (Arg₁: eventtimer):cancel`
    *TBD*
 
 
@@ -169,11 +213,219 @@ general
    *TBD*
 
 
+:mini:`meth eventhttp(Arg₁: function)`
+   *TBD*
+
+
+:mini:`meth eventhttp(Arg₁: function)`
+   *TBD*
+
+
+:mini:`meth eventhttp(Arg₁: function)`
+   *TBD*
+
+
 :mini:`type geometry`
    *TBD*
 
 
+:mini:`type httpheader`
+   *TBD*
+
+
+:mini:`type httpheader`
+   *TBD*
+
+
+:mini:`type httpheader`
+   *TBD*
+
+
+:mini:`type httpheaders < sequence`
+   *TBD*
+
+
+:mini:`type httpheaders < sequence`
+   *TBD*
+
+
+:mini:`type httpheaders < sequence`
+   *TBD*
+
+
+:mini:`meth (Arg₁: httpheaders)[Arg₂: string]`
+   *TBD*
+
+
+:mini:`meth (Arg₁: httpheaders)[Arg₂: string]`
+   *TBD*
+
+
+:mini:`type httpmethod < enum`
+   * :mini:`::GET`
+   * :mini:`::POST`
+   * :mini:`::HEAD`
+   * :mini:`::PUT`
+   * :mini:`::DELETE`
+   * :mini:`::OPTIONS`
+   * :mini:`::TRACE`
+   * :mini:`::CONNECT`
+   * :mini:`::PATCH`
+
+
+:mini:`type httpmethod < enum`
+   * :mini:`::GET`
+   * :mini:`::POST`
+   * :mini:`::HEAD`
+   * :mini:`::PUT`
+   * :mini:`::DELETE`
+   * :mini:`::OPTIONS`
+   * :mini:`::TRACE`
+   * :mini:`::CONNECT`
+   * :mini:`::PATCH`
+
+
+:mini:`type httpmethod < enum`
+   * :mini:`::GET`
+   * :mini:`::POST`
+   * :mini:`::HEAD`
+   * :mini:`::PUT`
+   * :mini:`::DELETE`
+   * :mini:`::OPTIONS`
+   * :mini:`::TRACE`
+   * :mini:`::CONNECT`
+   * :mini:`::PATCH`
+
+
+:mini:`type httprequest < stream`
+   *TBD*
+
+
+:mini:`type httprequest`
+   *TBD*
+
+
+:mini:`type httprequest < stream`
+   *TBD*
+
+
+:mini:`meth (Arg₁: httprequest):add_header(Arg₂: string, Arg₃: string)`
+   *TBD*
+
+
+:mini:`meth (Arg₁: httprequest):add_header(Arg₂: string, Arg₃: string)`
+   *TBD*
+
+
+:mini:`meth (Arg₁: httprequest):add_header(Arg₂: string, Arg₃: string)`
+   *TBD*
+
+
+:mini:`meth (Arg₁: httprequest):body`
+   *TBD*
+
+
+:mini:`meth (Arg₁: httprequest):body`
+   *TBD*
+
+
+:mini:`meth (Arg₁: httprequest):headers`
+   *TBD*
+
+
+:mini:`meth (Arg₁: httprequest):headers`
+   *TBD*
+
+
+:mini:`meth (Arg₁: httprequest):headers`
+   *TBD*
+
+
+:mini:`meth (Arg₁: httprequest):method`
+   *TBD*
+
+
+:mini:`meth (Arg₁: httprequest):method`
+   *TBD*
+
+
+:mini:`meth (Arg₁: httprequest):method`
+   *TBD*
+
+
+:mini:`meth (Arg₁: httprequest):output_stream`
+   *TBD*
+
+
+:mini:`meth (Arg₁: httprequest):peer`
+   *TBD*
+
+
+:mini:`meth (Arg₁: httprequest):peer`
+   *TBD*
+
+
+:mini:`meth (Arg₁: httprequest):reply(Arg₂: integer, Arg₃: string, Arg₄: address)`
+   *TBD*
+
+
+:mini:`meth (Arg₁: httprequest):send_error(Arg₂: integer, Arg₃: string)`
+   *TBD*
+
+
+:mini:`meth (Arg₁: httprequest):send_error(Arg₂: integer, Arg₃: string)`
+   *TBD*
+
+
+:mini:`meth (Arg₁: httprequest):send_file(Arg₂: integer, Arg₃: string, Arg₄: string)`
+   *TBD*
+
+
+:mini:`meth (Arg₁: httprequest):send_file(Arg₂: integer, Arg₃: string, Arg₄: string)`
+   *TBD*
+
+
+:mini:`meth (Arg₁: httprequest):send_reply(Arg₂: integer, Arg₃: string, Arg₄: address)`
+   *TBD*
+
+
+:mini:`meth (Arg₁: httprequest):send_reply(Arg₂: integer, Arg₃: string, Arg₄: address)`
+   *TBD*
+
+
+:mini:`meth (Arg₁: httprequest):send_stream(Arg₂: integer, Arg₃: string)`
+   *TBD*
+
+
+:mini:`meth (Arg₁: httprequest):send_stream(Arg₂: integer, Arg₃: string)`
+   *TBD*
+
+
+:mini:`meth (Arg₁: httprequest):uri`
+   *TBD*
+
+
+:mini:`meth (Arg₁: httprequest):uri`
+   *TBD*
+
+
+:mini:`meth (Arg₁: httprequest):uri`
+   *TBD*
+
+
+:mini:`type httprequeststream < stream`
+   *TBD*
+
+
 :mini:`fun mldqlite(Arg₁: integer, Arg₂: string, Arg₃: string)`
+   *TBD*
+
+
+:mini:`type multipart < stream`
+   *TBD*
+
+
+:mini:`meth (Arg₁: multipart):write(Arg₂: address)`
    *TBD*
 
 
@@ -206,6 +458,10 @@ general
 
 
 :mini:`type raschemaindex`
+   *TBD*
+
+
+:mini:`meth eventtimer(Arg₁: real, Arg₂: function)`
    *TBD*
 
 
@@ -246,6 +502,10 @@ general
 
 
 :mini:`meth fdbdatabase(Arg₁: string)`
+   *TBD*
+
+
+:mini:`meth multipart(Arg₁: string, Arg₂: function)`
    *TBD*
 
 

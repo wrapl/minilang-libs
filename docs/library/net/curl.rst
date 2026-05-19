@@ -17,16 +17,48 @@ net/curl
    Returns a new Curl easy instance.
 
 
+:mini:`meth (Arg₁: curl):cleanup`
+   *TBD*
+
+
+:mini:`meth (Arg₁: curl):get(Arg₂: curlinfointeger)`
+   *TBD*
+
+
+:mini:`meth (Arg₁: curl):get(Arg₂: curlinforeal)`
+   *TBD*
+
+
+:mini:`meth (Arg₁: curl):get(Arg₂: curlinfoset)`
+   *TBD*
+
+
+:mini:`meth (Arg₁: curl):get(Arg₂: curlinfostring)`
+   *TBD*
+
+
 :mini:`meth (Arg₁: curl):perform`
    *TBD*
 
 
-:mini:`meth (Arg₁: curl):set(Arg₂: curloptionfunction, Arg₃: function)`
+:mini:`meth (Arg₁: curl):reset`
    *TBD*
 
 
-:mini:`meth (Arg₁: curl):set(Arg₂: curloptionfunction, Arg₃: stream)`
-   *TBD*
+:mini:`meth (Curl: curl):set(Option: curloptionenum, Value: enum::value): curl`
+   Sets :mini:`Option` in :mini:`Curl` to :mini:`Value`.
+
+
+:mini:`meth (Curl: curl):set(Option: curloptionfunction, Value: function): curl`
+   Sets :mini:`Option` in :mini:`Curl` to :mini:`Value`.
+
+
+:mini:`meth (Curl: curl):set(Option: curloptionfunction, Value: stream): curl`
+   Sets :mini:`Option` in :mini:`Curl` to :mini:`Value`.
+
+
+:mini:`meth (Curl: curl):set(Option: curloptionfunction, Value: string::buffer): curl`
+   Sets :mini:`Option` in :mini:`Curl` to :mini:`Value`.
 
 
 :mini:`meth (Curl: curl):set(Option: curloptioninteger, Value: boolean): curl`
@@ -399,5 +431,12 @@ net/curl
    * :mini:`::ProxyIssuercertBlob` - 
    * :mini:`::CainfoBlob` - The CA certificates as "blob" used to validate the peer certificate
    * :mini:`::ProxyCainfoBlob` - The CA certificates as "blob" used to validate the proxy certificate
+
+
+:mini:`type curlusessl < enum`
+   * :mini:`::None`
+   * :mini:`::Try`
+   * :mini:`::Control`
+   * :mini:`::All`
 
 

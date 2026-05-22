@@ -2,7 +2,9 @@
 #include <minilang/ml_macros.h>
 #include <minilang/ml_object.h>
 #include <minilang/ml_stream.h>
-#include <nettle/sha.h>
+#include <nettle/sha1.h>
+#include <nettle/sha2.h>
+#include <nettle/sha3.h>
 #include <nettle/md5.h>
 #include <nettle/ripemd160.h>
 #include <nettle/version.h>
@@ -55,20 +57,8 @@ ML_METHOD("digest", NAME ## T) { \
 */ \
 	CNAME ## _t *Hash = (CNAME ## _t *)Args[0]; \
 	char *Buffer = snew(DEFAULT_LENGTH); \
-	CNAME ## _digest(Hash->Context, DEFAULT_LENGTH, (uint8_t *)Buffer); \
+	CNAME ## _digest(Hash->Context, (uint8_t *)Buffer); \
 	return ml_address(Buffer, DEFAULT_LENGTH); \
-} \
-\
-ML_METHOD("digest", NAME ## T, MLIntegerT) { \
-/*<Hash:CNAME
-//<Length
-//>address
-*/ \
-	CNAME ## _t *Hash = (CNAME ## _t *)Args[0]; \
-	int Length = ml_integer_value(Args[1]); \
-	char *Buffer = snew(Length); \
-	CNAME ## _digest(Hash->Context, Length, (uint8_t *)Buffer); \
-	return ml_address(Buffer, Length); \
 }
 
 HASH(MD5, md5, 16);

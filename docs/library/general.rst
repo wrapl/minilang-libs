@@ -301,11 +301,11 @@ general
    *TBD*
 
 
-:mini:`type httprequest`
+:mini:`type httprequest < stream`
    *TBD*
 
 
-:mini:`type httprequest < stream`
+:mini:`type httprequest`
    *TBD*
 
 
@@ -421,14 +421,6 @@ general
    *TBD*
 
 
-:mini:`type multipart < stream`
-   *TBD*
-
-
-:mini:`meth (Arg₁: multipart):write(Arg₂: address)`
-   *TBD*
-
-
 :mini:`type op < enum`
    *TBD*
 
@@ -502,10 +494,6 @@ general
 
 
 :mini:`meth fdbdatabase(Arg₁: string)`
-   *TBD*
-
-
-:mini:`meth multipart(Arg₁: string, Arg₂: function)`
    *TBD*
 
 

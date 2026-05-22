@@ -4,7 +4,8 @@
 #include <minilang/ml_stream.h>
 #include "multipart-parser/multipartparser.h"
 
-
+#undef ML_CATEGORY
+#define ML_CATEGORY "fmt/multipart"
 
 typedef struct {
 	ml_type_t *Type;

@@ -45,10 +45,6 @@ digest/hmac
    *TBD*
 
 
-:mini:`meth (HMAC: md5):digest(Length: md5, Arg₃: integer): address`
-   *TBD*
-
-
 :mini:`meth (HMAC: md5):update(Bytes: md5, Arg₃: address): md5`
    *TBD*
 
@@ -58,10 +54,6 @@ digest/hmac
 
 
 :mini:`meth (HMAC: ripemd160):digest(Arg₂: ripemd160): address`
-   *TBD*
-
-
-:mini:`meth (HMAC: ripemd160):digest(Length: ripemd160, Arg₃: integer): address`
    *TBD*
 
 
@@ -77,10 +69,6 @@ digest/hmac
    *TBD*
 
 
-:mini:`meth (HMAC: sha1):digest(Length: sha1, Arg₃: integer): address`
-   *TBD*
-
-
 :mini:`meth (HMAC: sha1):update(Bytes: sha1, Arg₃: address): sha1`
    *TBD*
 
@@ -90,10 +78,6 @@ digest/hmac
 
 
 :mini:`meth (HMAC: sha224):digest(Arg₂: sha224): address`
-   *TBD*
-
-
-:mini:`meth (HMAC: sha224):digest(Length: sha224, Arg₃: integer): address`
    *TBD*
 
 
@@ -109,10 +93,6 @@ digest/hmac
    *TBD*
 
 
-:mini:`meth (HMAC: sha256):digest(Length: sha256, Arg₃: integer): address`
-   *TBD*
-
-
 :mini:`meth (HMAC: sha256):update(Bytes: sha256, Arg₃: address): sha256`
    *TBD*
 
@@ -125,10 +105,6 @@ digest/hmac
    *TBD*
 
 
-:mini:`meth (HMAC: sha384):digest(Length: sha384, Arg₃: integer): address`
-   *TBD*
-
-
 :mini:`meth (HMAC: sha384):update(Bytes: sha384, Arg₃: address): sha384`
    *TBD*
 
@@ -138,10 +114,6 @@ digest/hmac
 
 
 :mini:`meth (HMAC: sha512):digest(Arg₂: sha512): address`
-   *TBD*
-
-
-:mini:`meth (HMAC: sha512):digest(Length: sha512, Arg₃: integer): address`
    *TBD*
 
 

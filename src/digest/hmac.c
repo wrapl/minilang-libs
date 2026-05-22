@@ -56,20 +56,8 @@ ML_METHOD("digest", NAME ## T) { \
 */ \
 	CNAME ## _t *HMAC = (CNAME ## _t *)Args[0]; \
 	char *Buffer = snew(DEFAULT_LENGTH); \
-	hmac_ ## CNAME ## _digest(HMAC->Context, DEFAULT_LENGTH, (uint8_t *)Buffer); \
+	hmac_ ## CNAME ## _digest(HMAC->Context, (uint8_t *)Buffer); \
 	return ml_address(Buffer, DEFAULT_LENGTH); \
-} \
-\
-ML_METHOD("digest", NAME ## T, MLIntegerT) { \
-/*<HMAC:CNAME
-//<Length
-//>address
-*/ \
-	CNAME ## _t *HMAC = (CNAME ## _t *)Args[0]; \
-	int Length = ml_integer_value(Args[1]); \
-	char *Buffer = snew(Length); \
-	hmac_ ## CNAME ## _digest(HMAC->Context, Length, (uint8_t *)Buffer); \
-	return ml_address(Buffer, Length); \
 }
 
 HMAC(MD5, md5, 16);

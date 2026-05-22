@@ -1,6 +1,7 @@
 import: zeromq("net/zeromq")
 import: json("fmt/json")
 import: glib("gir/GLib")
+import: glibunix("gir/GLibUnix")
 import: gtk("gir/Gtk@3.0")
 import: hmac("digest/hmac")
 import: base16("enc/base16")
@@ -63,7 +64,7 @@ end
 
 fun listen(Name, Socket, Callback) do
 	Sockets[Name] := (Socket, Callback)
-	glib::unix_fd_add_full(0, Socket:fd, glib::IOCondition::in; Fd, Condition) do
+	glibunix::fd_add_full(0, Socket:fd, glib::IOCondition::in; Fd, Condition) do
 		check_socket(Name, Socket, Callback)
 		ret true
 	on Error do

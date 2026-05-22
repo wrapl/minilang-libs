@@ -15,7 +15,7 @@ ML_FUNCTION(Factorize) {
 	ML_CHECK_ARG_COUNT(1);
 	ML_CHECK_ARG_TYPE(0, MLIntegerT);
 	ml_stringbuffer_t Buffer[1] = {ML_STRINGBUFFER_INIT};
-	ml_stringbuffer_simple_append(Buffer, Args[0]);
+	ml_stringbuffer_append(Buffer, Args[0]);
 	const char *Input = ml_stringbuffer_get_string(Buffer);
 	msieve_obj *MSieve = msieve_obj_new(
 		(char *)Input, 0, NULL, NULL, NULL,

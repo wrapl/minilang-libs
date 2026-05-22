@@ -322,7 +322,7 @@ static void console_show_value(GtkTreeStore *Store, GtkTreeIter *Iter, const cha
 	typeof(console_show_value) *function = ml_typed_fn_get(ml_typeof(Value), console_show_value);
 	if (function) return function(Store, Iter, Name, Value);
 	ml_stringbuffer_t Buffer[1] = {ML_STRINGBUFFER_INIT};
-	ml_stringbuffer_simple_append(Buffer, Value);
+	ml_stringbuffer_append(Buffer, Value);
 	char *Display;
 	if (ml_stringbuffer_length(Buffer) < 64) {
 		Display = ml_stringbuffer_get_string(Buffer);
@@ -663,7 +663,7 @@ ml_value_t *gtk_console_print(gtk_console_t *Console, int Count, ml_value_t **Ar
 	gtk_text_buffer_get_end_iter(LogBuffer, End);
 	ml_stringbuffer_t Buffer[1] = {ML_STRINGBUFFER_INIT};
 	for (int I = 0; I < Count; ++I) {
-		ml_value_t *Result = ml_stringbuffer_simple_append(Buffer, Args[I]);
+		ml_value_t *Result = ml_stringbuffer_append(Buffer, Args[I]);
 		if (ml_is_error(Result)) return Result;
 	}
 	ml_stringbuffer_drain(Buffer, Console, (void *)gtk_console_append);

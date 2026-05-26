@@ -4,6 +4,8 @@
 #include <minilang/ml_macros.h>
 #include <minilang/ml_logging.h>
 #include <minilang/ml_array.h>
+#include <minilang/ml_json.h>
+#include <minilang/ml_xml.h>
 #include <libpq-fe.h>
 #include <catalog/pg_type_d.h>
 #include <ctype.h>
@@ -369,6 +371,14 @@ static ml_value_t *query_recv_uuid(const char *Value, int Length) {
 	return ml_uuid_parse(Value, Length);
 }
 
+static ml_value_t *query_recv_json(const char *Value, int Length) {
+	return ml_json_decode(Value, Length);
+}
+
+static ml_value_t *query_recv_xml(const char *Value, int Length) {
+	return ml_xml_parse(Value, Length);
+}
+
 static recv_fn *query_recv_fns(PGresult *Result, int NumFields) {
 	recv_fn *RecvFns = anew(recv_fn, NumFields);
 	for (int I = 0; I < NumFields; ++I) {
@@ -381,8 +391,6 @@ static recv_fn *query_recv_fns(PGresult *Result, int NumFields) {
 		case FLOAT8OID: RecvFns[I] = query_recv_real; break;
 		case CHAROID:
 		case TEXTOID:
-		case JSONOID:
-		case XMLOID:
 		case VARCHAROID: RecvFns[I] = query_recv_string; break;
 		case BYTEAOID: RecvFns[I] = query_recv_bytes; break;
 		case DATEOID:
@@ -391,6 +399,9 @@ static recv_fn *query_recv_fns(PGresult *Result, int NumFields) {
 		case TIMESTAMPTZOID:
 		case TIMETZOID: RecvFns[I] = query_recv_time; break;
 		case UUIDOID: RecvFns[I] = query_recv_uuid; break;
+		case JSONOID:
+		case JSONBOID: RecvFns[I] = query_recv_json; break;
+		case XMLOID: RecvFns[I] = query_recv_xml; break;
 		default: RecvFns[I] = query_recv_string; break;
 		}
 	}

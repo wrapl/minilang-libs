@@ -23,7 +23,8 @@ static const char *BlockTags[] = {
     [MD_BLOCK_TBODY] = "tbody",
     [MD_BLOCK_TR] = "tr",
     [MD_BLOCK_TH] = "th",
-    [MD_BLOCK_TD] = "td"
+    [MD_BLOCK_TD] = "td",
+    [MD_BLOCK_ADMONITION] = "aside"
 };
 
 static const char *SpanTags[] = {
@@ -36,7 +37,9 @@ static const char *SpanTags[] = {
 	[MD_SPAN_LATEXMATH] = "span",
 	[MD_SPAN_LATEXMATH_DISPLAY] = "span",
 	[MD_SPAN_WIKILINK] = "a",
-	[MD_SPAN_U] = "u"
+	[MD_SPAN_U] = "u",
+	[MD_SPAN_SUBSCRIPT] = "sub",
+	[MD_SPAN_SUPERSCRIPT] = "sup"
 };
 
 typedef struct {
@@ -55,19 +58,16 @@ static int enter_block(MD_BLOCKTYPE Type, void *Detail0, xml_builder_t *Builder)
 	case MD_BLOCK_P:
 	case MD_BLOCK_HTML:
 	case MD_BLOCK_HR:
-	case MD_BLOCK_TR: {
-		ml_xml_element_t *Child = ml_xml_element(BlockTags[Type]);
-		ml_xml_element_put(Builder->Node, (ml_xml_node_t *)Child);
-		Builder->Node = Child;
-		break;
-	}
-	case MD_BLOCK_UL: {
-		ml_xml_element_t *Child = ml_xml_element(BlockTags[Type]);
-		ml_xml_element_put(Builder->Node, (ml_xml_node_t *)Child);
-		Builder->Node = Child;
-		break;
-	}
-	case MD_BLOCK_OL: {
+	case MD_BLOCK_TR:
+	case MD_BLOCK_UL:
+	case MD_BLOCK_OL:
+	case MD_BLOCK_CODE:
+	case MD_BLOCK_TABLE:
+	case MD_BLOCK_THEAD:
+	case MD_BLOCK_TBODY:
+	case MD_BLOCK_TH:
+	case MD_BLOCK_TD:
+	case MD_BLOCK_ADMONITION: {
 		ml_xml_element_t *Child = ml_xml_element(BlockTags[Type]);
 		ml_xml_element_put(Builder->Node, (ml_xml_node_t *)Child);
 		Builder->Node = Child;
@@ -102,32 +102,6 @@ static int enter_block(MD_BLOCKTYPE Type, void *Detail0, xml_builder_t *Builder)
 		Builder->Node = Child;
 		break;
 	}
-	case MD_BLOCK_CODE: {
-		ml_xml_element_t *Child = ml_xml_element(BlockTags[Type]);
-		ml_xml_element_put(Builder->Node, (ml_xml_node_t *)Child);
-		Builder->Node = Child;
-		break;
-	}
-	case MD_BLOCK_TABLE: {
-		ml_xml_element_t *Child = ml_xml_element(BlockTags[Type]);
-		ml_xml_element_put(Builder->Node, (ml_xml_node_t *)Child);
-		Builder->Node = Child;
-		break;
-	}
-	case MD_BLOCK_THEAD:
-	case MD_BLOCK_TBODY: {
-		ml_xml_element_t *Child = ml_xml_element(BlockTags[Type]);
-		ml_xml_element_put(Builder->Node, (ml_xml_node_t *)Child);
-		Builder->Node = Child;
-		break;
-	}
-	case MD_BLOCK_TH:
-	case MD_BLOCK_TD: {
-		ml_xml_element_t *Child = ml_xml_element(BlockTags[Type]);
-		ml_xml_element_put(Builder->Node, (ml_xml_node_t *)Child);
-		Builder->Node = Child;
-		break;
-	}
 	}
 	return 0;
 }
@@ -154,7 +128,9 @@ static int enter_span(MD_SPANTYPE Type, void *Detail0, xml_builder_t *Builder) {
 	case MD_SPAN_LATEXMATH:
 	case MD_SPAN_LATEXMATH_DISPLAY:
 	case MD_SPAN_WIKILINK:
-	case MD_SPAN_U: {
+	case MD_SPAN_U:
+	case MD_SPAN_SUBSCRIPT:
+	case MD_SPAN_SUPERSCRIPT: {
 		ml_xml_element_t *Child = ml_xml_element(SpanTags[Type]);
 		ml_xml_element_put(Builder->Node, (ml_xml_node_t *)Child);
 		Builder->Node = Child;

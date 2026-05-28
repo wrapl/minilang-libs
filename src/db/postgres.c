@@ -47,6 +47,7 @@ struct statement_t {
 	connection_t *Connection;
 	const char *Name, *SQL;
 	recv_fn *RecvFns;
+	ml_value_t *Names;
 	int NumFields;
 };
 
@@ -55,6 +56,7 @@ struct query_t {
 	ml_state_t *Caller;
 	const char *Name, *SQL;
 	recv_fn *RecvFns;
+	ml_value_t *Names;
 	const char **Values;
 	int *Types, *Lengths, *Formats;
 	int NumParams, NumFields;
@@ -311,6 +313,7 @@ static void statement_call(ml_state_t *Caller, statement_t *Statement, int Count
 	Query->Caller = Caller;
 	Query->Name = Statement->Name;
 	Query->RecvFns = Statement->RecvFns;
+	Query->Names = Statement->Names;
 	Query->NumFields = Statement->NumFields;
 	ml_value_t *Error = query_params(Query, Count, Args);
 	if (Error) ML_RETURN(Error);
@@ -379,9 +382,11 @@ static ml_value_t *query_recv_xml(const char *Value, int Length) {
 	return ml_xml_parse(Value, Length);
 }
 
-static recv_fn *query_recv_fns(PGresult *Result, int NumFields) {
+static void query_recv_fns(PGresult *Result, int NumFields, recv_fn **RecvFnsPtr, ml_value_t **NamesPtr) {
 	recv_fn *RecvFns = anew(recv_fn, NumFields);
+	ml_value_t *Names = ml_names();
 	for (int I = 0; I < NumFields; ++I) {
+		ml_names_add(Names, ml_string_copy(PQfname(Result, I), -1));
 		switch (PQftype(Result, I)) {
 		case BOOLOID: RecvFns[I] = query_recv_boolean; break;
 		case INT8OID:
@@ -405,7 +410,8 @@ static recv_fn *query_recv_fns(PGresult *Result, int NumFields) {
 		default: RecvFns[I] = query_recv_string; break;
 		}
 	}
-	return RecvFns;
+	*RecvFnsPtr = RecvFns;
+	*NamesPtr = Names;
 }
 
 static int connection_prepare(const char *Name, const char *SQL, connection_t *Connection) {
@@ -510,7 +516,7 @@ static void *connection_thread_fn(connection_t *Connection) {
 					Statement->SQL = Query->SQL;
 					Statement->Connection = Connection;
 					Statement->NumFields = PQnfields(Result);
-					Statement->RecvFns = query_recv_fns(Result, Statement->NumFields);
+					query_recv_fns(Result, Statement->NumFields, &Statement->RecvFns, &Statement->Names);
 					Value = (ml_value_t *)Statement;
 				}
 			} else {
@@ -519,9 +525,11 @@ static void *connection_thread_fn(connection_t *Connection) {
 					Value = ml_list();
 					int NumFields = PQnfields(Result);
 					recv_fn *RecvFns = Query->RecvFns;
-					if (!RecvFns || Query->NumFields != NumFields) RecvFns = query_recv_fns(Result, NumFields);
+					ml_value_t *Names = Query->Names;
+					if (!RecvFns || Query->NumFields != NumFields) query_recv_fns(Result, NumFields, &RecvFns, &Names);
 					for (int I = 0; I < PQntuples(Result); ++I) {
 						ml_tuple_t *Row = (ml_tuple_t *)ml_tuple(NumFields);
+						Row->Names = Names;
 						for (int J = 0; J < NumFields; ++J) {
 							if (PQgetisnull(Result, I, J)) {
 								Row->Values[J] = MLNil;
@@ -598,7 +606,7 @@ static void *connection_pipeline_thread_fn(connection_t *Connection) {
 						Statement->SQL = Query->SQL;
 						Statement->Connection = Connection;
 						Statement->NumFields = PQnfields(Result);
-						Statement->RecvFns = query_recv_fns(Result, Statement->NumFields);
+						query_recv_fns(Result, Statement->NumFields, &Statement->RecvFns, &Statement->Names);
 						Value = (ml_value_t *)Statement;
 					}
 				} else {
@@ -608,9 +616,11 @@ static void *connection_pipeline_thread_fn(connection_t *Connection) {
 						Value = ml_list();
 						int NumFields = PQnfields(Result);
 						recv_fn *RecvFns = Query->RecvFns;
-						if (!RecvFns || Query->NumFields != NumFields) RecvFns = query_recv_fns(Result, NumFields);
+						ml_value_t *Names = Query->Names;
+						if (!RecvFns || Query->NumFields != NumFields) query_recv_fns(Result, NumFields, &RecvFns, &Names);
 						for (int I = 0; I < PQntuples(Result); ++I) {
 							ml_tuple_t *Row = (ml_tuple_t *)ml_tuple(NumFields);
+							Row->Names = Names;
 							for (int J = 0; J < NumFields; ++J) {
 								if (PQgetisnull(Result, I, J)) {
 									Row->Values[J] = MLNil;

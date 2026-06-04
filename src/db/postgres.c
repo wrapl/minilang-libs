@@ -641,7 +641,6 @@ static void *connection_pipeline_thread_fn(connection_t *Connection) {
 					}
 				}
 				PQclear(Result);
-
 				if (Query->Caller) ml_state_schedule(Query->Caller, Value);
 			}
 		}

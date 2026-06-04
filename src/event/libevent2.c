@@ -46,11 +46,6 @@ ML_METHOD(EventHttpT) {
 }
 
 typedef struct {
-	ml_context_t *Context;
-	ml_value_t *Fn;
-} callback_t;
-
-typedef struct {
 	ml_state_t Base;
 	ml_value_t *Value;
 	ml_value_t *Args[];
@@ -76,6 +71,9 @@ typedef struct {
 	struct evhttp_request *Handle;
 	struct evbuffer *Buffer;
 	ml_state_t *Caller;
+	ml_value_t *CompleteFn;
+	ml_context_t *CompleteContext;
+	ml_value_t *Error;
 	size_t Count;
 	evhttp_request_state_t State;
 } evhttp_request_t;
@@ -86,8 +84,59 @@ static void request_finalize(evhttp_request_t *Request, void *Data) {
 	ML_LOG_INFO(NULL, "Finalizing request");
 	if (Request->State != REQUEST_STATE_CLOSED) {
 		evhttp_send_error(Request->Handle, 500, "Internal Server Error");
-		evhttp_request_free(Request->Handle);
 		Request->Handle = NULL;
+	}
+}
+
+ML_ENUM2(RequestErrorT, "request-error",
+	"Timeout", EVREQ_HTTP_TIMEOUT,
+	"EOF", EVREQ_HTTP_EOF,
+	"InvalidHeader", EVREQ_HTTP_INVALID_HEADER,
+	"BufferError", EVREQ_HTTP_BUFFER_ERROR,
+	"RequestCancel", EVREQ_HTTP_REQUEST_CANCEL,
+	"DataTooLong", EVREQ_HTTP_DATA_TOO_LONG
+);
+
+ML_METHODX("handler", HttpRequestT, MLFunctionT) {
+	evhttp_request_t *Request = (evhttp_request_t *)Args[0];
+	Request->CompleteContext = Caller->Context;
+	Request->CompleteFn = Args[1];
+	if (!Request->Handle) {
+		call_state_t *State = xnew(call_state_t, 1, ml_value_t *);
+		State->Base.Context = Request->CompleteContext;
+		State->Base.run = (ml_state_fn)call_state_run;
+		State->Value = Request->CompleteFn;
+		State->Args[0] = Request->Error ?: MLNil;
+		ml_state_schedule((ml_state_t *)State, ml_integer(1));
+	}
+	ML_RETURN(Request);
+}
+
+static void request_complete_fn(struct evhttp_request *Handle, void *Arg) {
+	//ML_LOG_WARN(NULL, "Request complete");
+	evhttp_request_t *Request = (evhttp_request_t *)Arg;
+	Request->State = REQUEST_STATE_CLOSED;
+	Request->Handle = NULL;
+	if (Request->CompleteFn && !Request->Error) {
+		call_state_t *State = new(call_state_t);
+		State->Base.Context = Request->CompleteContext;
+		State->Base.run = (ml_state_fn)call_state_run;
+		State->Value = Request->CompleteFn;
+		ml_state_schedule((ml_state_t *)State, ml_integer(0));
+	}
+}
+
+static void request_error_fn(enum evhttp_request_error Error, void *Arg) {
+	ML_LOG_WARN(NULL, "Request error");
+	evhttp_request_t *Request = (evhttp_request_t *)Arg;
+	Request->Error = ml_enum_value(RequestErrorT, Error);
+	if (Request->CompleteFn) {
+		call_state_t *State = xnew(call_state_t, 1, ml_value_t *);
+		State->Base.Context = Request->CompleteContext;
+		State->Base.run = (ml_state_fn)call_state_run;
+		State->Value = Request->CompleteFn;
+		State->Args[0] = Request->Error;
+		ml_state_schedule((ml_state_t *)State, ml_integer(1));
 	}
 }
 
@@ -96,6 +145,11 @@ static evhttp_request_t *event_request(struct evhttp_request *Handle) {
 	Request->Type = HttpRequestT;
 	Request->Handle = Handle;
 	Request->State = REQUEST_STATE_NORMAL;
+	struct evhttp_connection *Connection = evhttp_request_get_connection(Handle);
+	struct bufferevent *BufferEvent = evhttp_connection_get_bufferevent(Connection);
+	bufferevent_enable(BufferEvent, EV_READ);
+	evhttp_request_set_on_complete_cb(Handle, request_complete_fn, Request);
+	evhttp_request_set_error_cb(Handle, request_error_fn);
 	GC_register_finalizer(Request, (void *)request_finalize, NULL, NULL, NULL);
 	return Request;
 }
@@ -155,7 +209,6 @@ ML_METHOD("send_reply", HttpRequestT, MLIntegerT, MLStringT, MLAddressT) {
 	evbuffer_add(Buffer, ml_address_value(Args[3]), ml_address_length(Args[3]));
 	evhttp_send_reply(Request->Handle, ml_integer_value(Args[1]), ml_string_value(Args[2]), Buffer);
 	Request->State = REQUEST_STATE_CLOSED;
-	evhttp_request_free(Request->Handle);
 	Request->Handle = NULL;
 	return (ml_value_t *)Request;
 }
@@ -165,7 +218,6 @@ ML_METHOD("send_error", HttpRequestT, MLIntegerT, MLStringT) {
 	if (Request->State != REQUEST_STATE_NORMAL) return ml_error("StateError", "Invalid request state");
 	evhttp_send_error(Request->Handle, ml_integer_value(Args[1]), ml_string_value(Args[2]));
 	Request->State = REQUEST_STATE_CLOSED;
-	evhttp_request_free(Request->Handle);
 	Request->Handle = NULL;
 	return (ml_value_t *)Request;
 }
@@ -195,7 +247,6 @@ ML_METHOD("send_file", HttpRequestT, MLIntegerT, MLStringT, MLStringT) {
 		}
 	}
 	Request->State = REQUEST_STATE_CLOSED;
-	evhttp_request_free(Request->Handle);
 	Request->Handle = NULL;
 	return (ml_value_t *)Request;
 }
@@ -297,7 +348,6 @@ static void request_state_done(request_state_t *State, ml_value_t *Value) {
 		if (State->Request->State != REQUEST_STATE_CLOSED) {
 			State->Request->State = REQUEST_STATE_CLOSED;
 			evhttp_send_error(State->Request->Handle, HTTP_INTERNAL, NULL);
-			evhttp_request_free(State->Request->Handle);
 		}
 	}
 }
@@ -306,6 +356,11 @@ static void request_state_run(request_state_t *State, ml_value_t *Value) {
 	State->Base.run = (ml_state_fn)request_state_done;
 	return ml_call(State, State->Value, 1, (ml_value_t **)&State->Request);
 }
+
+typedef struct {
+	ml_context_t *Context;
+	ml_value_t *Fn;
+} callback_t;
 
 static void gen_callback(struct evhttp_request *Request, callback_t *Callback) {
 	request_state_t *CallState = new(request_state_t);

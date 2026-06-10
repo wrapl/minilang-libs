@@ -345,7 +345,7 @@ ML_METHODX(EventHttpT, MLFunctionT) {
 
 static struct bufferevent *ssl_callback(struct event_base *Base, SSL_CTX *Ctx) {
 	SSL *Ssl = SSL_new(Ctx);
-	return bufferevent_openssl_socket_new(Base, -1, Ssl, BUFFEREVENT_SSL_ACCEPTING, BEV_OPT_CLOSE_ON_FREE);
+	return bufferevent_openssl_socket_new(Base, -1, Ssl, BUFFEREVENT_SSL_ACCEPTING, BEV_OPT_CLOSE_ON_FREE | BEV_OPT_THREADSAFE | BEV_OPT_DEFER_CALLBACKS | BEV_OPT_UNLOCK_CALLBACKS);
 }
 
 ML_METHOD("enable_ssl", EventHttpT, MLStringT, MLStringT) {

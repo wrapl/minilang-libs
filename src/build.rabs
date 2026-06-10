@@ -139,7 +139,9 @@ else
 	LDFLAGS := old + ["-g"]
 end
 
+subdir("util")
 for Path in file(""):ls do
+	Path:basename = "util" and next
 	if Path / "build.rabs" exists () then
 		subdir(Path:basename)
 	end

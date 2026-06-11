@@ -3390,7 +3390,7 @@ static void type_param_size(GITypeInfo *Info, int Index, int *Size, int *NumAux)
 	switch (g_type_info_get_tag(ElementInfo)) {
 	BASIC_CASES_SIZE((*Size))
 	case GI_TYPE_TAG_INTERFACE: *Size += 2; (*NumAux)++; break;
-	default: // TODO: handle this.
+	default: break; // TODO: handle this.
 	}
 	g_base_info_unref(ElementInfo);
 }

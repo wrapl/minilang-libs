@@ -2200,7 +2200,8 @@ static void ghash_to_map(gpointer Key, gpointer Value, ghash_to_map_t *Convert) 
 	);
 }
 
-static void callable_invoke(ffi_cif *Cif, void *Return, void **Params, callable_instance_t *Instance) {
+static void callable_invoke(ffi_cif *Cif, void *Return, void **Params, void *Data) {
+	callable_instance_t *Instance = (callable_instance_t *)Data;
 	callable_t *Callback = (callable_t *)Instance->Type;
 	ml_value_t *Args[Callback->Provided];
 	ml_value_t **Arg = Args;
@@ -4118,7 +4119,8 @@ typedef struct {
 	int Offset;
 } iface_vfunc_t;
 
-static void interface_init(gpointer IFace, iface_vfunc_t *VFuncs) {
+static void interface_init(gpointer IFace, gpointer Data) {
+	iface_vfunc_t *VFuncs = (iface_vfunc_t *)Data;
 	while (VFuncs->Function) {
 		*(void **)(IFace + VFuncs->Offset) = VFuncs->Function;
 		++VFuncs;

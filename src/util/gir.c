@@ -2193,7 +2193,8 @@ typedef struct {
 	ptr_to_value_t Value[1];
 } ghash_to_map_t;
 
-static void ghash_to_map(gpointer Key, gpointer Value, ghash_to_map_t *Convert) {
+static void ghash_to_map(gpointer Key, gpointer Value, gpointer Data) {
+	ghash_to_map_t *Convert = (ghash_to_map_t *)Data;
 	ml_map_insert(Convert->Map,
 		Convert->Key->to_value(Key, Convert->Key->Aux),
 		Convert->Value->to_value(Value, Convert->Value->Aux)
@@ -4048,8 +4049,9 @@ static void object_get_property(gir_object_t *Object, guint Id, GValue *Value, G
 	g_value_copy(Object->Properties + Id, Value);
 }
 
-static void class_init(gpointer *Data, class_t *Info) {
+static void class_init(gpointer Data, gpointer ClassData) {
 	gir_class_t *Class = (gir_class_t *)Data;
+	class_t *Info = (class_t *)ClassData;
 	Class->Base.set_property = (void *)object_set_property;
 	Class->Base.get_property = (void *)object_get_property;
 	g_object_class_install_properties(&Class->Base, Info->NumProperties, Info->Properties);

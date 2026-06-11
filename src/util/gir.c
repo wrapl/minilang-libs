@@ -902,9 +902,10 @@ static ml_value_t *argument_to_ml(GIArgument *Argument, GITypeInfo *TypeInfo, GI
 	return ml_error("ValueError", "Unsupported situtation: %s", g_base_info_get_name((GIBaseInfo *)TypeInfo));
 }
 
-static ml_value_t *object_instance(interface_t *Object, int Count, ml_value_t **Args) {
+static ml_value_t *object_instance(void *Data, int Count, ml_value_t **Args) {
+	interface_t *Interface = (interface_t *)Data;
 	instance_t *Instance = new(instance_t);
-	Instance->Type = Object;
+	Instance->Type = Interface;
 	if (Count > 0) {
 		ML_CHECK_ARG_TYPE(0, MLNamesT);
 		ML_NAMES_CHECK_ARG_COUNT(0);
@@ -920,9 +921,9 @@ static ml_value_t *object_instance(interface_t *Object, int Count, ml_value_t **
 			_ml_to_property(Value, Values + Index);
 			++Index;
 		}
-		Instance->Handle = g_object_new_with_properties(Object->Base.Type, NumProperties, Names, Values);
+		Instance->Handle = g_object_new_with_properties(Interface->Base.Type, NumProperties, Names, Values);
 	} else {
-		Instance->Handle = g_object_new_with_properties(Object->Base.Type, 0, NULL, NULL);
+		Instance->Handle = g_object_new_with_properties(Interface->Base.Type, 0, NULL, NULL);
 	}
 	g_object_set_qdata(Instance->Handle, MLQuark, Instance);
 	g_object_ref_sink(Instance->Handle);
@@ -4029,7 +4030,8 @@ typedef struct {
 	class_t *Info;
 } gir_class_t;
 
-static void object_init(gir_object_t *Object, gir_class_t *Class) {
+static void object_init(GTypeInstance *Type, gir_class_t *Class) {
+	gir_object_t *Object = (gir_object_t *)Type;
 	Object->Properties = g_malloc(Class->Info->NumProperties * sizeof(GValue));
 	memset(Object->Properties, 0, Class->Info->NumProperties * sizeof(GValue));
 	for (int I = 1; I < Class->Info->NumProperties; ++I) {
@@ -4045,7 +4047,8 @@ static void object_get_property(gir_object_t *Object, guint Id, GValue *Value, G
 	g_value_copy(Object->Properties + Id, Value);
 }
 
-static void class_init(gir_class_t *Class, class_t *Info) {
+static void class_init(gpointer *Data, class_t *Info) {
+	gir_class_t *Class = (gir_class_t *)Data;
 	Class->Base.set_property = (void *)object_set_property;
 	Class->Base.get_property = (void *)object_get_property;
 	g_object_class_install_properties(&Class->Base, Info->NumProperties, Info->Properties);

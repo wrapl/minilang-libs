@@ -117,6 +117,7 @@ CFLAGS := old + [
 	"-Wno-deprecated-declarations",
 	"-Wno-unused-function",
 	"-Werror=cast-function-type",
+	"-Wno-cast-function-type-strict",
 	:>"-Wsuggest-attribute=pure",
 	:>"-Wsuggest-attribute=const",
 	:>"-Wsuggest-attribute=noreturn",

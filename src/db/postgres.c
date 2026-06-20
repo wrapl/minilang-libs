@@ -242,14 +242,18 @@ static int query_pipeline(connection_t *Connection, query_t *Query) {
 		if (!Connection->Waiting) Connection->Waiting = Query;
 		return 0;
 	}
+	int Success;
 	if (Query->SQL) {
 		if (Query->Name) {
-			PQsendPrepare(Connection->Conn, Query->Name, Query->SQL, 0, NULL);
+			Success = PQsendPrepare(Connection->Conn, Query->Name, Query->SQL, 0, NULL);
 		} else {
-			PQsendQueryParams(Connection->Conn, Query->SQL, Query->NumParams, NULL, Query->Values, Query->Lengths, Query->Formats, 0);
+			Success = PQsendQueryParams(Connection->Conn, Query->SQL, Query->NumParams, NULL, Query->Values, Query->Lengths, Query->Formats, 0);
 		}
 	} else {
-		PQsendQueryPrepared(Connection->Conn, Query->Name, Query->NumParams, Query->Values, Query->Lengths, Query->Formats, 0);
+		Success = PQsendQueryPrepared(Connection->Conn, Query->Name, Query->NumParams, Query->Values, Query->Lengths, Query->Formats, 0);
+	}
+	if (!Success) {
+		ML_LOG_ERROR(NULL, "Error dispatching query: %s", PQerrorMessage(Connection->Conn));
 	}
 	if (Connection->Pipeline) {
 		PQpipelineSync(Connection->Conn);
@@ -564,36 +568,41 @@ static void *connection_pipeline_thread_fn(connection_t *Connection) {
 		pthread_mutex_unlock(Connection->Lock);
 		return NULL;
 	}
-	for (;;) {
+	for (;;) { retry:
 		while (!Connection->Head) pthread_cond_wait(Connection->Ready, Connection->Lock);
-		while (PQisBusy(Conn)) {
-			while (PQflush(Conn));
-			pthread_mutex_unlock(Connection->Lock);
-			struct pollfd Fds[1] = {{.fd = PQsocket(Conn), .events = POLLIN}};
-			TEMP_FAILURE_RETRY(poll(Fds, 1, -1));
-			pthread_mutex_lock(Connection->Lock);
-			if (Fds[0].revents & POLLERR) break;
-			PQconsumeInput(Conn);
-		}
-		PGresult *Result = PQgetResult(Conn);
-		if (Result) {
+		query_t *Query = Connection->Head;
+		query_t *Next = Query->Next;
+		Connection->Head = Next;
+		if (!Next) Connection->Tail = NULL;
+		ml_value_t *Value = MLNil;
+		for (;;) {
+			while (PQisBusy(Conn)) {
+				struct pollfd Fds[1] = {{.fd = PQsocket(Conn), .events = POLLIN}};
+				if (PQflush(Conn)) Fds[0].events |= POLLOUT;
+				pthread_mutex_unlock(Connection->Lock);
+				TEMP_FAILURE_RETRY(poll(Fds, 1, -1));
+				pthread_mutex_lock(Connection->Lock);
+				if (Fds[0].revents & (POLLERR | POLLHUP | POLLNVAL)) break;
+				if (Fds[0].revents & POLLIN) if (!PQconsumeInput(Conn)) break;
+			}
+			PGresult *Result = PQgetResult(Conn);
+			if (!Result) break;
 			ExecStatusType Status = PQresultStatus(Result);
 			if (Status == PGRES_PIPELINE_SYNC) {
 			} else if (should_retry(Status, Result, Conn)) {
 				ML_LOG_WARN(NULL, "Reconnecting to database");
 				PQclear(Result);
 				PQfinish(Conn);
+				if (!(Query->Next = Connection->Head)) Connection->Tail = Query;
 				Connection->Conn = NULL;
 				if (!Connection->Reconnect) return NULL;
 				Connection->NeedsFlush = 1;
 				Connection->Waiting = Connection->Head;
 				Conn = connection_connect(Connection);
+				Value = MLNil;
+				goto retry;
 			} else {
-				query_t *Query = Connection->Head;
-				query_t *Next = Query->Next;
-				Connection->Head = Next;
-				if (!Next) Connection->Tail = NULL;
-				ml_value_t *Value = MLNil;
+				//ML_LOG_INFO(NULL, "Postgres query result: %s -> %s, %s", Query->SQL, PQcmdStatus(Result), PQresStatus(Status));
 				if (Query->SQL && Query->Name) {
 					//printf("Prepare complete: %s -> %s\n", Query->SQL, Query->Name);
 					if (Status != PGRES_COMMAND_OK) {
@@ -636,14 +645,15 @@ static void *connection_pipeline_thread_fn(connection_t *Connection) {
 						Value = MLNil;
 						break;
 					default:
+						ML_LOG_WARN(NULL, "Postgres query error: %s -> %s", Query->SQL, PQerrorMessage(Conn));
 						Value = ml_error("DatabaseError", "%s", PQerrorMessage(Conn));
 						break;
 					}
 				}
 				PQclear(Result);
-				if (Query->Caller) ml_state_schedule(Query->Caller, Value);
 			}
 		}
+		if (Query->Caller) ml_state_schedule(Query->Caller, Value);
 		if (Connection->NeedsFlush) {
 			Connection->NeedsFlush = PQflush(Conn);
 			query_t *Waiting = Connection->Waiting;

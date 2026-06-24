@@ -472,7 +472,16 @@ static void timer_callback(evutil_socket_t Socket, short Events, evtimer_t *Time
 	ml_state_schedule((ml_state_t *)State, ml_integer(0));
 }
 
-ML_METHODX(EventTimerT, MLRealT, MLFunctionT) {
+ML_METHOD("cancel", EventTimerT) {
+	evtimer_t *Timer = (evtimer_t *)Args[0];
+	evtimer_del(Timer->Handle);
+	return MLNil;
+}
+
+ML_FUNCTIONX(EventEvery) {
+	ML_CHECKX_ARG_COUNT(2);
+	ML_CHECKX_ARG_TYPE(0, MLRealT);
+	ML_CHECKX_ARG_TYPE(1, MLFunctionT);
 	evtimer_t *Timer = new(evtimer_t);
 	Timer->Type = EventTimerT;
 	Timer->Handle = event_new(Events, -1, EV_PERSIST, (void *)timer_callback, Timer);
@@ -486,10 +495,21 @@ ML_METHODX(EventTimerT, MLRealT, MLFunctionT) {
 	ML_RETURN(Timer);
 }
 
-ML_METHOD("cancel", EventTimerT) {
-	evtimer_t *Timer = (evtimer_t *)Args[0];
-	evtimer_del(Timer->Handle);
-	return MLNil;
+ML_FUNCTIONX(EventAfter) {
+	ML_CHECKX_ARG_COUNT(2);
+	ML_CHECKX_ARG_TYPE(0, MLRealT);
+	ML_CHECKX_ARG_TYPE(1, MLFunctionT);
+	evtimer_t *Timer = new(evtimer_t);
+	Timer->Type = EventTimerT;
+	Timer->Handle = event_new(Events, -1, 0, (void *)timer_callback, Timer);
+	Timer->Context = Caller->Context;
+	Timer->Fn = Args[1];
+	double Seconds = ml_real_value(Args[0]);
+	struct timeval Interval;
+	Interval.tv_sec = floor(Seconds);
+	Interval.tv_usec = (Seconds - Interval.tv_sec) * 1000000;
+	evtimer_add(Timer->Handle, &Interval);
+	ML_RETURN(Timer);
 }
 
 static void nop_free(void *Ptr) {
@@ -517,7 +537,8 @@ ML_LIBRARY_ENTRY(event_libevent) {
 	stringmap_insert(EventHttpT->Exports, "method", HttpMethodT);
 	ml_value_t *Module = Slot[0] = ml_module("libevent",
 		"http", EventHttpT,
-		"timer", EventTimerT,
+		"every", EventEvery,
+		"after", EventAfter,
 	NULL);
 	ML_RETURN(Module);
 }

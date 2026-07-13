@@ -1503,9 +1503,11 @@ static void gir_closure_marshal(GClosure *Closure, GValue *Dest, guint NumArgs, 
 	for (guint I = 1; I < NumArgs; ++I) MLArgs[I] = _value_to_ml(Args + I, Info->Args[I]);
 	//ml_value_t *Value = ml_call_wait(Info->Context, Info->Function, NumArgs, MLArgs);
 	ml_result_state_t *State = ml_result_state(Info->Context);
+	ml_preemption_enable();
 	ml_call(State, Info->Function, NumArgs, MLArgs);
 	ml_scheduler_t *Scheduler = ml_context_get_static(Info->Context, ML_SCHEDULER_INDEX);
 	while (!State->Value) Scheduler->run(Scheduler);
+	ml_preemption_disable();
 	ml_value_t *Value = State->Value;
 	if (ml_is_error(Value)) ML_LOG_ERROR(Value, "Closure returned error");
 	if (Dest) {
@@ -1690,9 +1692,13 @@ int ml_gir_queue_add(gir_scheduler_t *Scheduler, ml_state_t *State, ml_value_t *
 }
 
 void ml_gir_queue_run(gir_scheduler_t *Scheduler) {
-	while (g_main_context_iteration(Scheduler->MainContext, !ml_scheduler_queue_fill(Scheduler->Queue)));
+	ml_preemption_disable();
+	while (g_main_context_iteration(Scheduler->MainContext, !Scheduler->Base.Fill));
 	ml_queued_state_t QueuedState = ml_scheduler_queue_next(Scheduler->Queue);
-	if (QueuedState.State) QueuedState.State->run(QueuedState.State, QueuedState.Value);
+	if (QueuedState.State) {
+		ml_preemption_enable();
+		QueuedState.State->run(QueuedState.State, QueuedState.Value);
+	}
 }
 
 int ml_gir_queue_fill(gir_scheduler_t *Scheduler) {
@@ -2410,9 +2416,11 @@ static void callable_invoke(ffi_cif *Cif, void *Return, void **Params, void *Dat
 	}
 	}
 	ml_result_state_t *State = ml_result_state(Instance->Context);
+	ml_preemption_enable();
 	ml_call(State, Instance->Function, Arg - Args, Args);
 	ml_scheduler_t *Scheduler = ml_context_get_static(Instance->Context, ML_SCHEDULER_INDEX);
 	while (!State->Value) Scheduler->run(Scheduler);
+	ml_preemption_disable();
 	ml_value_t *Result = ml_deref(State->Value);
 	if (ml_is_error(Result)) ML_LOG_ERROR(Result, "Callback returned error");
 	for (gi_inst_t *Inst = Callback->InstOut; Inst->Opcode != GIB_DONE;) switch ((Inst++)->Opcode) {

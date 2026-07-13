@@ -137,12 +137,14 @@ static __attribute__ ((noinline)) void console_new_line(gtk_console_t *Console) 
 static void ml_console_repl_run(gtk_console_t *Console, ml_value_t *Result) {
 	if (Result == MLEndOfInput) {
 		gtk_widget_grab_focus(Console->InputView);
+		ml_preemption_disable();
 		return;
 	}
 	if (Console->DisplayOutput || ml_is_error(Result)) gtk_console_log(Console, Result);
 	console_new_line(Console);
 	if (ml_is_error(Result)) {
 		gtk_widget_grab_focus(Console->InputView);
+		ml_preemption_disable();
 		return;
 	}
 	return ml_command_evaluate((ml_state_t *)Console, Console->Parser, Console->Compiler);
@@ -153,6 +155,7 @@ static void console_step_in(GtkWidget *Button, gtk_console_t *Console) {
 	ml_compiler_t *Compiler = Console->Compiler;
 	ml_parser_reset(Parser);
 	ml_parser_input(Parser, "step_in()", 0);
+	ml_preemption_enable();
 	ml_command_evaluate((ml_state_t *)Console, Parser, Compiler);
 }
 
@@ -161,6 +164,7 @@ static void console_step_over(GtkWidget *Button, gtk_console_t *Console) {
 	ml_compiler_t *Compiler = Console->Compiler;
 	ml_parser_reset(Parser);
 	ml_parser_input(Parser, "step_over()", 0);
+	ml_preemption_enable();
 	ml_command_evaluate((ml_state_t *)Console, Parser, Compiler);
 }
 
@@ -169,6 +173,7 @@ static void console_step_out(GtkWidget *Button, gtk_console_t *Console) {
 	ml_compiler_t *Compiler = Console->Compiler;
 	ml_parser_reset(Parser);
 	ml_parser_input(Parser, "step_out()", 0);
+	ml_preemption_enable();
 	ml_command_evaluate((ml_state_t *)Console, Parser, Compiler);
 }
 
@@ -177,6 +182,7 @@ static void console_continue(GtkWidget *Button, gtk_console_t *Console) {
 	ml_compiler_t *Compiler = Console->Compiler;
 	ml_parser_reset(Parser);
 	ml_parser_input(Parser, "continue()", 0);
+	ml_preemption_enable();
 	ml_command_evaluate((ml_state_t *)Console, Parser, Compiler);
 }
 
@@ -193,6 +199,7 @@ void gtk_console_evaluate(gtk_console_t *Console, const char *Text) {
 	ml_compiler_t *Compiler = Console->Compiler;
 	ml_parser_reset(Parser);
 	ml_parser_input(Parser, Text, 1);
+	ml_preemption_enable();
 	ml_command_evaluate((ml_state_t *)Console, Parser, Compiler);
 }
 

@@ -1,0 +1,18 @@
+:<scope("imgui";) do
+	let Dir := file("imgui")
+	let Lib := file("cimgui.a") => fun() do
+		Dir:rmdir
+		execute("git clone --recursive https://github.com/cimgui/cimgui.git", Dir)
+		Dir:chdir
+		execute('cmake . -DIMGUI_STATIC=on -DCMAKE_INSTALL_PREFIX={PATH}')
+		execute('make -j4 install')
+	end
+	PREBUILDS := old + [Lib]
+	CFLAGS := old + ["-DGC_PTHREADS", '-I{file("include")}']
+	LDFLAGS := old + [Lib]
+	so_module("ui/imgui.so", [file("imgui.o")])
+end>:
+
+if PLATFORM = "Android" then
+	so_module("ui/termux.so", [file("termux.o")], ["-ltermuxgui"])
+end

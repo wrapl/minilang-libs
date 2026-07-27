@@ -1679,24 +1679,24 @@ ML_METHOD("::", GirObjectInstanceT, MLStringT) {
 
 typedef struct {
 	ml_scheduler_t Base;
-	ml_scheduler_queue_t *Queue;
 	GMainContext *MainContext;
 } gir_scheduler_t;
 
 int ml_gir_queue_add(gir_scheduler_t *Scheduler, ml_state_t *State, ml_value_t *Value) {
-	int Fill = ml_scheduler_queue_add(Scheduler->Queue, State, Value);
+	int Fill = ml_scheduler_queue_add(Scheduler->Base.Queue, State, Value);
 	g_main_context_wakeup(Scheduler->MainContext);
 	return Fill;
 }
 
 void ml_gir_queue_run(gir_scheduler_t *Scheduler) {
-	while (g_main_context_iteration(Scheduler->MainContext, !Scheduler->Base.Fill));
-	ml_queued_state_t QueuedState = ml_scheduler_queue_next(Scheduler->Queue);
+	ml_scheduler_queue_t *Queue = Scheduler->Base.Queue;
+	while (g_main_context_iteration(Scheduler->MainContext, !ml_scheduler_queue_fill(Queue)));
+	ml_queued_state_t QueuedState = ml_scheduler_queue_next(Queue);
 	if (QueuedState.State) QueuedState.State->run(QueuedState.State, QueuedState.Value);
 }
 
 int ml_gir_queue_fill(gir_scheduler_t *Scheduler) {
-	return ml_scheduler_queue_fill(Scheduler->Queue);
+	return ml_scheduler_queue_fill(Scheduler->Base.Queue);
 }
 
 typedef struct {
@@ -1725,7 +1725,7 @@ static gir_scheduler_t *gir_scheduler(ml_context_t *Context) {
 	Scheduler->Base.run = (ml_scheduler_run_fn)ml_gir_queue_run;
 	Scheduler->Base.fill = (ml_scheduler_fill_fn)ml_gir_queue_fill;
 	Scheduler->Base.sleep = (ml_scheduler_sleep_fn)ml_gir_queue_sleep;
-	Scheduler->Queue = ml_default_queue_init(Context, 256);
+	Scheduler->Base.Queue = ml_scheduler_queue(256);
 	Scheduler->MainContext = g_main_context_default();
 	ml_context_set_static(Context, ML_SCHEDULER_INDEX, Scheduler);
 	return Scheduler;

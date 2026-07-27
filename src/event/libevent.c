@@ -18,7 +18,6 @@
 
 typedef struct {
 	ml_scheduler_t Base;
-	ml_scheduler_queue_t *Queue;
 	struct event_base *Events;
 	struct event *QueueEvent;
 } event_scheduler_t;
@@ -367,19 +366,20 @@ ML_METHOD("bind", EventHttpT, MLStringT, MLIntegerT) {
 }
 
 int ml_event_queue_add(event_scheduler_t *Scheduler, ml_state_t *State, ml_value_t *Value) {
-	int Fill = ml_scheduler_queue_add(Scheduler->Queue, State, Value);
+	int Fill = ml_scheduler_queue_add(Scheduler->Base.Queue, State, Value);
 	event_active(Scheduler->QueueEvent, 0, 0);
 	return Fill;
 }
 
 void ml_event_queue_run(event_scheduler_t *Scheduler) {
-	while (!ml_scheduler_queue_fill(Scheduler->Queue)) event_base_loop(Scheduler->Events, EVLOOP_NO_EXIT_ON_EMPTY);
-	ml_queued_state_t QueuedState = ml_scheduler_queue_next(Scheduler->Queue);
+	ml_scheduler_queue_t *Queue = Scheduler->Base.Queue;
+	while (!ml_scheduler_queue_fill(Queue)) event_base_loop(Scheduler->Events, EVLOOP_NO_EXIT_ON_EMPTY);
+	ml_queued_state_t QueuedState = ml_scheduler_queue_next(Queue);
 	if (QueuedState.State) QueuedState.State->run(QueuedState.State, QueuedState.Value);
 }
 
 int ml_event_queue_fill(event_scheduler_t *Scheduler) {
-	return ml_scheduler_queue_fill(Scheduler->Queue);
+	return ml_scheduler_queue_fill(Scheduler->Base.Queue);
 }
 
 typedef struct {
@@ -425,7 +425,7 @@ ML_LIBRARY_ENTRY(event_libevent) {
 	Scheduler->Base.run = (ml_scheduler_run_fn)ml_event_queue_run;
 	Scheduler->Base.fill = (ml_scheduler_fill_fn)ml_event_queue_fill;
 	Scheduler->Base.sleep = (ml_scheduler_sleep_fn)ml_event_queue_sleep;
-	Scheduler->Queue = ml_default_queue_init(Caller->Context, 256);
+	Scheduler->Base.Queue = ml_scheduler_queue(256);
 	Scheduler->Events = event_base_new();
 	Scheduler->QueueEvent = event_new(Scheduler->Events, -1, EV_PERSIST, (event_callback_fn)event_queue_run, Scheduler);
 	ml_context_set_static(Caller->Context, ML_SCHEDULER_INDEX, Scheduler);

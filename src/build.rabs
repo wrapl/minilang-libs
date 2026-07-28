@@ -1,6 +1,8 @@
 if PLATFORM = "Darwin" then
 	setenv("LDFLAGS", '-L/usr/local/opt/libffi/lib')
 	setenv("PKG_CONFIG_PATH", '/usr/local/opt/libffi/lib/pkgconfig')
+	CFLAGS := old + ['-I/opt/homebrew/include']
+	LDFLAGS := old + ['-L/opt/homebrew/lib']
 end
 
 MODULE_DIR := old or (LIB_DIR/"minilang"):mkdir

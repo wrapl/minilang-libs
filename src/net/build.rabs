@@ -19,7 +19,7 @@ file("curl_options.c")[CurlHeader] => fun(Target) do
 		if let (_, Value, Type) := Line % r"CURLOPT\(CURLOPT_([A-Z_]+), CURLOPTTYPE_([A-Z_]+), [0-9]+\)" then
 			Options[Type, /list]:put(Value)
 			Comments[Value] := Buffer:rest
-		elseif let (_, Value, Type) := Line % r"CURLINFO_([A-Z_]+)\s+=\s+CURLINFO_([A-Z_]+)\s+\+\s+[0-9]+" then
+		elseif let (_, Value, Type) := Line % r"CURLINFO_([A-Z_]+)[ \t]+=[ \t]+CURLINFO_([A-Z_]+)[ \t]+\+[ \t]+[0-9]+" then
 			Infos[Type, /list]:put(Value)
 			Comments[Value] := Buffer:rest
 		elseif Line:trim = "" or Line:starts("typedef") or Line:find("CURLOPTDEPRECATED") then

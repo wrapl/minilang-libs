@@ -86,7 +86,7 @@ so_module := fun(Name, Objects, Libraries, Extra, Tags := []) do
 			end
 			File:close
 		end
-		Library[Objects, Libraries] => fun(Library) do
+		Library[Objects, Libraries, Exports] => fun(Library) do
 			Library:dir:mkdir
 			execute('cc', '-o', Library, '-dynamiclib', Objects, Libraries, LDFLAGS, '-exported_symbols_list', Exports, '-undefined', 'dynamic_lookup')
 			Extra and Extra(Library)

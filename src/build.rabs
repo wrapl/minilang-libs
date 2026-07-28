@@ -81,7 +81,7 @@ so_module := fun(Name, Objects, Libraries, Extra, Tags := []) do
 	if PLATFORM = "Darwin" then
 		let Exports := file(Name:replace("/", "_") + ".txt")[Objects] => fun(Target) do
 			let File := Target:open("w")
-			for Export in set(Objects => shell("nm", _) ->> (_ / "\n") -> (_ % r"[0-9A-F]+ [DST] (_[mM][lL]_.*)") ->? 1 -> _[2]) do
+			for Export in set(Objects -> shell("nm", _) ->> (_ / "\n") -> (_ % r"[0-9A-F]+ [DST] (_[mM][lL]_.*)") ->? 1 -> _[2]) do
 				File:write(Export, "\n")
 			end
 			File:close

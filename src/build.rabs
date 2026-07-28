@@ -76,11 +76,27 @@ so_module := fun(Name, Objects, Libraries, Extra, Tags := []) do
 			end
 		end
 	end
-	Library[Objects, Libraries] => fun(Library) do
-		Library:dir:mkdir
-		execute('cc', '-o', Library, '-shared', '-Wl,--export-dynamic', Objects, Libraries, LDFLAGS, '-Wl,--dynamic-list={Exports}')
-		Extra and Extra(Library)
-		:>DEBUG or execute("strip", Library)
+	if PLATFORM = "Darwin" then
+		let Exports := file(Name:replace("/", "_") + ".txt")[Objects] => fun(Target) do
+			let File := Target:open("w")
+			for Export in set(Objects => shell("nm", _) ->> (_ / "\n") -> (_ % r"[0-9A-F]+ [DST] (_[mM][lL]_.*)") ->? 1 -> _[2]) do
+				File:write(Export, "\n")
+			end
+			File:close
+		end
+		Library[Objects, Libraries] => fun(Library) do
+			Library:dir:mkdir
+			execute('cc', '-o', Library, '-dynamiclib', Objects, Libraries, LDFLAGS, '-exported_symbols_list', Exports, '-undefined', 'dynamic_lookup')
+			Extra and Extra(Library)
+			:>DEBUG or execute("strip", Library)
+		end
+	else
+		Library[Objects, Libraries] => fun(Library) do
+			Library:dir:mkdir
+			execute('cc', '-o', Library, '-shared', '-Wl,--export-dynamic', Objects, Libraries, LDFLAGS, '-Wl,--dynamic-list={Exports}')
+			Extra and Extra(Library)
+			:>DEBUG or execute("strip", Library)
+		end
 	end
 	module(Name, Library, Tags)
 end
@@ -110,7 +126,7 @@ end
 
 CFLAGS := old + [
 	"-march=native",
-	"-std=gnu11", :>'--save-temps',
+	:>"-std=gnu11", :>'--save-temps',
 	"-fstrict-aliasing",
 	"-foptimize-sibling-calls",
 	"-Wall", "-Wstrict-aliasing",

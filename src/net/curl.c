@@ -395,6 +395,11 @@ ML_METHODX("set", CurlT, CurlOptionFunctionT, MLFunctionT) {
 static curl_multi_t DefaultMulti[1];
 
 static void *multi_thread_fn(void *Arg) {
+#ifdef Darwin
+	pthread_setname_np("curl");
+#else
+	pthread_setname_np(pthread_self(), "curl");
+#endif
 	curl_multi_t *Multi = (curl_multi_t *)Arg;
 	for (;;) {
 		CURLMcode Result = curl_multi_poll(Multi->Handle, NULL, 0, 1000, NULL);
@@ -554,7 +559,6 @@ ML_LIBRARY_ENTRY0(net_curl) {
 	DefaultMulti->Queue = NULL;
 	pthread_t Thread;
 	pthread_create(&Thread, NULL, multi_thread_fn, DefaultMulti);
-	pthread_setname_np(Thread, "curl");
 #include "curl_init.c"
 	stringmap_insert(CurlT->Exports, "option", CurlOptionT);
 	stringmap_insert(CurlT->Exports, "info", CurlInfoT);

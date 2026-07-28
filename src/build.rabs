@@ -134,7 +134,6 @@ CFLAGS := old + [
 	"-Wall", "-Wstrict-aliasing",
 	"-Wno-deprecated-declarations",
 	"-Wno-unused-function",
-	"-Werror=cast-function-type",
 	:>"-Wsuggest-attribute=pure",
 	:>"-Wsuggest-attribute=const",
 	:>"-Wsuggest-attribute=noreturn",
@@ -146,6 +145,12 @@ CFLAGS := old + [
 	"-fpic", "-I.."
 ]
 LDFLAGS := old + ["-lm", "-ldl"]
+
+if PLATFORM != "Darwin" then
+	CFLAGS := old + [
+		"-Werror=cast-function-type"
+	]
+end
 
 if PLATFORM = "Android" then
 	CFLAGS := old + [

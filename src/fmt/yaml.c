@@ -236,7 +236,7 @@ ML_METHOD(Decode, MLStringT) {
 	State->Key = IsList;
 	for (;;) {
 		if (!yaml_parser_parse(Parser, Event)) {
-			State->Container = ml_error("YAMLError", "%s at %ld (%s)", Parser->problem, Parser->problem_offset, Parser->context);
+			State->Container = ml_error("YAMLError", "%s at %ld:%ld (%s)", Parser->problem, Parser->problem_mark.line, Parser->problem_mark.column, Parser->context);
 			goto done;
 		}
 		if (Event->type) printf("Event = %d\n", Event->type);

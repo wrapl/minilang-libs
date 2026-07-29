@@ -99,6 +99,7 @@ ML_TYPE(TypelibIterT, (), "typelib-iter");
 //!internal
 
 ml_value_t *ml_gir_typelib(const char *Name, const char *Version) {
+	ML_LOG_DEBUG(NULL, "Loading g-ir typelib %s:%s", Name, Version);
 	typelib_t *Typelib = new(typelib_t);
 	Typelib->Type = MLGirTypelibT;
 	Typelib->Namespace = Name;

@@ -16,7 +16,7 @@ end
 scope("gtk_console";) do
 	CFLAGS := old + [
 		pkgconfig("--cflags gobject-introspection-1.0"),
-		pkgconfig("--cflags gtk+-3.0 gdk-pixbuf-2.0 gtksourceview-4")
+		pkgconfig("--cflags gtk4 gdk-pixbuf-2.0 gtksourceview-5")
 	]
 	let LinkArg := if PLATFORM = "Darwin" then
 		"-rpath,@loader_path"
@@ -25,7 +25,7 @@ scope("gtk_console";) do
 	end
 	LDFLAGS := old + [
 		pkgconfig("--libs gobject-introspection-1.0 gio-2.0"),
-		pkgconfig("--libs gtk+-3.0 gdk-pixbuf-2.0 gtksourceview-4"),
+		pkgconfig("--libs gtk4 gdk-pixbuf-2.0 gtksourceview-5"),
 		'-Wl,{LinkArg}'
 	]
 	PREBUILDS := old + [GIR]
@@ -34,7 +34,7 @@ scope("gtk_console";) do
 			execute("patchelf", Library, "--replace-needed", GIR, "gir.so")
 		end
 	end
-	share_file("gtksourceview-4/language-specs", "minilang.lang", Tags is ["gtk"])
+	share_file("gtksourceview-5/language-specs", "minilang.lang", Tags is ["gtk"])
 end
 
 context(""):in(;) meta("gtk_console")[meta("gir"), meta("minilang.lang")]

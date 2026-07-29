@@ -19,15 +19,110 @@
 static struct event_base *Events = NULL;
 static pthread_t EventThread;
 
-typedef struct event_t {
+typedef struct {
+	ml_state_t Base;
+	ml_value_t *Value;
+	ml_value_t *Args[];
+} call_state_t;
+
+static void call_state_done(call_state_t *State, ml_value_t *Value) {
+	if (ml_is_error(Value)) ML_LOG_ERROR(Value, "Callback returned an error");
+}
+
+static void call_state_run(call_state_t *State, ml_value_t *Value) {
+	State->Base.run = (ml_state_fn)call_state_done;
+	return ml_call(State, State->Value, ml_integer_value(Value), State->Args);
+}
+
+typedef struct {
 	const ml_type_t *Type;
 	struct event *Handle;
+	ml_context_t *Context;
+	ml_value_t *Function;
 } ml_event_t;
 
 ML_TYPE(EventT, (), "event");
 
 ML_FUNCTIONX(EventSleep) {
 	ML_RETURN(MLNil);
+}
+
+ML_FLAGS2(EventTypeT, "event-type",
+	"Timeout", EV_TIMEOUT,
+	"Read", EV_READ,
+	"Write", EV_WRITE,
+	"Signal", EV_SIGNAL,
+	"Persist", EV_PERSIST,
+	"ET", EV_ET,
+	"Finalize", EV_FINALIZE,
+	"Closed", EV_CLOSED
+);
+
+static void event_fn(evutil_socket_t Socket, short Events, void *Data) {
+	ML_LOG_WARN(NULL, "Got a libevent event on socket %d -> %d", Socket, Events);
+	ml_event_t *Event = (ml_event_t *)Data;
+	call_state_t *State = xnew(call_state_t, 1, ml_value_t *);
+	State->Base.Context = Event->Context;
+	State->Base.run = (ml_state_fn)call_state_run;
+	State->Value = Event->Function;
+	State->Args[0] = ml_flags_value(EventTypeT, Events);
+	ml_state_schedule((ml_state_t *)State, ml_integer(1));
+}
+
+ML_FUNCTIONX(EventSocket) {
+	ML_CHECKX_ARG_COUNT(3);
+	ML_CHECKX_ARG_TYPE(0, MLIntegerT);
+	ML_CHECKX_ARG_TYPE(1, EventTypeT);
+	ML_CHECKX_ARG_TYPE(2, MLFunctionT);
+	ml_event_t *Event = new(ml_event_t);
+	Event->Type = EventT;
+	Event->Handle = event_new(Events, ml_integer_value(Args[0]), ml_flags_value_value(Args[1]), event_fn, Event);
+	Event->Context = Caller->Context;
+	Event->Function = Args[2];
+	event_add(Event->Handle, NULL);
+	ML_RETURN(Event);
+}
+
+ML_TYPE(EventTimerT, (EventT), "event-timer");
+
+ML_METHOD("cancel", EventTimerT) {
+	ml_event_t *Timer = (ml_event_t *)Args[0];
+	evtimer_del(Timer->Handle);
+	return MLNil;
+}
+
+ML_FUNCTIONX(EventEvery) {
+	ML_CHECKX_ARG_COUNT(2);
+	ML_CHECKX_ARG_TYPE(0, MLRealT);
+	ML_CHECKX_ARG_TYPE(1, MLFunctionT);
+	ml_event_t *Timer = new(ml_event_t);
+	Timer->Type = EventTimerT;
+	Timer->Handle = event_new(Events, -1, EV_PERSIST, event_fn, Timer);
+	Timer->Context = Caller->Context;
+	Timer->Function = Args[1];
+	double Seconds = ml_real_value(Args[0]);
+	struct timeval Interval;
+	Interval.tv_sec = floor(Seconds);
+	Interval.tv_usec = (Seconds - Interval.tv_sec) * 1000000;
+	evtimer_add(Timer->Handle, &Interval);
+	ML_RETURN(Timer);
+}
+
+ML_FUNCTIONX(EventAfter) {
+	ML_CHECKX_ARG_COUNT(2);
+	ML_CHECKX_ARG_TYPE(0, MLRealT);
+	ML_CHECKX_ARG_TYPE(1, MLFunctionT);
+	ml_event_t *Timer = new(ml_event_t);
+	Timer->Type = EventTimerT;
+	Timer->Handle = event_new(Events, -1, 0, event_fn, Timer);
+	Timer->Context = Caller->Context;
+	Timer->Function = Args[1];
+	double Seconds = ml_real_value(Args[0]);
+	struct timeval Interval;
+	Interval.tv_sec = floor(Seconds);
+	Interval.tv_usec = (Seconds - Interval.tv_sec) * 1000000;
+	evtimer_add(Timer->Handle, &Interval);
+	ML_RETURN(Timer);
 }
 
 typedef struct {
@@ -43,21 +138,6 @@ ML_METHOD(EventHttpT) {
 	Http->Handle = evhttp_new(Events);
 	evhttp_set_max_connections(Http->Handle, 1000);
 	return (ml_value_t *)Http;
-}
-
-typedef struct {
-	ml_state_t Base;
-	ml_value_t *Value;
-	ml_value_t *Args[];
-} call_state_t;
-
-static void call_state_done(call_state_t *State, ml_value_t *Value) {
-	if (ml_is_error(Value)) ML_LOG_ERROR(Value, "Callback returned an error");
-}
-
-static void call_state_run(call_state_t *State, ml_value_t *Value) {
-	State->Base.run = (ml_state_fn)call_state_done;
-	return ml_call(State, State->Value, ml_integer_value(Value), State->Args);
 }
 
 typedef enum {
@@ -417,101 +497,6 @@ ML_METHOD("bind", EventHttpT, MLStringT, MLIntegerT) {
 	}
 }
 
-/*int ml_event_queue_add(event_scheduler_t *Scheduler, ml_state_t *State, ml_value_t *Value) {
-	int Fill = ml_scheduler_queue_add(Scheduler->Queue, State, Value);
-	event_active(Scheduler->QueueEvent, 0, 0);
-	return Fill;
-}
-
-void ml_event_queue_run(event_scheduler_t *Scheduler) {
-	while (!ml_scheduler_queue_fill(Scheduler->Queue)) event_base_loop(Scheduler->Events, EVLOOP_NO_EXIT_ON_EMPTY);
-	ml_queued_state_t QueuedState = ml_scheduler_queue_next(Scheduler->Queue);
-	if (QueuedState.State) QueuedState.State->run(QueuedState.State, QueuedState.Value);
-}
-
-int ml_event_queue_fill(event_scheduler_t *Scheduler) {
-	return ml_scheduler_queue_fill(Scheduler->Queue);
-}
-
-typedef struct {
-	ml_state_t *State;
-	ml_value_t *Result;
-	struct event *Event;
-} ml_event_sleep_t;
-
-static void sleep_run(evutil_socket_t Socket, short Events, ml_event_sleep_t *Sleep) {
-	ml_state_schedule(Sleep->State, Sleep->Result);
-	event_free(Sleep->Event);
-}
-
-void ml_event_queue_sleep(event_scheduler_t *Scheduler, ml_state_t *State, double Duration, ml_value_t *Result) {
-	ml_event_sleep_t *Sleep = new(ml_event_sleep_t);
-	Sleep->State = State;
-	Sleep->Result = Result;
-	Sleep->Event = event_new(Scheduler->Events, -1, 0, (event_callback_fn)sleep_run, Sleep);
-	struct timeval Timeout;
-	Timeout.tv_sec = floor(Duration);
-	Timeout.tv_usec = (Duration - Timeout.tv_sec) * 1000000;
-	event_add(Sleep->Event, &Timeout);
-}*/
-
-typedef struct {
-	ml_type_t *Type;
-	struct event *Handle;
-	ml_context_t *Context;
-	ml_value_t *Fn;
-} evtimer_t;
-
-ML_TYPE(EventTimerT, (), "event-timer");
-
-static void timer_callback(evutil_socket_t Socket, short Events, evtimer_t *Timer) {
-	call_state_t *State = new(call_state_t);
-	State->Base.Context = Timer->Context;
-	State->Base.run = (ml_state_fn)call_state_run;
-	State->Value = Timer->Fn;
-	ml_state_schedule((ml_state_t *)State, ml_integer(0));
-}
-
-ML_METHOD("cancel", EventTimerT) {
-	evtimer_t *Timer = (evtimer_t *)Args[0];
-	evtimer_del(Timer->Handle);
-	return MLNil;
-}
-
-ML_FUNCTIONX(EventEvery) {
-	ML_CHECKX_ARG_COUNT(2);
-	ML_CHECKX_ARG_TYPE(0, MLRealT);
-	ML_CHECKX_ARG_TYPE(1, MLFunctionT);
-	evtimer_t *Timer = new(evtimer_t);
-	Timer->Type = EventTimerT;
-	Timer->Handle = event_new(Events, -1, EV_PERSIST, (void *)timer_callback, Timer);
-	Timer->Context = Caller->Context;
-	Timer->Fn = Args[1];
-	double Seconds = ml_real_value(Args[0]);
-	struct timeval Interval;
-	Interval.tv_sec = floor(Seconds);
-	Interval.tv_usec = (Seconds - Interval.tv_sec) * 1000000;
-	evtimer_add(Timer->Handle, &Interval);
-	ML_RETURN(Timer);
-}
-
-ML_FUNCTIONX(EventAfter) {
-	ML_CHECKX_ARG_COUNT(2);
-	ML_CHECKX_ARG_TYPE(0, MLRealT);
-	ML_CHECKX_ARG_TYPE(1, MLFunctionT);
-	evtimer_t *Timer = new(evtimer_t);
-	Timer->Type = EventTimerT;
-	Timer->Handle = event_new(Events, -1, 0, (void *)timer_callback, Timer);
-	Timer->Context = Caller->Context;
-	Timer->Fn = Args[1];
-	double Seconds = ml_real_value(Args[0]);
-	struct timeval Interval;
-	Interval.tv_sec = floor(Seconds);
-	Interval.tv_usec = (Seconds - Interval.tv_sec) * 1000000;
-	evtimer_add(Timer->Handle, &Interval);
-	ML_RETURN(Timer);
-}
-
 static void nop_free(void *Ptr) {
 }
 
@@ -536,9 +521,11 @@ ML_LIBRARY_ENTRY(event_libevent) {
 	stringmap_insert(EventHttpT->Exports, "request", HttpRequestT);
 	stringmap_insert(EventHttpT->Exports, "method", HttpMethodT);
 	ml_value_t *Module = Slot[0] = ml_module("libevent",
-		"http", EventHttpT,
+		"type", EventTypeT,
+		"socket", EventSocket,
 		"every", EventEvery,
 		"after", EventAfter,
+		"http", EventHttpT,
 	NULL);
 	ML_RETURN(Module);
 }

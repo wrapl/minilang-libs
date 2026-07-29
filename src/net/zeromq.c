@@ -250,7 +250,7 @@ SOCKET_OPTION_STRING_SET(unsubscribe)
 SOCKET_OPTION_STRING(identity)
 SOCKET_OPTION_STRING(tcp_accept_filter)
 
-ML_ENUM2(SocketEventT, "zeromq::socket::event",
+ML_FLAGS2(SocketEventT, "zeromq::socket::event",
 	"In", ZMQ_POLLIN,
 	"Out", ZMQ_POLLOUT,
 	"Err", ZMQ_POLLERR,

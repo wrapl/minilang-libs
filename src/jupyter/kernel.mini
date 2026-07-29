@@ -1,10 +1,9 @@
 import: zeromq("net/zeromq")
 import: json("fmt/json")
-import: glib("gir/GLib")
-import: glibunix("gir/GLibUnix")
-import: gtk("gir/Gtk@3.0")
+import: libevent("event/libevent2")
 import: hmac("digest/hmac")
 import: base16("enc/base16")
+logger: log("main")
 
 let Config := with Json := file(sys::Args[1], "r") do
 	must Json:close
@@ -39,9 +38,11 @@ IOPub:bind('{Config["transport"]}://{Config["ip"]}:{Config["iopub_port"]}')
 def Sockets := {}
 
 fun check_socket(Name, Socket, Callback) do
-	if Socket:events /\ 1 = 1 then
+	let Events := Socket:events
+	log::info(Name, "events", Events)
+	if Events /\ 1 = 1 then
 		let Message := list(zeromq::message(Socket), :data)
-		print('{Name} <- {Message}\n')
+		log::info(Name, "<-", Message)
 		let Ids := if let Index := Message:find("<IDS|MSG>") then
 			Message:splice(1, Index)
 		else
@@ -64,7 +65,10 @@ end
 
 fun listen(Name, Socket, Callback) do
 	Sockets[Name] := (Socket, Callback)
-	glibunix::fd_add_full(0, Socket:fd, glib::IOCondition::in; Fd, Condition) do
+	log::info("Listening on socket", Name)
+	:>glibunix::fd_add_full(0, Socket:fd, glib::IOCondition::in; Fd, Condition) do
+	libevent::socket(Socket:fd, libevent::type("Read", "Persist"); Events) do
+		log::info(Name, "events", string(Events))
 		check_socket(Name, Socket, Callback)
 		ret true
 	on Error do
@@ -341,3 +345,6 @@ end
 listen("Stdin", Stdin; Message) do
 end
 
+log::info("Starting Minilang Jupyter kernel")
+
+callcc(0)

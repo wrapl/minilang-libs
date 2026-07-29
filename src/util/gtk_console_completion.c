@@ -6,7 +6,7 @@ struct _ConsoleCompletionProvider {
 	ml_compiler_t *Compiler;
 };
 
-static void gtk_console_completion_provider_interface_init(GtkSourceCompletionProviderIface *Interface);
+static void gtk_console_completion_provider_interface_init(GtkSourceCompletionProviderInterface *Interface);
 
 G_DEFINE_TYPE_WITH_CODE(ConsoleCompletionProvider, gtk_console_completion_provider, G_TYPE_OBJECT, G_IMPLEMENT_INTERFACE(GTK_SOURCE_TYPE_COMPLETION_PROVIDER, gtk_console_completion_provider_interface_init))
 
@@ -16,30 +16,24 @@ static void gtk_console_completion_provider_class_init(ConsoleCompletionProvider
 static void gtk_console_completion_provider_init(ConsoleCompletionProvider *Provider) {
 }
 
-static gchar *gtk_console_completion_provider_get_name(ConsoleCompletionProvider *Provider) {
+static gchar *gtk_console_completion_provider_get_title(GtkSourceCompletionProvider *Self) {
+	//ConsoleCompletionProvider *Provider = CONSOLE_COMPLETION_PROVIDER(Self);
 	return g_strdup("console-completion");
 }
 
-/*
-static GdkPixbuf *console_completion_provider_get_icon(ConsoleCompletionProvider *Provider) {
-	printf("%s()\n", __FUNCTION__);
+struct _ConsoleCompletionProposal {
+	GObject parent_instance;
+	const char *Text;
+};
 
+G_DEFINE_TYPE_WITH_CODE(ConsoleCompletionProposal, gtk_console_completion_proposal, G_TYPE_OBJECT, G_IMPLEMENT_INTERFACE(GTK_SOURCE_TYPE_COMPLETION_PROPOSAL, NULL));
+
+static void gtk_console_completion_proposal_init(ConsoleCompletionProposal *Proposal) {
 }
-
-static const gchar *console_completion_provider_get_icon_name(ConsoleCompletionProvider *Provider) {
-	printf("%s()\n", __FUNCTION__);
-
-}
-
-static GIcon *console_completion_provider_get_gicon(ConsoleCompletionProvider *Provider) {
-	printf("%s()\n", __FUNCTION__);
-
-}
-*/
 
 typedef struct {
 	gchar *Prefix;
-	GList *Proposals;
+	GListStore *Proposals;
 	int PrefixLength;
 } populate_info_t;
 
@@ -47,38 +41,35 @@ static int populate_fn(const char *Name, void *Value, populate_info_t *Info) {
 	if (Info->Prefix) {
 		if (strncmp(Name, Info->Prefix, Info->PrefixLength)) return 0;
 	}
-	GtkSourceCompletionItem *Item = gtk_source_completion_item_new();
-	gtk_source_completion_item_set_label(Item, g_strdup(Name));
-	gtk_source_completion_item_set_text(Item, g_strdup(Name));
-	Info->Proposals = g_list_prepend(Info->Proposals, Item);
+	ConsoleCompletionProposal *Proposal = (ConsoleCompletionProposal *)g_object_new(CONSOLE_TYPE_COMPLETION_PROPOSAL, NULL);
+	Proposal->Text = Name;
+	g_list_store_append(Info->Proposals, G_OBJECT(Proposal));
 	return 0;
 }
 
-static void gtk_console_completion_provider_populate(ConsoleCompletionProvider *Provider, GtkSourceCompletionContext *Context) {
-	GtkTextIter Start;
-	gtk_source_completion_context_get_iter(Context, &Start);
+static void gtk_console_completion_provider_populate_async(GtkSourceCompletionProvider *Self, GtkSourceCompletionContext *Context, GCancellable *Cancellable, GAsyncReadyCallback Callback, gpointer Data) {
+	ConsoleCompletionProvider *Provider = CONSOLE_COMPLETION_PROVIDER(Self);
+	GTask *Task = g_task_new(Provider, Cancellable, Callback, Data);
+	GtkTextIter Start, End;
+	gtk_source_completion_context_get_bounds(Context, &Start, &End);
 	populate_info_t Info[1];
 	Info->Prefix = NULL;
-	Info->Proposals = NULL;
-	if (gtk_text_iter_ends_word(&Start)) {
-		GtkTextIter Iter = Start;
-		gtk_text_iter_backward_word_start(&Start);
-		Info->Prefix = gtk_text_iter_get_text(&Start, &Iter);
+	Info->Proposals = g_list_store_new(CONSOLE_TYPE_COMPLETION_PROPOSAL);
+	if (gtk_text_iter_ends_word(&End)) {
+		Info->Prefix = gtk_text_iter_get_text(&Start, &End);
 		Info->PrefixLength = strlen(Info->Prefix);
 	}
-	GtkTextIter End = Start;
-	gtk_text_iter_backward_visible_word_start(&Start);
+	//gtk_text_iter_backward_visible_word_start(&Start);
 	gtk_text_iter_backward_chars(&End, 2);
 	gchar *Name = gtk_text_iter_get_text(&Start, &End);
 	ml_value_t *Value = ml_compiler_lookup(Provider->Compiler, Name, "", 0, 0);
 	if (!Value) {
-		GtkTextIter Iter = Start;
+		GtkTextIter Iter = End;
 		do {
 			if (!gtk_text_iter_backward_char(&Iter)) break;
 			if (gtk_text_iter_get_char(&Iter) != ':') break;
 			if (!gtk_text_iter_backward_char(&Iter)) break;
 			if (gtk_text_iter_get_char(&Iter) != ':') break;
-			gtk_text_iter_backward_word_start(&Start);
 			gchar *Name0 = gtk_text_iter_get_text(&Start, &Iter);
 			ml_value_t *Value0 = ml_compiler_lookup(Provider->Compiler, Name0, "", 0, 0);
 			g_free(Name0);
@@ -106,77 +97,40 @@ static void gtk_console_completion_provider_populate(ConsoleCompletionProvider *
 				if (Info->Prefix) {
 					if (strncmp(Name, Info->Prefix, Info->PrefixLength)) continue;
 				}
-				GtkSourceCompletionItem *Item = gtk_source_completion_item_new();
-				gtk_source_completion_item_set_label(Item, g_strdup(Name));
-				gtk_source_completion_item_set_text(Item, g_strdup(Name));
-				Info->Proposals = g_list_prepend(Info->Proposals, Item);
+				ConsoleCompletionProposal *Proposal = (ConsoleCompletionProposal *)g_object_new(CONSOLE_TYPE_COMPLETION_PROPOSAL, NULL);
+				Proposal->Text = Name;
+				g_list_store_append(Info->Proposals, G_OBJECT(Proposal));
 			}
 		}
 	}
 	if (Info->Prefix) g_free(Info->Prefix);
-	Info->Proposals = g_list_reverse(Info->Proposals);
-	gtk_source_completion_context_add_proposals(Context, GTK_SOURCE_COMPLETION_PROVIDER(Provider), Info->Proposals, TRUE);
+	g_task_return_pointer(Task, Info->Proposals, g_object_unref);
+	g_object_unref(Task);
 }
 
-static gboolean gtk_console_completion_provider_match(ConsoleCompletionProvider *Provider, GtkSourceCompletionContext *Context) {
-	GtkTextIter Iter;
-	gtk_source_completion_context_get_iter(Context, &Iter);
-	if (gtk_text_iter_ends_word(&Iter)) {
+static GListModel *gtk_console_completion_provider_populate_finish(GtkSourceCompletionProvider *Self, GAsyncResult *Result, GError **Error) {
+	ConsoleCompletionProvider *Provider = CONSOLE_COMPLETION_PROVIDER(Self);
+	return g_task_propagate_pointer(G_TASK(Result), Error);
+}
+
+static void gtk_console_completion_provider_refilter(GtkSourceCompletionProvider *Self, GtkSourceCompletionContext *Context, GListModel *Model) {
+	ConsoleCompletionProvider *Provider = CONSOLE_COMPLETION_PROVIDER(Self);
+	GtkTextIter Start, End;
+	gtk_source_completion_context_get_bounds(Context, &Start, &End);
+	/*if (gtk_text_iter_ends_word(&Iter)) {
 		if (!gtk_text_iter_backward_word_start(&Iter)) return FALSE;
 	}
 	if (!gtk_text_iter_backward_char(&Iter)) return FALSE;
 	if (gtk_text_iter_get_char(&Iter) != ':') return FALSE;
 	if (!gtk_text_iter_backward_char(&Iter)) return FALSE;
-	if (gtk_text_iter_get_char(&Iter) != ':') return FALSE;
-	return TRUE;
+	if (gtk_text_iter_get_char(&Iter) != ':') return FALSE;*/
 }
 
-/*
-static GtkSourceCompletionActivation gtk_console_completion_provider_get_activation(ConsoleCompletionProvider *Provider) {
-	printf("%s()\n", __FUNCTION__);
-
-}
-
-static GtkWidget *gtk_console_completion_provider_get_info_widget(ConsoleCompletionProvider *Provider, GtkSourceCompletionProposal *Proposal) {
-	printf("%s()\n", __FUNCTION__);
-
-}
-
-static void gtk_console_completion_provider_update_info(ConsoleCompletionProvider *Provider, GtkSourceCompletionProposal *Proposal, GtkSourceCompletionInfo *Info) {
-	printf("%s()\n", __FUNCTION__);
-}
-
-static gboolean	gtk_console_completion_provider_get_start_iter(ConsoleCompletionProvider *Provider, GtkSourceCompletionContext *Context, GtkSourceCompletionProposal *Proposal, GtkTextIter *Iter) {
-	printf("%s()\n", __FUNCTION__);
-}
-
-static gboolean	gtk_console_completion_provider_activate_proposal(ConsoleCompletionProvider *Provider, GtkSourceCompletionProposal *Proposal, GtkTextIter *Iter) {
-	printf("%s()\n", __FUNCTION__);
-}
-
-static gint gtk_console_completion_provider_get_interactive_delay(ConsoleCompletionProvider *Provider) {
-	printf("%s()\n", __FUNCTION__);
-}
-
-static gint gtk_console_completion_provider_get_priority(ConsoleCompletionProvider *Provider) {
-	printf("%s()\n", __FUNCTION__);
-}
-*/
-
-static void gtk_console_completion_provider_interface_init(GtkSourceCompletionProviderIface *Interface) {
-	Interface->get_name = (void *)gtk_console_completion_provider_get_name;
-	//Interface->get_icon = (void *)console_completion_provider_get_icon;
-	//Interface->get_icon_name = (void *)console_completion_provider_get_icon_name;
-	//Interface->get_gicon = (void *)console_completion_provider_get_gicon;
-	Interface->populate = (void *)gtk_console_completion_provider_populate;
-	Interface->match = (void *)gtk_console_completion_provider_match;
-	//Interface->get_activation = (void *)console_completion_provider_get_activation;
-	//Interface->get_info_widget = (void *)console_completion_provider_get_info_widget;
-	//Interface->update_info = (void *)console_completion_provider_update_info;
-	//Interface->get_start_iter = (void *)console_completion_provider_get_start_iter;
-	//Interface->activate_proposal = (void *)console_completion_provider_activate_proposal;
-	//Interface->get_interactive_delay = (void *)console_completion_provider_get_interactive_delay;
-	//Interface->get_priority = (void *)console_completion_provider_get_priority;
+static void gtk_console_completion_provider_interface_init(GtkSourceCompletionProviderInterface *Interface) {
+	Interface->get_title = gtk_console_completion_provider_get_title;
+	Interface->populate_async = gtk_console_completion_provider_populate_async;
+	Interface->populate_finish = gtk_console_completion_provider_populate_finish;
+	Interface->refilter = gtk_console_completion_provider_refilter;
 }
 
 GtkSourceCompletionProvider *gtk_console_completion_provider(ml_compiler_t *Compiler) {

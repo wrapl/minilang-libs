@@ -12,6 +12,11 @@ G_DECLARE_FINAL_TYPE(ConsoleCompletionProvider, gtk_console_completion_provider,
 
 GtkSourceCompletionProvider *gtk_console_completion_provider(ml_compiler_t *Compiler);
 
+#define CONSOLE_TYPE_COMPLETION_PROPOSAL gtk_console_completion_proposal_get_type()
+G_DECLARE_FINAL_TYPE(ConsoleCompletionProposal, gtk_console_completion_proposal, CONSOLE, COMPLETION_PROPOSAL, GObject)
+
+GObject *gtk_console_completion_proposal(const char *Text);
+
 G_END_DECLS
 
 #endif

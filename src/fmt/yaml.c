@@ -359,9 +359,59 @@ done:
 	return State->Container;
 }
 
+void ml_stringbuffer_escape_yaml(ml_stringbuffer_t *Buffer, const char *String, int Length) {
+	if (Length < 0) Length = strlen(String);
+	const char *S = String;
+	for (int I = Length; --I >= 0; ++S) {
+		switch (*S) {
+		case '\0':
+			ml_stringbuffer_write(Buffer, "\\0", strlen("\\0"));
+			break;
+		case '\a':
+			ml_stringbuffer_write(Buffer, "\\a", strlen("\\a"));
+			break;
+		case '\b':
+			ml_stringbuffer_write(Buffer, "\\b", strlen("\\b"));
+			break;
+		case '\t':
+			ml_stringbuffer_write(Buffer, "\\t", strlen("\\t"));
+			break;
+		case '\r':
+			ml_stringbuffer_write(Buffer, "\\r", strlen("\\r"));
+			break;
+		case '\n':
+			ml_stringbuffer_write(Buffer, "\\n", strlen("\\n"));
+			break;
+		case '\\':
+			ml_stringbuffer_write(Buffer, "\\\\", strlen("\\\\"));
+			break;
+		case '\"':
+			ml_stringbuffer_write(Buffer, "\\\"", strlen("\\\""));
+			break;
+		default:
+			ml_stringbuffer_write(Buffer, S, 1);
+			break;
+		}
+	}
+}
+
+ML_FUNCTION(Escape) {
+//@yaml::escape
+//<String:string
+//>string
+// Escapes characters in :mini:`String`, suitable for a YAML document.
+//$= yaml::escape("\'Hello\nworld!\'")
+	ML_CHECK_ARG_COUNT(1);
+	ML_CHECK_ARG_TYPE(0, MLStringT);
+	ml_stringbuffer_t Buffer[1] = {ML_STRINGBUFFER_INIT};
+	ml_stringbuffer_escape_yaml(Buffer, ml_string_value(Args[0]), ml_string_length(Args[0]));
+	return ml_stringbuffer_to_string(Buffer);
+}
+
 ML_LIBRARY_ENTRY0(fmt_yaml) {
 #include "yaml_init.c"
 	Slot[0] = ml_callable_module("yaml", (ml_value_t *)Decode,
 		"decode", Decode,
+		"escape", Escape,
 	NULL);
 }

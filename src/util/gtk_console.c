@@ -650,7 +650,7 @@ static gboolean console_keypress(GtkEventControllerKey *Controller, guint Keyval
 
 void gtk_console_show(gtk_console_t *Console, GtkWindow *Parent) {
 	gtk_window_set_transient_for(GTK_WINDOW(Console->Window), Parent);
-	gtk_widget_show(Console->Window);
+	gtk_window_present(GTK_WINDOW(Console->Window));
 	gtk_widget_hide(Console->DebugButtons);
 	gtk_widget_grab_focus(Console->InputView);
 }

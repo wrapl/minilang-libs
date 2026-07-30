@@ -542,7 +542,7 @@ static void console_size_allocate(GtkWindow *Window, GdkRectangle *Allocation, g
 	}
 }
 
-static gboolean console_quit(GtkWindow *Window, GdkEvent *Event, gtk_console_t *Console) {
+static gboolean console_quit(GtkWindow *Window, gtk_console_t *Console) {
 	g_source_remove(Console->StatusTimeout);
 	ml_state_schedule(Console->Base.Caller, MLNil);
 	return FALSE;

@@ -10,6 +10,7 @@
 #include <girepository.h>
 #include <minilang/ml_library.h>
 #include <minilang/ml_macros.h>
+#include <minilang/ml_logging.h>
 #include <sys/stat.h>
 
 #include "gir.h"
@@ -36,11 +37,11 @@ struct gtk_console_t {
 	GtkTextTag *OutputTag, *ResultTag, *ErrorTag, *BinaryTag;
 	GtkTextMark *EndMark;
 	GtkSourceBuffer *SourceBuffer;
+	GtkCssProvider *CssProvider;
 	ml_getter_t ParentGetter;
 	void *ParentGlobals;
 	ml_interactive_debugger_t *Debugger;
 	const char *ConfigPath;
-	const char *FontName;
 	GKeyFile *Config;
 	PangoFontDescription *FontDescription;
 	ml_parser_t *Parser;
@@ -283,8 +284,6 @@ static GtkWidget *console_open_source(gtk_console_t *Console, const char *Source
 		gtk_scrolled_window_set_child(GTK_SCROLLED_WINDOW(Scrolled), View);
 		gtk_text_view_set_monospace(GTK_TEXT_VIEW(View), TRUE);
 		gtk_text_view_set_editable(GTK_TEXT_VIEW(View), FALSE);
-
-		//gtk_widget_override_font(View, Console->FontDescription);
 		gtk_source_view_set_tab_width(GTK_SOURCE_VIEW(View), 4);
 		gtk_source_view_set_highlight_current_line(GTK_SOURCE_VIEW(View), TRUE);
 		gtk_source_view_set_show_line_numbers(GTK_SOURCE_VIEW(View), TRUE);
@@ -498,14 +497,37 @@ static void console_style_changed(GtkSourceStyleSchemeChooser *Widget, GParamSpe
 	g_key_file_save_to_file(Console->Config, Console->ConfigPath, NULL);
 }
 
-static void console_font_changed(GtkFontChooser *Widget, gtk_console_t *Console) {
-	gchar *FontName = gtk_font_chooser_get_font(Widget);
-	Console->FontName = FontName;
-	Console->FontDescription = pango_font_description_from_string(FontName);
-	//gtk_widget_override_font(Console->InputView, Console->FontDescription);
-	//gtk_widget_override_font(Console->LogView, Console->FontDescription);
+static void console_update_font(gtk_console_t *Console) {
+	const char *Style = "normal";
+	switch (pango_font_description_get_style(Console->FontDescription)) {
+	case PANGO_STYLE_NORMAL: Style = "normal"; break;
+	case PANGO_STYLE_ITALIC: Style = "italic"; break;
+	case PANGO_STYLE_OBLIQUE: Style = "oblique"; break;
+	}
+	g_autofree char *CSS = g_strdup_printf(
+		"textview.sourceview {\n"
+		" font-family: '%s';\n"
+		" font-size: %d%s;\n"
+		" font-style: %s;\n"
+		" font-weight: %d;\n"
+		" }",
+		pango_font_description_get_family(Console->FontDescription) ?: "Monospace",
+		pango_font_description_get_size(Console->FontDescription) / PANGO_SCALE ?: 12,
+		pango_font_description_get_size_is_absolute(Console->FontDescription) ? "px" : "pt",
+		Style,
+		pango_font_description_get_weight(Console->FontDescription)
+	);
+	ML_LOG_DEBUG(NULL, "Updating font description: %s", CSS);
+	gtk_css_provider_load_from_string(Console->CssProvider, CSS);
+}
 
+static void console_font_changed(GtkFontDialogButton *Widget, GParamSpec *Spec, gtk_console_t *Console) {
+	Console->FontDescription = gtk_font_dialog_button_get_font_desc(Widget);
+	console_update_font(Console);
+
+	const char *FontName = pango_font_description_to_string(Console->FontDescription);
 	g_key_file_set_string(Console->Config, "gtk-console", "font", FontName);
+	g_free((void *)FontName);
 	g_key_file_save_to_file(Console->Config, Console->ConfigPath, NULL);
 }
 
@@ -695,8 +717,7 @@ static ml_value_t *console_set_font(gtk_console_t *Console, int Count, ml_value_
 	Console->FontDescription = pango_font_description_new();
 	pango_font_description_set_family(Console->FontDescription, ml_string_value(Args[0]));
 	pango_font_description_set_size(Console->FontDescription, PANGO_SCALE * ml_integer_value(Args[1]));
-	//gtk_widget_override_font(Console->InputView, Console->FontDescription);
-	//gtk_widget_override_font(Console->LogView, Console->FontDescription);
+	console_update_font(Console);
 	return MLNil;
 }
 
@@ -806,6 +827,13 @@ gtk_console_t *gtk_console(ml_state_t *Caller, ml_getter_t GlobalGet, void *Glob
 	Console->Parser = ml_parser(NULL, NULL);
 	Console->Compiler = ml_compiler2((ml_getter_t)console_global_get, Console, 1);
 	ml_parser_source(Console->Parser, (ml_source_t){Console->Name, 0});
+	Console->CssProvider = gtk_css_provider_new();
+	gtk_style_context_add_provider_for_display(
+		gdk_display_get_default(),
+		GTK_STYLE_PROVIDER(Console->CssProvider),
+		GTK_STYLE_PROVIDER_PRIORITY_USER
+	);
+
 	Console->Notebook = GTK_NOTEBOOK(gtk_notebook_new());
 
 	GC_asprintf((char **)&Console->ConfigPath, "%s/%s", g_get_user_config_dir(), "minilang.conf");
@@ -817,6 +845,7 @@ gtk_console_t *gtk_console(ml_state_t *Caller, ml_getter_t GlobalGet, void *Glob
 
 	GtkSourceBuffer *InputBuffer = gtk_source_buffer_new_with_language(Console->Language);
 	Console->InputView = gtk_source_view_new_with_buffer(InputBuffer);
+	gtk_widget_set_hexpand(Console->InputView, TRUE);
 	GtkSourceCompletion *Completion = gtk_source_view_get_completion(GTK_SOURCE_VIEW(Console->InputView));
 	GtkSourceCompletionProvider *Provider = gtk_console_completion_provider(Console->Compiler);
 	gtk_source_completion_add_provider(Completion, Provider);
@@ -854,6 +883,7 @@ gtk_console_t *gtk_console(ml_state_t *Caller, ml_getter_t GlobalGet, void *Glob
 
 	Console->LogScrolled = gtk_scrolled_window_new();
 	gtk_scrolled_window_set_child(GTK_SCROLLED_WINDOW(Console->LogScrolled), Console->LogView);
+	gtk_widget_set_vexpand(Console->LogScrolled, TRUE);
 
 	Console->ThreadStore = gtk_list_store_new(3, G_TYPE_INT, G_TYPE_STRING, G_TYPE_INT);
 	gtk_tree_sortable_set_sort_column_id(GTK_TREE_SORTABLE(Console->ThreadStore), 0, GTK_SORT_ASCENDING);
@@ -892,32 +922,32 @@ gtk_console_t *gtk_console(ml_state_t *Caller, ml_getter_t GlobalGet, void *Glob
 	GtkWidget *DebugButtons = Console->DebugButtons = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 2);
 	GtkWidget *StepInButton = gtk_button_new();
 	gtk_button_set_label(GTK_BUTTON(StepInButton), "In");
-	gtk_box_prepend(GTK_BOX(DebugButtons), StepInButton);
+	gtk_box_append(GTK_BOX(DebugButtons), StepInButton);
 	GtkWidget *StepOverButton = gtk_button_new();
 	gtk_button_set_label(GTK_BUTTON(StepOverButton), "Over");
-	gtk_box_prepend(GTK_BOX(DebugButtons), StepOverButton);
+	gtk_box_append(GTK_BOX(DebugButtons), StepOverButton);
 	GtkWidget *StepOutButton = gtk_button_new();
 	gtk_button_set_label(GTK_BUTTON(StepOutButton), "Out");
-	gtk_box_prepend(GTK_BOX(DebugButtons), StepOutButton);
+	gtk_box_append(GTK_BOX(DebugButtons), StepOutButton);
 	GtkWidget *ContinueButton = gtk_button_new();
 	gtk_button_set_label(GTK_BUTTON(ContinueButton), "Run");
-	gtk_box_prepend(GTK_BOX(DebugButtons), ContinueButton);
+	gtk_box_append(GTK_BOX(DebugButtons), ContinueButton);
 	GtkWidget *ContinueAllButton = gtk_button_new();
 	gtk_button_set_label(GTK_BUTTON(ContinueAllButton), "Run All");
-	gtk_box_prepend(GTK_BOX(DebugButtons), ContinueAllButton);
+	gtk_box_append(GTK_BOX(DebugButtons), ContinueAllButton);
 	g_signal_connect(G_OBJECT(StepInButton), "clicked", G_CALLBACK(console_step_in), Console);
 	g_signal_connect(G_OBJECT(StepOverButton), "clicked", G_CALLBACK(console_step_over), Console);
 	g_signal_connect(G_OBJECT(StepOutButton), "clicked", G_CALLBACK(console_step_out), Console);
 	g_signal_connect(G_OBJECT(ContinueButton), "clicked", G_CALLBACK(console_continue), Console);
 	g_signal_connect(G_OBJECT(ContinueAllButton), "clicked", G_CALLBACK(console_continue_all), Console);
-	gtk_box_prepend(GTK_BOX(InputPanel), DebugButtons);
+	gtk_box_append(GTK_BOX(InputPanel), DebugButtons);
 	GtkWidget *SubmitButton = gtk_button_new();
 	gtk_button_set_icon_name(GTK_BUTTON(SubmitButton), "go-jump-symbolic");
 	GtkWidget *ClearButton = gtk_button_new();
 	gtk_button_set_icon_name(GTK_BUTTON(ClearButton), "edit-delete-symbolic");
-	gtk_box_prepend(GTK_BOX(InputPanel), Console->InputView);
-	gtk_box_prepend(GTK_BOX(InputPanel), SubmitButton);
-	gtk_box_prepend(GTK_BOX(InputPanel), ClearButton);
+	gtk_box_append(GTK_BOX(InputPanel), Console->InputView);
+	gtk_box_append(GTK_BOX(InputPanel), SubmitButton);
+	gtk_box_append(GTK_BOX(InputPanel), ClearButton);
 
 	GtkWidget *StyleCombo = gtk_source_style_scheme_chooser_button_new();
 
@@ -925,7 +955,7 @@ gtk_console_t *gtk_console(ml_state_t *Caller, ml_getter_t GlobalGet, void *Glob
 
 	GtkFontDialog *FontDialog = gtk_font_dialog_new();
 	GtkWidget *FontButton = gtk_font_dialog_button_new(FontDialog);
-	//g_signal_connect(G_OBJECT(FontButton), "font-set", G_CALLBACK(console_font_changed), Console);
+	g_signal_connect(G_OBJECT(FontButton), "notify::font-desc", G_CALLBACK(console_font_changed), Console);
 
 	GtkWidget *SourceView = Console->SourceView = gtk_source_view_new_with_buffer(Console->SourceBuffer);
 	gtk_text_view_set_monospace(GTK_TEXT_VIEW(SourceView), TRUE);
@@ -946,10 +976,11 @@ gtk_console_t *gtk_console(ml_state_t *Caller, ml_getter_t GlobalGet, void *Glob
 	g_signal_connect(G_OBJECT(ClearButton), "clicked", G_CALLBACK(console_clear), Console);
 	Console->Window = gtk_window_new();
 	gtk_window_set_icon_name(GTK_WINDOW(Console->Window), "face-smile");
+	gtk_window_set_title(GTK_WINDOW(Console->Window), "Minilang");
 
 	GtkWidget *ReplBox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 2);
-	gtk_box_prepend(GTK_BOX(ReplBox), InputFrame);
-	gtk_box_prepend(GTK_BOX(ReplBox), Console->LogScrolled);
+	gtk_box_append(GTK_BOX(ReplBox), InputFrame);
+	gtk_box_append(GTK_BOX(ReplBox), Console->LogScrolled);
 
 	gtk_paned_set_start_child(GTK_PANED(Console->Paned), OutputPane);
 	gtk_paned_set_end_child(GTK_PANED(Console->Paned), ReplBox);
@@ -961,14 +992,13 @@ gtk_console_t *gtk_console(ml_state_t *Caller, ml_getter_t GlobalGet, void *Glob
 
 	GtkWidget *MenuButton = gtk_menu_button_new();
 	GtkWidget *ActionsBox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 2);
-	gtk_box_prepend(GTK_BOX(ActionsBox), StyleCombo);
-	gtk_box_prepend(GTK_BOX(ActionsBox), FontButton);
-	gtk_box_prepend(GTK_BOX(ActionsBox), LayoutButton);
+	gtk_box_append(GTK_BOX(ActionsBox), StyleCombo);
+	gtk_box_append(GTK_BOX(ActionsBox), FontButton);
+	gtk_box_append(GTK_BOX(ActionsBox), LayoutButton);
 	GtkWidget *ActionsPopover = gtk_popover_new();
 	gtk_popover_set_child(GTK_POPOVER(ActionsPopover), ActionsBox);
 	gtk_menu_button_set_popover(GTK_MENU_BUTTON(MenuButton), ActionsPopover);
 	gtk_widget_show(ActionsBox);
-
 
 	GtkWidget *HeaderBar = gtk_header_bar_new();
 	gtk_header_bar_set_use_native_controls(GTK_HEADER_BAR(HeaderBar), TRUE);
@@ -1007,15 +1037,13 @@ gtk_console_t *gtk_console(ml_state_t *Caller, ml_getter_t GlobalGet, void *Glob
 	stringmap_insert(Console->Globals, "include", ml_cfunctionx(Console, (ml_callbackx_t)console_include_fnx));
 
 	if (g_key_file_has_key(Console->Config, "gtk-console", "font", NULL)) {
-		Console->FontName = g_key_file_get_string(Console->Config, "gtk-console", "font", NULL);
+		const char *FontName = g_key_file_get_string(Console->Config, "gtk-console", "font", NULL);
+		Console->FontDescription = pango_font_description_from_string(FontName);
+		g_free((void *)FontName);
 	} else {
-		Console->FontName = "Monospace 10";
+		Console->FontDescription = pango_font_description_from_string("Monospace 10");
 	}
-	Console->FontDescription = pango_font_description_from_string(Console->FontName);
-	//gtk_widget_override_font(Console->InputView, Console->FontDescription);
-	//gtk_widget_override_font(Console->LogView, Console->FontDescription);
-	//gtk_widget_override_font(SourceView, Console->FontDescription);
-	//gtk_font_button_set_font_name(GTK_FONT_BUTTON(FontButton), Console->FontName);
+	console_update_font(Console);
 	gtk_font_dialog_button_set_font_desc(GTK_FONT_DIALOG_BUTTON(FontButton), Console->FontDescription);
 
 	if (g_key_file_has_key(Console->Config, "gtk-console", "style", NULL)) {
@@ -1058,8 +1086,8 @@ gtk_console_t *gtk_console(ml_state_t *Caller, ml_getter_t GlobalGet, void *Glob
 	Console->StatusTimeout = g_timeout_add(1000, (GSourceFunc)console_update_status, Console);
 
 	GError *Error = 0;
-	g_irepository_require(NULL, "Gtk", "3.0", 0, &Error);
-	g_irepository_require(NULL, "GtkSource", "4", 0, &Error);
+	g_irepository_require(NULL, "Gtk", "4.0", 0, &Error);
+	g_irepository_require(NULL, "GtkSource", "5", 0, &Error);
 	stringmap_insert(Console->Globals, "print", ml_cfunction2(Console, (void *)gtk_console_print, ML_CATEGORY, __LINE__));
 	Console->DisplayOutput = 1;
 	stringmap_insert(Console->Globals, "display", ml_cfunction2(Console, (void *)gtk_console_display, ML_CATEGORY, __LINE__));

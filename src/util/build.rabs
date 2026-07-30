@@ -30,7 +30,9 @@ scope("gtk_console";) do
 	]
 	PREBUILDS := old + [GIR]
 	so_module("gtk_console.so", [file("gtk_console.o"), file("gtk_console_completion.o")], [GIR], Tags is ["gtk"], Extra is; Library) do
-		if PLATFORM != "Darwin" then
+		if PLATFORM = "Darwin" then
+			execute("install_name_tool", "-change", GIR, "@loader_path/gir.so", Library)
+		else
 			execute("patchelf", Library, "--replace-needed", GIR, "gir.so")
 		end
 	end

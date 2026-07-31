@@ -1139,6 +1139,7 @@ typedef struct {
 static void finish_load(load_state_t *State, ml_value_t *GirModule) {
 	GError *Error = 0;
 	g_irepository_require(NULL, "Gtk", "4.0", 0, &Error);
+	gtk_source_init();
 	ml_state_t *Caller = State->Base.Caller;
 #include "gtk_console_init.c"
 	gtk_console_t *Console = gtk_console(Caller, (ml_getter_t)ml_stringmap_global_get, MLGlobals);

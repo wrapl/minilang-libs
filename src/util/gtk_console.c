@@ -846,6 +846,7 @@ gtk_console_t *gtk_console(ml_state_t *Caller, ml_getter_t GlobalGet, void *Glob
 	Console->InputView = gtk_source_view_new_with_buffer(InputBuffer);
 	gtk_widget_set_hexpand(Console->InputView, TRUE);
 	GtkSourceCompletion *Completion = gtk_source_view_get_completion(GTK_SOURCE_VIEW(Console->InputView));
+	g_object_set(Completion, "select-on-show", TRUE, NULL);
 	GtkSourceCompletionProvider *Provider = gtk_console_completion_provider(Console->Compiler, Console->Globals);
 	gtk_source_completion_add_provider(Completion, Provider);
 	GtkTextTagTable *TagTable = gtk_text_buffer_get_tag_table(GTK_TEXT_BUFFER(InputBuffer));

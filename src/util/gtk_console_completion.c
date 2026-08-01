@@ -1,6 +1,7 @@
 #include "gtk_console_completion.h"
 #include "gir.h"
 #include <minilang/ml_logging.h>
+#include <minilang/ml_object.h>
 
 struct _ConsoleCompletionProvider {
 	GObject parent_instance;
@@ -31,6 +32,7 @@ static gint gtk_console_completion_provider_get_priority(GtkSourceCompletionProv
 struct _ConsoleCompletionProposal {
 	GObject parent_instance;
 	const char *Text;
+	const char *Icon;
 };
 
 static void gtk_console_completion_proposal_interface_init(GtkSourceCompletionProposalInterface *Interface);
@@ -64,6 +66,19 @@ static int populate_fn(const char *Name, void *Value, populate_info_t *Info) {
 	}
 	ConsoleCompletionProposal *Proposal = (ConsoleCompletionProposal *)g_object_new(CONSOLE_TYPE_COMPLETION_PROPOSAL, NULL);
 	Proposal->Text = Name;
+	if (ml_is(Value, MLTypeT)) {
+		Proposal->Icon = "lang-typedef-symbolic";
+	} else if (ml_is(Value, MLFunctionT)) {
+		Proposal->Icon = "lang-function-symbolic";
+	} else if (ml_is(Value, MLEnumValueT)) {
+		Proposal->Icon = "lang-enum-value-symbolic";
+	} else if (ml_is(Value, MLFlagsValueT)) {
+		Proposal->Icon = "lang-enum-value-symbolic";
+	} else if (ml_is(Value, MLModuleT)) {
+		Proposal->Icon = "lang-namespace-symbolic";
+	} else {
+		Proposal->Icon = "lang-variable-symbolic";
+	}
 	g_list_store_append(Info->Proposals, G_OBJECT(Proposal));
 	g_object_unref(Proposal);
 	return 0;
@@ -91,6 +106,25 @@ static void gtk_console_completion_provider_populate(ConsoleCompletionProvider *
 			}
 			ConsoleCompletionProposal *Proposal = (ConsoleCompletionProposal *)g_object_new(CONSOLE_TYPE_COMPLETION_PROPOSAL, NULL);
 			Proposal->Text = Name;
+			switch (g_base_info_get_type(Base)) {
+			case GI_INFO_TYPE_FUNCTION:
+			case GI_INFO_TYPE_CALLBACK:
+				Proposal->Icon = "lang-function-symbolic";
+				break;
+			case GI_INFO_TYPE_STRUCT:
+			case GI_INFO_TYPE_BOXED:
+			case GI_INFO_TYPE_OBJECT:
+			case GI_INFO_TYPE_INTERFACE:
+				Proposal->Icon = "lang-struct-symbolic";
+				break;
+			case GI_INFO_TYPE_ENUM:
+			case GI_INFO_TYPE_FLAGS:
+				Proposal->Icon = "lang-enum-symbolic";
+				break;
+			default:
+				Proposal->Icon = "lang-variable-symbolic";
+				break;
+			}
 			g_list_store_append(Info->Proposals, G_OBJECT(Proposal));
 		}
 	}
@@ -164,7 +198,7 @@ static void gtk_console_completion_provider_display(GtkSourceCompletionProvider 
 	ConsoleCompletionProposal *Proposal = CONSOLE_COMPLETION_PROPOSAL(Prop);
 	switch (gtk_source_completion_cell_get_column(Cell)) {
 	case GTK_SOURCE_COMPLETION_COLUMN_ICON:
-		gtk_source_completion_cell_set_icon_name(Cell, "info-symbolic");
+		gtk_source_completion_cell_set_icon_name(Cell, Proposal->Icon);
 		break;
 	case GTK_SOURCE_COMPLETION_COLUMN_TYPED_TEXT:
 		gtk_source_completion_cell_set_text(Cell, Proposal->Text);

@@ -84,6 +84,8 @@ static int populate_fn(const char *Name, void *Value, populate_info_t *Info) {
 	return 0;
 }
 
+static ML_VALUE(Methods, MLAnyT);
+
 static void gtk_console_completion_provider_populate(ConsoleCompletionProvider *Provider, populate_info_t *Info) {
 	ml_value_t *Scope = Provider->Scope;
 	if (!Scope) {
@@ -127,14 +129,16 @@ static void gtk_console_completion_provider_populate(ConsoleCompletionProvider *
 			}
 			g_list_store_append(Info->Proposals, G_OBJECT(Proposal));
 		}
+	} else if (Scope == Methods) {
+		ml_methods_foreach(Info, (void *)populate_fn);
 	}
 }
 
 static ml_value_t *gtk_console_completion_find_scope(GtkTextIter *Start, ml_compiler_t *Compiler) {
 	if (!gtk_text_iter_backward_char(Start)) return NULL;
 	if (gtk_text_iter_get_char(Start) != ':') return NULL;
-	if (!gtk_text_iter_backward_char(Start)) return NULL;
-	if (gtk_text_iter_get_char(Start) != ':') return NULL;
+	if (!gtk_text_iter_backward_char(Start)) return Methods;
+	if (gtk_text_iter_get_char(Start) != ':') return Methods;
 	GtkTextIter Iter = *Start;
 	if (!gtk_text_iter_backward_word_start(Start)) return NULL;
 	gchar *Name = gtk_text_iter_get_text(Start, &Iter);

@@ -813,7 +813,6 @@ static gboolean console_update_status(gtk_console_t *Console) {
 }
 
 gtk_console_t *gtk_console(ml_state_t *Caller, ml_getter_t GlobalGet, void *Globals) {
-	gtk_init();
 	gtk_console_t *Console = new(gtk_console_t);
 	Console->Base.Type = ConsoleT;
 	Console->Base.run = (ml_state_fn)ml_console_repl_run;
@@ -847,7 +846,7 @@ gtk_console_t *gtk_console(ml_state_t *Caller, ml_getter_t GlobalGet, void *Glob
 	Console->InputView = gtk_source_view_new_with_buffer(InputBuffer);
 	gtk_widget_set_hexpand(Console->InputView, TRUE);
 	GtkSourceCompletion *Completion = gtk_source_view_get_completion(GTK_SOURCE_VIEW(Console->InputView));
-	GtkSourceCompletionProvider *Provider = gtk_console_completion_provider(Console->Compiler);
+	GtkSourceCompletionProvider *Provider = gtk_console_completion_provider(Console->Compiler, Console->Globals);
 	gtk_source_completion_add_provider(Completion, Provider);
 	GtkTextTagTable *TagTable = gtk_text_buffer_get_tag_table(GTK_TEXT_BUFFER(InputBuffer));
 	Console->OutputTag = gtk_text_tag_new("log-output");
@@ -1085,9 +1084,6 @@ gtk_console_t *gtk_console(ml_state_t *Caller, ml_getter_t GlobalGet, void *Glob
 
 	Console->StatusTimeout = g_timeout_add(1000, (GSourceFunc)console_update_status, Console);
 
-	GError *Error = 0;
-	g_irepository_require(NULL, "Gtk", "4.0", 0, &Error);
-	g_irepository_require(NULL, "GtkSource", "5", 0, &Error);
 	stringmap_insert(Console->Globals, "print", ml_cfunction2(Console, (void *)gtk_console_print, ML_CATEGORY, __LINE__));
 	Console->DisplayOutput = 1;
 	stringmap_insert(Console->Globals, "display", ml_cfunction2(Console, (void *)gtk_console_display, ML_CATEGORY, __LINE__));
@@ -1139,6 +1135,8 @@ typedef struct {
 static void finish_load(load_state_t *State, ml_value_t *GirModule) {
 	GError *Error = 0;
 	g_irepository_require(NULL, "Gtk", "4.0", 0, &Error);
+	g_irepository_require(NULL, "GtkSource", "5", 0, &Error);
+	gtk_init();
 	gtk_source_init();
 	ml_state_t *Caller = State->Base.Caller;
 #include "gtk_console_init.c"

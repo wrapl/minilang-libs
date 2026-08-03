@@ -23,6 +23,16 @@
 
 #define MAX_HISTORY 128
 
+typedef struct {
+	gtk_console_t *Console;
+	GtkSourceStyleSchemeManager *StyleManager;
+	GtkSourceBuffer *PreviewBuffer;
+	GtkCssProvider *CssProvider;
+	GtkWidget *FontButton;
+	GtkWidget *Dialog, *StyleDropDown;
+	const char *FontCss;
+} gtk_console_settings_t;
+
 struct gtk_console_t {
 	ml_state_t Base;
 	const char *Name;
@@ -46,6 +56,7 @@ struct gtk_console_t {
 	PangoFontDescription *FontDescription;
 	ml_parser_t *Parser;
 	ml_compiler_t *Compiler;
+	gtk_console_settings_t *Settings;
 	char *History[MAX_HISTORY];
 	int HistoryIndex, HistoryEnd;
 	stringmap_t Globals[1];
@@ -486,20 +497,13 @@ static void toggle_layout(GtkWidget *Button, gtk_console_t *Console) {
 	}
 }
 
-static void console_style_changed(GtkSourceStyleSchemeChooser *Widget, GParamSpec *Spec, gtk_console_t *Console) {
-	Console->StyleScheme = gtk_source_style_scheme_chooser_get_style_scheme(Widget);
-	gtk_source_buffer_set_style_scheme(GTK_SOURCE_BUFFER(gtk_text_view_get_buffer(GTK_TEXT_VIEW(Console->InputView))), Console->StyleScheme);
-	gtk_source_buffer_set_style_scheme(GTK_SOURCE_BUFFER(gtk_text_view_get_buffer(GTK_TEXT_VIEW(Console->LogView))), Console->StyleScheme);
-
-	const char *StyleId = gtk_source_style_scheme_get_id(Console->StyleScheme);
-
-	g_key_file_set_string(Console->Config, "gtk-console", "style", StyleId);
-	g_key_file_save_to_file(Console->Config, Console->ConfigPath, NULL);
+static void console_settings_show(GtkWidget *Button, gtk_console_t *Console) {
+	gtk_widget_show(Console->Settings->Dialog);
 }
 
-static void console_update_font(gtk_console_t *Console) {
+static void console_update_font(GtkCssProvider *CssProvider, PangoFontDescription *FontDescription) {
 	const char *Style = "normal";
-	switch (pango_font_description_get_style(Console->FontDescription)) {
+	switch (pango_font_description_get_style(FontDescription)) {
 	case PANGO_STYLE_NORMAL: Style = "normal"; break;
 	case PANGO_STYLE_ITALIC: Style = "italic"; break;
 	case PANGO_STYLE_OBLIQUE: Style = "oblique"; break;
@@ -511,24 +515,14 @@ static void console_update_font(gtk_console_t *Console) {
 		" font-style: %s;\n"
 		" font-weight: %d;\n"
 		" }",
-		pango_font_description_get_family(Console->FontDescription) ?: "Monospace",
-		pango_font_description_get_size(Console->FontDescription) / PANGO_SCALE ?: 12,
-		pango_font_description_get_size_is_absolute(Console->FontDescription) ? "px" : "pt",
+		pango_font_description_get_family(FontDescription) ?: "Monospace",
+		pango_font_description_get_size(FontDescription) / PANGO_SCALE ?: 12,
+		pango_font_description_get_size_is_absolute(FontDescription) ? "px" : "pt",
 		Style,
-		pango_font_description_get_weight(Console->FontDescription)
+		pango_font_description_get_weight(FontDescription)
 	);
 	ML_LOG_DEBUG(NULL, "Updating font description: %s", CSS);
-	gtk_css_provider_load_from_string(Console->CssProvider, CSS);
-}
-
-static void console_font_changed(GtkFontDialogButton *Widget, GParamSpec *Spec, gtk_console_t *Console) {
-	Console->FontDescription = gtk_font_dialog_button_get_font_desc(Widget);
-	console_update_font(Console);
-
-	const char *FontName = pango_font_description_to_string(Console->FontDescription);
-	g_key_file_set_string(Console->Config, "gtk-console", "font", FontName);
-	g_free((void *)FontName);
-	g_key_file_save_to_file(Console->Config, Console->ConfigPath, NULL);
+	gtk_css_provider_load_from_string(CssProvider, CSS);
 }
 
 static void console_size_allocate(GtkWindow *Window, GdkRectangle *Allocation, gtk_console_t *Console) {
@@ -717,7 +711,7 @@ static ml_value_t *console_set_font(gtk_console_t *Console, int Count, ml_value_
 	Console->FontDescription = pango_font_description_new();
 	pango_font_description_set_family(Console->FontDescription, ml_string_value(Args[0]));
 	pango_font_description_set_size(Console->FontDescription, PANGO_SCALE * ml_integer_value(Args[1]));
-	console_update_font(Console);
+	console_update_font(Console->CssProvider, Console->FontDescription);
 	return MLNil;
 }
 
@@ -810,6 +804,167 @@ static gboolean console_update_status(gtk_console_t *Console) {
 	printf("\tBytesSinceGC = %ld\n", BytesSinceGC);
 	printf("\tTotalBytes = %ld\n", TotalBytes);*/
 	return G_SOURCE_CONTINUE;
+}
+
+static void console_settings_apply(GtkButton *Widget, gtk_console_settings_t *Settings) {
+	gtk_console_t *Console = Settings->Console;
+	GObject *SelectedItem = gtk_drop_down_get_selected_item(GTK_DROP_DOWN(Settings->StyleDropDown));
+	const char *StyleId = gtk_string_object_get_string(GTK_STRING_OBJECT(SelectedItem));
+	Console->StyleScheme = gtk_source_style_scheme_manager_get_scheme(Settings->StyleManager, StyleId);
+
+	gtk_source_buffer_set_style_scheme(GTK_SOURCE_BUFFER(gtk_text_view_get_buffer(GTK_TEXT_VIEW(Console->InputView))), Console->StyleScheme);
+	gtk_source_buffer_set_style_scheme(GTK_SOURCE_BUFFER(gtk_text_view_get_buffer(GTK_TEXT_VIEW(Console->LogView))), Console->StyleScheme);
+	for (int I = gtk_notebook_get_n_pages(Console->Notebook); --I >= 0;) {
+		GtkWidget *Widget = gtk_notebook_get_nth_page(Console->Notebook, I);
+		if (GTK_IS_SCROLLED_WINDOW(Widget)) {
+			GtkWidget *Widget2 = gtk_scrolled_window_get_child(GTK_SCROLLED_WINDOW(Widget));
+			if (GTK_SOURCE_IS_VIEW(Widget2)) {
+				GtkTextBuffer *Buffer = gtk_text_view_get_buffer(GTK_TEXT_VIEW(Widget2));
+				gtk_source_buffer_set_style_scheme(GTK_SOURCE_BUFFER(Buffer), Console->StyleScheme);
+			}
+		}
+	}
+	g_key_file_set_string(Console->Config, "gtk-console", "style", StyleId);
+	g_key_file_save_to_file(Console->Config, Console->ConfigPath, NULL);
+
+	Console->FontDescription = gtk_font_dialog_button_get_font_desc(GTK_FONT_DIALOG_BUTTON(Settings->FontButton));
+	console_update_font(Console->CssProvider, Console->FontDescription);
+	const char *FontName = pango_font_description_to_string(Console->FontDescription);
+	g_key_file_set_string(Console->Config, "gtk-console", "font", FontName);
+	g_free((void *)FontName);
+	g_key_file_save_to_file(Console->Config, Console->ConfigPath, NULL);
+	gtk_widget_hide(Settings->Dialog);
+}
+
+static void console_settings_cancel(GtkButton *Widget, gtk_console_settings_t *Settings) {
+	gtk_widget_hide(Settings->Dialog);
+}
+
+static void style_drop_down_changed(GtkDropDown *Widget, GParamSpec *Spec, gtk_console_settings_t *Settings) {
+	GObject *SelectedItem = gtk_drop_down_get_selected_item(Widget);
+	const char *StyleId = gtk_string_object_get_string(GTK_STRING_OBJECT(SelectedItem));
+	GtkSourceStyleScheme *StyleScheme = gtk_source_style_scheme_manager_get_scheme(Settings->StyleManager, StyleId);
+	gtk_source_buffer_set_style_scheme(Settings->PreviewBuffer, StyleScheme);
+	gchar *Foreground, *Background;
+	g_object_get(StyleScheme, "foreground", &Foreground, "background", &Background, NULL);
+	ML_LOG_INFO(NULL, "Style %s / %s", Foreground, Background);
+	g_free(Foreground);
+	g_free(Background);
+}
+
+static void console_font_changed(GtkFontDialogButton *Widget, GParamSpec *Spec, gtk_console_settings_t *Settings) {
+	PangoFontDescription *FontDescription = gtk_font_dialog_button_get_font_desc(Widget);
+	console_update_font(Settings->CssProvider, FontDescription);
+}
+
+static gtk_console_settings_t *gtk_console_settings(gtk_console_t *Console, GtkSourceStyleSchemeManager *StyleManager) {
+	gtk_console_settings_t *Settings = new(gtk_console_settings_t);
+	Settings->Console = Console;
+	Settings->StyleManager = StyleManager;
+	GtkWidget *Box = gtk_box_new(GTK_ORIENTATION_VERTICAL, 20);
+	gtk_widget_set_margin_top(Box, 20);
+	gtk_widget_set_margin_bottom(Box, 20);
+	gtk_widget_set_margin_start(Box, 20);
+	gtk_widget_set_margin_end(Box, 20);
+	const gchar * const *StyleIds = gtk_source_style_scheme_manager_get_scheme_ids(StyleManager);
+	GtkWidget *StyleDropDown = Settings->StyleDropDown = gtk_drop_down_new_from_strings(StyleIds);
+	if (Console->StyleScheme) {
+		const char *StyleId = gtk_source_style_scheme_get_id(Console->StyleScheme);
+		for (const gchar * const *Ptr = StyleIds; *Ptr; ++Ptr) {
+			ML_LOG_INFO(NULL, "Comparing %s <-> %s", *Ptr, StyleId);
+			if (!strcmp(*Ptr, StyleId)) {
+				gtk_drop_down_set_selected(GTK_DROP_DOWN(StyleDropDown), Ptr - StyleIds);
+				break;
+			}
+		}
+	}
+	gtk_drop_down_set_enable_search(GTK_DROP_DOWN(StyleDropDown), TRUE);
+	gtk_drop_down_set_search_match_mode(GTK_DROP_DOWN(StyleDropDown), GTK_STRING_FILTER_MATCH_MODE_SUBSTRING);
+	g_signal_connect(G_OBJECT(StyleDropDown), "notify::selected-item", G_CALLBACK(style_drop_down_changed), Settings);
+	gtk_widget_set_hexpand(StyleDropDown, TRUE);
+	GtkFontDialog *FontDialog = gtk_font_dialog_new();
+	GtkWidget *FontButton = Settings->FontButton = gtk_font_dialog_button_new(FontDialog);
+	g_signal_connect(G_OBJECT(FontButton), "notify::font-desc", G_CALLBACK(console_font_changed), Settings);
+	gtk_widget_set_hexpand(FontButton, TRUE);
+	GtkWidget *TopBox = gtk_grid_new();
+	gtk_grid_set_column_spacing(GTK_GRID(TopBox), 20);
+	gtk_grid_set_row_spacing(GTK_GRID(TopBox), 20);
+	GtkWidget *StyleLabel = gtk_label_new("Style");
+	gtk_widget_add_css_class(StyleLabel, "heading");
+	GtkWidget *FontLabel = gtk_label_new("Font");
+	gtk_widget_add_css_class(FontLabel, "heading");
+	gtk_grid_attach(GTK_GRID(TopBox), StyleLabel, 0, 0, 1, 1);
+	gtk_grid_attach(GTK_GRID(TopBox), StyleDropDown, 1, 0, 1, 1);
+	gtk_grid_attach(GTK_GRID(TopBox), FontLabel, 0, 1, 1, 1);
+	gtk_grid_attach(GTK_GRID(TopBox), FontButton, 1, 1, 1, 1);
+	gtk_box_append(GTK_BOX(Box), TopBox);
+	Settings->PreviewBuffer = gtk_source_buffer_new_with_language(Console->Language);
+	if (Console->StyleScheme) {
+		gtk_source_buffer_set_style_scheme(Settings->PreviewBuffer, Console->StyleScheme);
+	}
+	GtkWidget *Preview = gtk_source_view_new_with_buffer(Settings->PreviewBuffer);
+	gtk_text_buffer_set_text(GTK_TEXT_BUFFER(Settings->PreviewBuffer),
+		"import: terminal(\"io/terminal\")\n"
+		"\n"
+		"fun test(N: integer): integer do\n"
+		"\tlet L := [1, 2, 3]\n"
+		"\tfor I in 1 .. N do\n"
+		"\t\tswitch I % 15: integer\n"
+		"\t\tcase 0 do\n"
+		"\t\t\tL:put(math::sin(I))\n"
+		"\t\tcase 3 do\n"
+		"\t\t\tprint(max(L skip 3))\n"
+		"\t\tcase 5 do\n"
+		"\t\t\tterminal::Stdout:write(\"Hello world!\\n\")\n"
+		"\t\telse\n"
+		"\t\t\tL:put(\'I = {I}, Now = {time(), time::timezone::\"Europe/Dublin\"}\\n\')\n"
+		"\t\tend\n"
+		"\t\tuntil I >= 10\n"
+		"\tend\n"
+		"end",
+	-1);
+	gtk_source_view_set_tab_width(GTK_SOURCE_VIEW(Preview), 4);
+	gtk_source_view_set_show_line_numbers(GTK_SOURCE_VIEW(Preview), TRUE);
+	gtk_text_view_set_wrap_mode(GTK_TEXT_VIEW(Preview), TRUE);
+	GtkWidget *PreviewFrame = gtk_frame_new(NULL);
+	gtk_frame_set_child(GTK_FRAME(PreviewFrame), Preview);
+	gtk_box_append(GTK_BOX(Box), PreviewFrame);
+
+	Settings->Dialog = gtk_window_new();
+	gtk_window_set_hide_on_close(GTK_WINDOW(Settings->Dialog), TRUE);
+
+	GtkWidget *HeaderBar = gtk_header_bar_new();
+	gtk_header_bar_set_use_native_controls(GTK_HEADER_BAR(HeaderBar), FALSE);
+	gtk_header_bar_set_show_title_buttons(GTK_HEADER_BAR(HeaderBar), FALSE);
+	GtkWidget *SettingsTitle = gtk_label_new("Settings");
+	gtk_widget_add_css_class(SettingsTitle, "title");
+	gtk_header_bar_set_title_widget(GTK_HEADER_BAR(HeaderBar), SettingsTitle);
+
+	GtkWidget *ApplyButton = gtk_button_new_with_label("Apply");
+	gtk_widget_add_css_class(ApplyButton, "suggested-action");
+	GtkWidget *CancelButton = gtk_button_new_with_label("Cancel");
+
+	g_signal_connect(ApplyButton, "clicked", G_CALLBACK(console_settings_apply), Settings);
+	g_signal_connect(CancelButton, "clicked", G_CALLBACK(console_settings_cancel), Settings);
+
+	gtk_header_bar_pack_start(GTK_HEADER_BAR(HeaderBar), CancelButton);
+	gtk_header_bar_pack_end(GTK_HEADER_BAR(HeaderBar), ApplyButton);
+	gtk_window_set_titlebar(GTK_WINDOW(Settings->Dialog), HeaderBar);
+
+
+	gtk_window_set_child(GTK_WINDOW(Settings->Dialog), Box);
+	gtk_window_set_default_size(GTK_WINDOW(Settings->Dialog), 800, -1);
+	Settings->CssProvider = gtk_css_provider_new();
+	gtk_style_context_add_provider(
+		gtk_widget_get_style_context(Preview),
+		GTK_STYLE_PROVIDER(Settings->CssProvider),
+		GTK_STYLE_PROVIDER_PRIORITY_USER
+	);
+	if (Console->FontDescription) {
+		gtk_font_dialog_button_set_font_desc(GTK_FONT_DIALOG_BUTTON(FontButton), Console->FontDescription);
+		console_update_font(Settings->CssProvider, Console->FontDescription);
+	}
+	return Settings;
 }
 
 gtk_console_t *gtk_console(ml_state_t *Caller, ml_getter_t GlobalGet, void *Globals) {
@@ -949,13 +1104,8 @@ gtk_console_t *gtk_console(ml_state_t *Caller, ml_getter_t GlobalGet, void *Glob
 	gtk_box_append(GTK_BOX(InputPanel), SubmitButton);
 	gtk_box_append(GTK_BOX(InputPanel), ClearButton);
 
-	GtkWidget *StyleCombo = gtk_source_style_scheme_chooser_button_new();
-
-	g_signal_connect(G_OBJECT(StyleCombo), "notify::style-scheme", G_CALLBACK(console_style_changed), Console);
-
-	GtkFontDialog *FontDialog = gtk_font_dialog_new();
-	GtkWidget *FontButton = gtk_font_dialog_button_new(FontDialog);
-	g_signal_connect(G_OBJECT(FontButton), "notify::font-desc", G_CALLBACK(console_font_changed), Console);
+	//GtkWidget *StyleCombo = gtk_source_style_scheme_chooser_button_new();
+	//g_signal_connect(G_OBJECT(StyleCombo), "notify::style-scheme", G_CALLBACK(console_style_changed), Console);
 
 	GtkWidget *SourceView = Console->SourceView = gtk_source_view_new_with_buffer(Console->SourceBuffer);
 	gtk_text_view_set_monospace(GTK_TEXT_VIEW(SourceView), TRUE);
@@ -986,26 +1136,39 @@ gtk_console_t *gtk_console(ml_state_t *Caller, ml_getter_t GlobalGet, void *Glob
 	gtk_paned_set_end_child(GTK_PANED(Console->Paned), ReplBox);
 	gtk_paned_set_position(GTK_PANED(Console->Paned), 600);
 
+	if (g_key_file_has_key(Console->Config, "gtk-console", "font", NULL)) {
+		const char *FontName = g_key_file_get_string(Console->Config, "gtk-console", "font", NULL);
+		Console->FontDescription = pango_font_description_from_string(FontName);
+		g_free((void *)FontName);
+	} else {
+		Console->FontDescription = pango_font_description_from_string("Monospace 10");
+	}
+	console_update_font(Console->CssProvider, Console->FontDescription);
 
-	GtkWidget *LayoutButton = gtk_button_new_with_label("Layout");
+	if (g_key_file_has_key(Console->Config, "gtk-console", "style", NULL)) {
+		const char *StyleId = g_key_file_get_string(Console->Config, "gtk-console", "style", NULL);
+		Console->StyleScheme = gtk_source_style_scheme_manager_get_scheme(StyleManager, StyleId);
+		GtkSourceBuffer *InputBuffer = GTK_SOURCE_BUFFER(gtk_text_view_get_buffer(GTK_TEXT_VIEW(Console->InputView)));
+		gtk_source_buffer_set_style_scheme(InputBuffer, Console->StyleScheme);
+		gtk_source_buffer_set_style_scheme(LogBuffer, Console->StyleScheme);
+		gtk_source_buffer_set_style_scheme(Console->SourceBuffer, Console->StyleScheme);
+		//gtk_source_style_scheme_chooser_set_style_scheme(GTK_SOURCE_STYLE_SCHEME_CHOOSER(StyleCombo), Console->StyleScheme);
+	}
+
+	GtkWidget *LayoutButton = gtk_button_new_from_icon_name("transform-rotate-symbolic");
 	g_signal_connect(G_OBJECT(LayoutButton), "clicked", G_CALLBACK(toggle_layout), Console);
 
-	GtkWidget *MenuButton = gtk_menu_button_new();
-	GtkWidget *ActionsBox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 2);
-	gtk_box_append(GTK_BOX(ActionsBox), StyleCombo);
-	gtk_box_append(GTK_BOX(ActionsBox), FontButton);
-	gtk_box_append(GTK_BOX(ActionsBox), LayoutButton);
-	GtkWidget *ActionsPopover = gtk_popover_new();
-	gtk_popover_set_child(GTK_POPOVER(ActionsPopover), ActionsBox);
-	gtk_menu_button_set_popover(GTK_MENU_BUTTON(MenuButton), ActionsPopover);
-	gtk_widget_show(ActionsBox);
+	Console->Settings = gtk_console_settings(Console, StyleManager);
+	GtkWidget *SettingsButton = gtk_button_new_from_icon_name("appearance-symbolic");
+	g_signal_connect(G_OBJECT(SettingsButton), "clicked", G_CALLBACK(console_settings_show), Console);
 
 	GtkWidget *HeaderBar = gtk_header_bar_new();
 	gtk_header_bar_set_use_native_controls(GTK_HEADER_BAR(HeaderBar), TRUE);
 	//gtk_header_bar_set_title(GTK_HEADER_BAR(HeaderBar), "Minilang");
 	//gtk_header_bar_set_has_subtitle(GTK_HEADER_BAR(HeaderBar), FALSE);
 	gtk_header_bar_set_show_title_buttons(GTK_HEADER_BAR(HeaderBar), TRUE);
-	gtk_header_bar_pack_start(GTK_HEADER_BAR(HeaderBar), MenuButton);
+	gtk_header_bar_pack_start(GTK_HEADER_BAR(HeaderBar), LayoutButton);
+	gtk_header_bar_pack_start(GTK_HEADER_BAR(HeaderBar), SettingsButton);
 	gtk_window_set_titlebar(GTK_WINDOW(Console->Window), HeaderBar);
 
 	GtkWidget *MemoryBar = gtk_label_new("");
@@ -1035,26 +1198,6 @@ gtk_console_t *gtk_console(ml_state_t *Caller, ml_getter_t GlobalGet, void *Glob
 	stringmap_insert(Console->Globals, "add_cycle", ml_cfunction(Console, (ml_callback_t)console_add_cycle));
 	stringmap_insert(Console->Globals, "add_combo", ml_cfunction(Console, (ml_callback_t)console_add_combo));
 	stringmap_insert(Console->Globals, "include", ml_cfunctionx(Console, (ml_callbackx_t)console_include_fnx));
-
-	if (g_key_file_has_key(Console->Config, "gtk-console", "font", NULL)) {
-		const char *FontName = g_key_file_get_string(Console->Config, "gtk-console", "font", NULL);
-		Console->FontDescription = pango_font_description_from_string(FontName);
-		g_free((void *)FontName);
-	} else {
-		Console->FontDescription = pango_font_description_from_string("Monospace 10");
-	}
-	console_update_font(Console);
-	gtk_font_dialog_button_set_font_desc(GTK_FONT_DIALOG_BUTTON(FontButton), Console->FontDescription);
-
-	if (g_key_file_has_key(Console->Config, "gtk-console", "style", NULL)) {
-		const char *StyleId = g_key_file_get_string(Console->Config, "gtk-console", "style", NULL);
-		Console->StyleScheme = gtk_source_style_scheme_manager_get_scheme(StyleManager, StyleId);
-		GtkSourceBuffer *InputBuffer = GTK_SOURCE_BUFFER(gtk_text_view_get_buffer(GTK_TEXT_VIEW(Console->InputView)));
-		gtk_source_buffer_set_style_scheme(InputBuffer, Console->StyleScheme);
-		gtk_source_buffer_set_style_scheme(LogBuffer, Console->StyleScheme);
-		gtk_source_buffer_set_style_scheme(Console->SourceBuffer, Console->StyleScheme);
-		gtk_source_style_scheme_chooser_set_style_scheme(GTK_SOURCE_STYLE_SCHEME_CHOOSER(StyleCombo), Console->StyleScheme);
-	}
 
 	gtk_text_view_set_top_margin(GTK_TEXT_VIEW(Console->LogView), 4);
 	gtk_text_view_set_bottom_margin(GTK_TEXT_VIEW(Console->LogView), 4);

@@ -845,11 +845,6 @@ static void style_drop_down_changed(GtkDropDown *Widget, GParamSpec *Spec, gtk_c
 	const char *StyleId = gtk_string_object_get_string(GTK_STRING_OBJECT(SelectedItem));
 	GtkSourceStyleScheme *StyleScheme = gtk_source_style_scheme_manager_get_scheme(Settings->StyleManager, StyleId);
 	gtk_source_buffer_set_style_scheme(Settings->PreviewBuffer, StyleScheme);
-	gchar *Foreground, *Background;
-	g_object_get(StyleScheme, "foreground", &Foreground, "background", &Background, NULL);
-	ML_LOG_INFO(NULL, "Style %s / %s", Foreground, Background);
-	g_free(Foreground);
-	g_free(Background);
 }
 
 static void console_font_changed(GtkFontDialogButton *Widget, GParamSpec *Spec, gtk_console_settings_t *Settings) {

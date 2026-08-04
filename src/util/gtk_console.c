@@ -1182,11 +1182,11 @@ gtk_console_t *gtk_console(ml_state_t *Caller, ml_getter_t GlobalGet, void *Glob
 	}
 	console_update_css(Console->CssProvider, Console->FontDescription, Console->StyleScheme);
 
-	GtkWidget *LayoutButton = gtk_button_new_from_icon_name("transform-rotate-symbolic");
+	GtkWidget *LayoutButton = gtk_button_new_from_icon_name("object-packing-symbolic");
 	g_signal_connect(G_OBJECT(LayoutButton), "clicked", G_CALLBACK(toggle_layout), Console);
 
 	Console->Settings = gtk_console_settings(Console, StyleManager);
-	GtkWidget *SettingsButton = gtk_button_new_from_icon_name("appearance-symbolic");
+	GtkWidget *SettingsButton = gtk_button_new_from_icon_name("general-properties-symbolic");
 	g_signal_connect(G_OBJECT(SettingsButton), "clicked", G_CALLBACK(console_settings_show), Console);
 
 	GtkWidget *HeaderBar = gtk_header_bar_new();

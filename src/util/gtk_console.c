@@ -26,6 +26,7 @@
 typedef struct {
 	gtk_console_t *Console;
 	GtkSourceStyleSchemeManager *StyleManager;
+	GtkSourceStyleScheme *StyleScheme;
 	GtkSourceBuffer *PreviewBuffer;
 	GtkCssProvider *CssProvider;
 	GtkWidget *FontButton;
@@ -501,26 +502,53 @@ static void console_settings_show(GtkWidget *Button, gtk_console_t *Console) {
 	gtk_widget_show(Console->Settings->Dialog);
 }
 
-static void console_update_font(GtkCssProvider *CssProvider, PangoFontDescription *FontDescription) {
+static void console_update_css(GtkCssProvider *CssProvider, PangoFontDescription *FontDescription, GtkSourceStyleScheme *Scheme) {
 	const char *Style = "normal";
 	switch (pango_font_description_get_style(FontDescription)) {
 	case PANGO_STYLE_NORMAL: Style = "normal"; break;
 	case PANGO_STYLE_ITALIC: Style = "italic"; break;
 	case PANGO_STYLE_OBLIQUE: Style = "oblique"; break;
 	}
+	gchar *Foreground = NULL, *Background = NULL;
+	gchar *SelectedForeground = NULL, *SelectedBackground = NULL;
+	if (Scheme) {
+		GtkSourceStyle *Text = gtk_source_style_scheme_get_style(Scheme, "text");
+		if (Text) g_object_get(Text, "foreground", &Foreground, "background", &Background, NULL);
+		GtkSourceStyle *Selected = gtk_source_style_scheme_get_style(Scheme, "selection");
+		if (Selected) g_object_get(Selected, "foreground", &SelectedForeground, "background", &SelectedBackground, NULL);
+
+	}
 	g_autofree char *CSS = g_strdup_printf(
-		"textview.sourceview {\n"
+		"textview.sourceview, treeview.debugger {\n"
 		" font-family: '%s';\n"
 		" font-size: %d%s;\n"
 		" font-style: %s;\n"
 		" font-weight: %d;\n"
-		" }",
+		"}\n"
+		"\n"
+		"treeview.debugger {\n"
+		" color: %s;\n"
+		" background-color: %s;\n"
+		"}"
+		"\n"
+		"treeview.debugger:selected {\n"
+		" color: %s;\n"
+		" background-color: %s;\n"
+		"}",
 		pango_font_description_get_family(FontDescription) ?: "Monospace",
 		pango_font_description_get_size(FontDescription) / PANGO_SCALE ?: 12,
 		pango_font_description_get_size_is_absolute(FontDescription) ? "px" : "pt",
 		Style,
-		pango_font_description_get_weight(FontDescription)
+		pango_font_description_get_weight(FontDescription),
+		Foreground ?: "initial",
+		Background ?: "initial",
+		SelectedForeground ?: Foreground ?: "initial",
+		SelectedBackground ?: Background ?: "initial"
 	);
+	g_free(Foreground);
+	g_free(Background);
+	g_free(SelectedForeground);
+	g_free(SelectedBackground);
 	ML_LOG_DEBUG(NULL, "Updating font description: %s", CSS);
 	gtk_css_provider_load_from_string(CssProvider, CSS);
 }
@@ -711,7 +739,7 @@ static ml_value_t *console_set_font(gtk_console_t *Console, int Count, ml_value_
 	Console->FontDescription = pango_font_description_new();
 	pango_font_description_set_family(Console->FontDescription, ml_string_value(Args[0]));
 	pango_font_description_set_size(Console->FontDescription, PANGO_SCALE * ml_integer_value(Args[1]));
-	console_update_font(Console->CssProvider, Console->FontDescription);
+	console_update_css(Console->CssProvider, Console->FontDescription, Console->StyleScheme);
 	return MLNil;
 }
 
@@ -828,7 +856,7 @@ static void console_settings_apply(GtkButton *Widget, gtk_console_settings_t *Se
 	g_key_file_save_to_file(Console->Config, Console->ConfigPath, NULL);
 
 	Console->FontDescription = gtk_font_dialog_button_get_font_desc(GTK_FONT_DIALOG_BUTTON(Settings->FontButton));
-	console_update_font(Console->CssProvider, Console->FontDescription);
+	console_update_css(Console->CssProvider, Console->FontDescription, Console->StyleScheme);
 	const char *FontName = pango_font_description_to_string(Console->FontDescription);
 	g_key_file_set_string(Console->Config, "gtk-console", "font", FontName);
 	g_free((void *)FontName);
@@ -844,12 +872,13 @@ static void style_drop_down_changed(GtkDropDown *Widget, GParamSpec *Spec, gtk_c
 	GObject *SelectedItem = gtk_drop_down_get_selected_item(Widget);
 	const char *StyleId = gtk_string_object_get_string(GTK_STRING_OBJECT(SelectedItem));
 	GtkSourceStyleScheme *StyleScheme = gtk_source_style_scheme_manager_get_scheme(Settings->StyleManager, StyleId);
+	Settings->StyleScheme = StyleScheme;
 	gtk_source_buffer_set_style_scheme(Settings->PreviewBuffer, StyleScheme);
 }
 
 static void console_font_changed(GtkFontDialogButton *Widget, GParamSpec *Spec, gtk_console_settings_t *Settings) {
 	PangoFontDescription *FontDescription = gtk_font_dialog_button_get_font_desc(Widget);
-	console_update_font(Settings->CssProvider, FontDescription);
+	console_update_css(Settings->CssProvider, FontDescription, Settings->StyleScheme);
 }
 
 static gtk_console_settings_t *gtk_console_settings(gtk_console_t *Console, GtkSourceStyleSchemeManager *StyleManager) {
@@ -895,6 +924,7 @@ static gtk_console_settings_t *gtk_console_settings(gtk_console_t *Console, GtkS
 	gtk_box_append(GTK_BOX(Box), TopBox);
 	Settings->PreviewBuffer = gtk_source_buffer_new_with_language(Console->Language);
 	if (Console->StyleScheme) {
+		Settings->StyleScheme = Console->StyleScheme;
 		gtk_source_buffer_set_style_scheme(Settings->PreviewBuffer, Console->StyleScheme);
 	}
 	GtkWidget *Preview = gtk_source_view_new_with_buffer(Settings->PreviewBuffer);
@@ -957,7 +987,7 @@ static gtk_console_settings_t *gtk_console_settings(gtk_console_t *Console, GtkS
 	);
 	if (Console->FontDescription) {
 		gtk_font_dialog_button_set_font_desc(GTK_FONT_DIALOG_BUTTON(FontButton), Console->FontDescription);
-		console_update_font(Settings->CssProvider, Console->FontDescription);
+		console_update_css(Settings->CssProvider, Console->FontDescription, Console->StyleScheme);
 	}
 	return Settings;
 }
@@ -1038,6 +1068,7 @@ gtk_console_t *gtk_console(ml_state_t *Caller, ml_getter_t GlobalGet, void *Glob
 	Console->ThreadStore = gtk_list_store_new(3, G_TYPE_INT, G_TYPE_STRING, G_TYPE_INT);
 	gtk_tree_sortable_set_sort_column_id(GTK_TREE_SORTABLE(Console->ThreadStore), 0, GTK_SORT_ASCENDING);
 	GtkWidget *ThreadView = Console->ThreadView = gtk_tree_view_new_with_model(GTK_TREE_MODEL(Console->ThreadStore));
+	gtk_widget_add_css_class(ThreadView, "debugger");
 	gtk_tree_view_insert_column_with_attributes(GTK_TREE_VIEW(ThreadView), -1, "Thread", gtk_cell_renderer_text_new(), "text", 0, NULL);
 	gtk_tree_view_insert_column_with_attributes(GTK_TREE_VIEW(ThreadView), -1, "Source", gtk_cell_renderer_text_new(), "text", 1, NULL);
 	gtk_tree_view_insert_column_with_attributes(GTK_TREE_VIEW(ThreadView), -1, "Line", gtk_cell_renderer_text_new(), "text", 2, NULL);
@@ -1046,6 +1077,7 @@ gtk_console_t *gtk_console(ml_state_t *Caller, ml_getter_t GlobalGet, void *Glob
 
 	Console->FrameStore = gtk_tree_store_new(2, G_TYPE_STRING, G_TYPE_STRING);
 	GtkWidget *FrameView = Console->FrameView = gtk_tree_view_new_with_model(GTK_TREE_MODEL(Console->FrameStore));
+	gtk_widget_add_css_class(FrameView, "debugger");
 	//gtk_tree_view_set_level_indentation(GTK_TREE_VIEW(FrameView), 20);
 	gtk_tree_view_insert_column_with_attributes(GTK_TREE_VIEW(FrameView), -1, "Name", gtk_cell_renderer_text_new(), "text", 0, NULL);
 	gtk_tree_view_insert_column_with_attributes(GTK_TREE_VIEW(FrameView), -1, "Value", gtk_cell_renderer_text_new(), "text", 1, NULL);
@@ -1138,8 +1170,6 @@ gtk_console_t *gtk_console(ml_state_t *Caller, ml_getter_t GlobalGet, void *Glob
 	} else {
 		Console->FontDescription = pango_font_description_from_string("Monospace 10");
 	}
-	console_update_font(Console->CssProvider, Console->FontDescription);
-
 	if (g_key_file_has_key(Console->Config, "gtk-console", "style", NULL)) {
 		const char *StyleId = g_key_file_get_string(Console->Config, "gtk-console", "style", NULL);
 		Console->StyleScheme = gtk_source_style_scheme_manager_get_scheme(StyleManager, StyleId);
@@ -1149,6 +1179,7 @@ gtk_console_t *gtk_console(ml_state_t *Caller, ml_getter_t GlobalGet, void *Glob
 		gtk_source_buffer_set_style_scheme(Console->SourceBuffer, Console->StyleScheme);
 		//gtk_source_style_scheme_chooser_set_style_scheme(GTK_SOURCE_STYLE_SCHEME_CHOOSER(StyleCombo), Console->StyleScheme);
 	}
+	console_update_css(Console->CssProvider, Console->FontDescription, Console->StyleScheme);
 
 	GtkWidget *LayoutButton = gtk_button_new_from_icon_name("transform-rotate-symbolic");
 	g_signal_connect(G_OBJECT(LayoutButton), "clicked", G_CALLBACK(toggle_layout), Console);

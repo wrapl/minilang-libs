@@ -514,7 +514,8 @@ static void console_update_css(GtkCssProvider *CssProvider, PangoFontDescription
 	if (Scheme) {
 		GtkSourceStyle *Text = gtk_source_style_scheme_get_style(Scheme, "text");
 		if (Text) g_object_get(Text, "foreground", &Foreground, "background", &Background, NULL);
-		GtkSourceStyle *Selected = gtk_source_style_scheme_get_style(Scheme, "selection");
+		GtkSourceStyle *Selected = gtk_source_style_scheme_get_style(Scheme, "current-line");
+		if (!Selected) Selected = gtk_source_style_scheme_get_style(Scheme, "selection");
 		if (Selected) g_object_get(Selected, "foreground", &SelectedForeground, "background", &SelectedBackground, NULL);
 
 	}

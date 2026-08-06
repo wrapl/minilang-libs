@@ -1144,8 +1144,6 @@ gtk_console_t *gtk_console(ml_state_t *Caller, ml_getter_t GlobalGet, void *Glob
 	gtk_scrolled_window_set_child(GTK_SCROLLED_WINDOW(SourceScrolled), SourceView);
 	gtk_notebook_append_page(Console->Notebook, SourceScrolled, gtk_label_new("<console>"));
 
-	GtkWidget *InputFrame = gtk_frame_new(NULL);
-	gtk_frame_set_child(GTK_FRAME(InputFrame), InputPanel);
 	GtkEventController *KeyEventController = gtk_event_controller_key_new();
 	gtk_widget_add_controller(Console->InputView, KeyEventController);
 
@@ -1157,7 +1155,7 @@ gtk_console_t *gtk_console(ml_state_t *Caller, ml_getter_t GlobalGet, void *Glob
 	gtk_window_set_title(GTK_WINDOW(Console->Window), "Minilang");
 
 	GtkWidget *ReplBox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 2);
-	gtk_box_append(GTK_BOX(ReplBox), InputFrame);
+	gtk_box_append(GTK_BOX(ReplBox), InputPanel);
 	gtk_box_append(GTK_BOX(ReplBox), Console->LogScrolled);
 
 	gtk_paned_set_start_child(GTK_PANED(Console->Paned), OutputPane);

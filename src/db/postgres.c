@@ -256,7 +256,7 @@ static int query_pipeline(connection_t *Connection, query_t *Query) {
 		ML_LOG_ERROR(NULL, "Error dispatching query: %s", PQerrorMessage(Connection->Conn));
 	}
 	if (Connection->Pipeline) {
-		PQpipelineSync(Connection->Conn);
+		PQsendPipelineSync(Connection->Conn);
 		Connection->Waiting = Query->Next;
 		Connection->NeedsFlush = PQflush(Connection->Conn);
 	} else {
@@ -448,6 +448,7 @@ static PGconn *connection_connect(connection_t *Connection) {
 				PQenterPipelineMode(Conn);
 				query_t *Waiting = Connection->Head;
 				Connection->Waiting = NULL;
+				Connection->NeedsFlush = 0;
 				while (Waiting && query_pipeline(Connection, Waiting)) Waiting = Waiting->Next;
 			}
 			return Conn;
@@ -589,11 +590,13 @@ static void *connection_pipeline_thread_fn(connection_t *Connection) {
 			if (!Result) break;
 			ExecStatusType Status = PQresultStatus(Result);
 			if (Status == PGRES_PIPELINE_SYNC) {
+				PQclear(Result);
 			} else if (should_retry(Status, Result, Conn)) {
 				ML_LOG_WARN(NULL, "Reconnecting to database");
 				PQclear(Result);
 				PQfinish(Conn);
 				if (!(Query->Next = Connection->Head)) Connection->Tail = Query;
+				Connection->Head = Query;
 				Connection->Conn = NULL;
 				if (!Connection->Reconnect) return NULL;
 				Connection->NeedsFlush = 1;

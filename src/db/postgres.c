@@ -252,9 +252,7 @@ static int query_pipeline(connection_t *Connection, query_t *Query) {
 	} else {
 		Success = PQsendQueryPrepared(Connection->Conn, Query->Name, Query->NumParams, Query->Values, Query->Lengths, Query->Formats, 0);
 	}
-	if (!Success) {
-		ML_LOG_ERROR(NULL, "Error dispatching query: %s", PQerrorMessage(Connection->Conn));
-	}
+	if (!Success) ML_LOG_ERROR(NULL, "Error dispatching query: %s", PQerrorMessage(Connection->Conn));
 	if (Connection->Pipeline) {
 		PQsendPipelineSync(Connection->Conn);
 		Connection->Waiting = Query->Next;

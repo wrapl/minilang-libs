@@ -400,6 +400,7 @@ ML_FUNCTION(Escape) {
 //<String:string
 //>string
 // Escapes characters in :mini:`String`, suitable for a YAML document.
+//$= import: yaml("fmt/yaml")
 //$= yaml::escape("\'Hello\nworld!\'")
 	ML_CHECK_ARG_COUNT(1);
 	ML_CHECK_ARG_TYPE(0, MLStringT);

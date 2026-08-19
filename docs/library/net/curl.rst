@@ -9,76 +9,8 @@ net/curl
 
 .. rst-class:: mini-api
 
-:mini:`type curl`
-   *TBD*
-
-
 :mini:`fun curl(): curl`
    Returns a new Curl easy instance.
-
-
-:mini:`meth (Arg₁: curl):cleanup`
-   *TBD*
-
-
-:mini:`meth (Arg₁: curl):get(Arg₂: curlinfointeger)`
-   *TBD*
-
-
-:mini:`meth (Arg₁: curl):get(Arg₂: curlinforeal)`
-   *TBD*
-
-
-:mini:`meth (Arg₁: curl):get(Arg₂: curlinfoset)`
-   *TBD*
-
-
-:mini:`meth (Arg₁: curl):get(Arg₂: curlinfostring)`
-   *TBD*
-
-
-:mini:`meth (Arg₁: curl):perform`
-   *TBD*
-
-
-:mini:`meth (Arg₁: curl):reset`
-   *TBD*
-
-
-:mini:`meth (Curl: curl):set(Option: curloptionenum, Value: enum::value): curl`
-   Sets :mini:`Option` in :mini:`Curl` to :mini:`Value`.
-
-
-:mini:`meth (Curl: curl):set(Option: curloptionfunction, Value: function): curl`
-   Sets :mini:`Option` in :mini:`Curl` to :mini:`Value`.
-
-
-:mini:`meth (Curl: curl):set(Option: curloptionfunction, Value: stream): curl`
-   Sets :mini:`Option` in :mini:`Curl` to :mini:`Value`.
-
-
-:mini:`meth (Curl: curl):set(Option: curloptionfunction, Value: string::buffer): curl`
-   Sets :mini:`Option` in :mini:`Curl` to :mini:`Value`.
-
-
-:mini:`meth (Curl: curl):set(Option: curloptioninteger, Value: boolean): curl`
-   Sets :mini:`Option` in :mini:`Curl` to :mini:`Value`.
-
-
-:mini:`meth (Curl: curl):set(Option: curloptioninteger, Value: integer): curl`
-   Sets :mini:`Option` in :mini:`Curl` to :mini:`Value`.
-
-
-:mini:`meth (Curl: curl):set(Option: curloptionset, Value: list): curl`
-   Sets :mini:`Option` in :mini:`Curl` to :mini:`Value`.
-
-
-:mini:`meth (Curl: curl):set(Option: curloptionstring, Value: string): curl`
-   Sets :mini:`Option` in :mini:`Curl` to :mini:`Value`.
-
-
-:mini:`meth (Curl: curl):set(Option: curloption, nil: nil): curl`
-   Sets :mini:`Option` in :mini:`Curl` to :mini:`nil`.
 
 
 :mini:`type curl::info < enum`
@@ -145,6 +77,7 @@ net/curl
    * :mini:`::QueueTimeT`
    * :mini:`::PosttransferTimeT`
    * :mini:`::EarlydataSentT`
+   * :mini:`::SizeDelivered`
    * :mini:`::SslEngines`
    * :mini:`::Cookielist`
    * :mini:`::Certinfo`
@@ -368,9 +301,9 @@ net/curl
    * :mini:`::StreamDependsE` - Set E-xclusive stream dependency on another curl handle
    * :mini:`::Mimepost` - Post MIME data.
    * :mini:`::Curlu` - Specify URL using CURL URL API.
-   * :mini:`::Writefunction` - Function that will be called to store the output (instead of fwrite). The
-   * :mini:`::Readfunction` - Function that will be called to read the input (instead of fread). The
-   * :mini:`::Headerfunction` - Function that will be called to store headers (instead of fwrite). The
+   * :mini:`::Writefunction` - Function that is called to store the output (instead of fwrite). The
+   * :mini:`::Readfunction` - Function that is called to read the input (instead of fread). The
+   * :mini:`::Headerfunction` - Function that is called to store headers (instead of fwrite). The
    * :mini:`::Debugfunction` - set the debug function
    * :mini:`::SslCtxFunction` - Set the ssl context callback function, currently only for OpenSSL or
    * :mini:`::Sockoptfunction` - callback function for setting socket options
@@ -382,12 +315,12 @@ net/curl
    * :mini:`::ChunkEndFunction` - Directory matching callback called after the file (chunk)
    * :mini:`::FnmatchFunction` - Change match (fnmatch-like) callback for wildcard matching
    * :mini:`::Closesocketfunction` - Callback function for closing socket (instead of close(2)). The callback
-   * :mini:`::Xferinfofunction` - Function that will be called instead of the internal progress display
-   * :mini:`::ResolverStartFunction` - Function that will be called before a resolver request is made
+   * :mini:`::Xferinfofunction` - Function that is called instead of the internal progress display
+   * :mini:`::ResolverStartFunction` - Function that is called before a resolver request is made
    * :mini:`::Trailerfunction` - add trailing data after no more data is available
    * :mini:`::Hstsreadfunction` - HSTS read callback
    * :mini:`::Hstswritefunction` - HSTS write callback
-   * :mini:`::Prereqfunction` - Function that will be called immediately before the initial request
+   * :mini:`::Prereqfunction` - Function that is called immediately before the initial request
    * :mini:`::SshHostkeyfunction` - set the SSH host key callback, must point to a curl_sshkeycallback
    * :mini:`::Httpheader` - This points to a linked list of headers, struct curl_slist kind. This
    * :mini:`::Quote` - send linked-list of QUOTE commands
@@ -418,7 +351,7 @@ net/curl
    * :mini:`::ProxySslversion` - What version to specifically try to use for proxy.
    * :mini:`::InfilesizeLarge` - See the comment for INFILESIZE above, but in short, specifies
    * :mini:`::ResumeFromLarge` - Sets the continuation offset. There is also a CURLOPTTYPE_LONG version
-   * :mini:`::MaxfilesizeLarge` - Sets the maximum size of data that will be downloaded from
+   * :mini:`::MaxfilesizeLarge` - Sets the maximum size of data that is to be downloaded from
    * :mini:`::PostfieldsizeLarge` - The _LARGE version of the standard POSTFIELDSIZE option
    * :mini:`::MaxSendSpeedLarge` - if the connection proceeds too quickly then need to slow it down limit-rate: maximum number of bytes per second to send or receive
    * :mini:`::MaxRecvSpeedLarge` - 
@@ -438,5 +371,140 @@ net/curl
    * :mini:`::Try`
    * :mini:`::Control`
    * :mini:`::All`
+
+
+:mini:`meth (Arg₁: curl):get(Arg₂: curlinfoset)`
+   *TBD*
+
+
+:mini:`meth (Arg₁: curl):get(Arg₂: curlinfostring)`
+   *TBD*
+
+
+:mini:`type curlusessl < enum`
+   * :mini:`::None`
+   * :mini:`::Try`
+   * :mini:`::Control`
+   * :mini:`::All`
+
+
+:mini:`meth (Arg₁: curl):get(Arg₂: curlinfointeger)`
+   *TBD*
+
+
+:mini:`meth (Arg₁: curl):cleanup`
+   *TBD*
+
+
+:mini:`meth (Arg₁: curl):reset`
+   *TBD*
+
+
+:mini:`meth (Arg₁: curl):perform`
+   *TBD*
+
+
+:mini:`meth (Curl: curl):set(Option: curloptionfunction, Value: function): curl`
+   Sets :mini:`Option` in :mini:`Curl` to :mini:`Value`.
+
+
+:mini:`meth (Curl: curl):set(Option: curloptionfunction, Value: string::buffer): curl`
+   Sets :mini:`Option` in :mini:`Curl` to :mini:`Value`.
+
+
+:mini:`meth (Curl: curl):set(Option: curloptionfunction, Value: stream): curl`
+   Sets :mini:`Option` in :mini:`Curl` to :mini:`Value`.
+
+
+:mini:`meth (Curl: curl):set(Option: curloptionset, Value: list): curl`
+   Sets :mini:`Option` in :mini:`Curl` to :mini:`Value`.
+
+
+:mini:`meth (Curl: curl):set(Option: curloptionstring, Value: string): curl`
+   Sets :mini:`Option` in :mini:`Curl` to :mini:`Value`.
+
+
+:mini:`meth (Curl: curl):set(Option: curloptioninteger, Value: boolean): curl`
+   Sets :mini:`Option` in :mini:`Curl` to :mini:`Value`.
+
+
+:mini:`meth (Curl: curl):set(Option: curloptionenum, Value: enum::value): curl`
+   Sets :mini:`Option` in :mini:`Curl` to :mini:`Value`.
+
+
+:mini:`meth (Curl: curl):set(Option: curloptioninteger, Value: integer): curl`
+   Sets :mini:`Option` in :mini:`Curl` to :mini:`Value`.
+
+
+:mini:`meth (Curl: curl):set(Option: curloption, nil: nil): curl`
+   Sets :mini:`Option` in :mini:`Curl` to :mini:`nil`.
+
+
+:mini:`type curl`
+   *TBD*
+
+
+:mini:`fun curl(): curl`
+   Returns a new Curl easy instance.
+
+
+:mini:`meth (Arg₁: curl):get(Arg₂: curlinforeal)`
+   *TBD*
+
+
+:mini:`meth (Arg₁: curl):get(Arg₂: curlinfoset)`
+   *TBD*
+
+
+:mini:`meth (Arg₁: curl):get(Arg₂: curlinfostring)`
+   *TBD*
+
+
+:mini:`meth (Arg₁: curl):get(Arg₂: curlinforeal)`
+   *TBD*
+
+
+:mini:`meth (Arg₁: curl):get(Arg₂: curlinfointeger)`
+   *TBD*
+
+
+:mini:`meth (Arg₁: curl):perform`
+   *TBD*
+
+
+:mini:`meth (Curl: curl):set(Option: curloptionfunction, Value: function): curl`
+   Sets :mini:`Option` in :mini:`Curl` to :mini:`Value`.
+
+
+:mini:`meth (Curl: curl):set(Option: curloptionfunction, Value: stream): curl`
+   Sets :mini:`Option` in :mini:`Curl` to :mini:`Value`.
+
+
+:mini:`meth (Curl: curl):set(Option: curloptionset, Value: list): curl`
+   Sets :mini:`Option` in :mini:`Curl` to :mini:`Value`.
+
+
+:mini:`meth (Curl: curl):set(Option: curloptionstring, Value: string): curl`
+   Sets :mini:`Option` in :mini:`Curl` to :mini:`Value`.
+
+
+:mini:`meth (Curl: curl):set(Option: curloptioninteger, Value: boolean): curl`
+   Sets :mini:`Option` in :mini:`Curl` to :mini:`Value`.
+
+
+:mini:`meth (Curl: curl):set(Option: curloptionenum, Value: enum::value): curl`
+   Sets :mini:`Option` in :mini:`Curl` to :mini:`Value`.
+
+
+:mini:`meth (Curl: curl):set(Option: curloptioninteger, Value: integer): curl`
+   Sets :mini:`Option` in :mini:`Curl` to :mini:`Value`.
+
+
+:mini:`meth (Curl: curl):set(Option: curloption, nil: nil): curl`
+   Sets :mini:`Option` in :mini:`Curl` to :mini:`nil`.
+
+
+:mini:`type curl`
+   *TBD*
 
 

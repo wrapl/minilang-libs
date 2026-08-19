@@ -25,11 +25,7 @@ snd/sox
    *TBD*
 
 
-:mini:`type effect`
-   *TBD*
-
-
-:mini:`type effect < effect`
+:mini:`type format`
    *TBD*
 
 
@@ -45,10 +41,6 @@ snd/sox
    * :mini:`::Modify`
    * :mini:`::Alpha`
    * :mini:`::Internal`
-
-
-:mini:`type format`
-   *TBD*
 
 
 :mini:`meth (Arg₁: format):close`
@@ -71,7 +63,19 @@ snd/sox
    *TBD*
 
 
+:mini:`type effect < effect`
+   *TBD*
+
+
+:mini:`type effect`
+   *TBD*
+
+
 :mini:`meth (Arg₁: sox):flow`
+   *TBD*
+
+
+:mini:`meth (Arg₁: string):OpenWrite(Arg₂: signalinfo)`
    *TBD*
 
 
@@ -80,10 +84,6 @@ snd/sox
 
 
 :mini:`meth (Arg₁: string):OpenRead`
-   *TBD*
-
-
-:mini:`meth (Arg₁: string):OpenWrite(Arg₂: signalinfo)`
    *TBD*
 
 

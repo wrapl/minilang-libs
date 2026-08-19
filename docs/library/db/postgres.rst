@@ -13,27 +13,11 @@ db/postgres
    A connection to a Postgresql database.
 
 
-:mini:`meth connection(Settings: map): connection`
-   Connects to a Postgresql database with the supplied settings.
+:mini:`type statement < function`
+   A prepared statement. Calling a statement executes the prepared statement on the associated connection,  with the provided arguments (if any).
 
 
-:mini:`meth connection(Name₁ is Value₁, ...): connection`
-   Connects to a Postgresql database with the supplied settings.
-
-
-:mini:`meth (Arg₁: connection):close`
-   *TBD*
-
-
-:mini:`meth (Arg₁: connection):connected`
-   *TBD*
-
-
-:mini:`meth (Arg₁: connection):db`
-   *TBD*
-
-
-:mini:`meth (Arg₁: connection):host`
+:mini:`meth (Arg₁: connection):port`
    *TBD*
 
 
@@ -41,7 +25,7 @@ db/postgres
    *TBD*
 
 
-:mini:`meth (Arg₁: connection):options`
+:mini:`meth (Arg₁: connection):host`
    *TBD*
 
 
@@ -49,7 +33,35 @@ db/postgres
    *TBD*
 
 
-:mini:`meth (Arg₁: connection):port`
+:mini:`meth (Arg₁: connection):user`
+   *TBD*
+
+
+:mini:`meth (Arg₁: connection):db`
+   *TBD*
+
+
+:mini:`meth (Arg₁: connection):close`
+   *TBD*
+
+
+:mini:`meth (Arg₁: connection):options`
+   *TBD*
+
+
+:mini:`meth (Arg₁: connection):reconnect(Arg₂: number)`
+   *TBD*
+
+
+:mini:`meth connection(Name₁ is Value₁, ...): connection`
+   Connects to a Postgresql database with the supplied settings.
+
+
+:mini:`meth connection(Settings: map): connection`
+   Connects to a Postgresql database with the supplied settings.
+
+
+:mini:`meth (Arg₁: connection):connected`
    *TBD*
 
 
@@ -60,17 +72,5 @@ db/postgres
 :mini:`meth (Connection: connection):query(SQL: string, Arg: any, ...): list[tuple] | nil`
    Executes :mini:`SQL` on :mini:`Connection`,  with arguments :mini:`Argᵢ` if supplied.
    Returns a list of tuples (for ``SELECT``,  etc) or :mini:`nil` for commands without results.
-
-
-:mini:`meth (Arg₁: connection):reconnect(Arg₂: number)`
-   *TBD*
-
-
-:mini:`meth (Arg₁: connection):user`
-   *TBD*
-
-
-:mini:`type statement < function`
-   A prepared statement. Calling a statement executes the prepared statement on the associated connection,  with the provided arguments (if any).
 
 

@@ -2,6 +2,7 @@
 #include "gir.h"
 #include <minilang/ml_logging.h>
 #include <minilang/ml_object.h>
+#include <ctype.h>
 
 struct _ConsoleCompletionProvider {
 	GObject parent_instance;
@@ -140,7 +141,16 @@ static ml_value_t *gtk_console_completion_find_scope(GtkTextIter *Start, ml_comp
 	if (!gtk_text_iter_backward_char(Start)) return Methods;
 	if (gtk_text_iter_get_char(Start) != ':') return Methods;
 	GtkTextIter Iter = *Start;
-	if (!gtk_text_iter_backward_word_start(Start)) return NULL;
+	int IdLength = 0;
+	while (gtk_text_iter_backward_char(Start)) {
+		char Char = gtk_text_iter_get_char(Start);
+		if (!isalnum(Char) && Char != '_') {
+			gtk_text_iter_forward_char(Start);
+			break;
+		}
+		++IdLength;
+	}
+	if (!IdLength) return NULL;
 	gchar *Name = gtk_text_iter_get_text(Start, &Iter);
 	ml_value_t *Scope = gtk_console_completion_find_scope(Start, Compiler);
 	ml_value_t *Value = NULL;

@@ -9,15 +9,7 @@ db/sqlite
 
 .. rst-class:: mini-api
 
-:mini:`type sqlite`
-   *TBD*
-
-
 :mini:`fun sqlite(Arg₁: string, Arg₂: sqlite::open): sqlite`
-   *TBD*
-
-
-:mini:`meth (Arg₁: sqlite):close`
    *TBD*
 
 
@@ -26,6 +18,10 @@ db/sqlite
 
 
 :mini:`meth (Arg₁: sqlite):statement(Arg₂: string)`
+   *TBD*
+
+
+:mini:`type sqlite::stmt < sequence`
    *TBD*
 
 
@@ -54,7 +50,11 @@ db/sqlite
    * :mini:`::EXRESCODE`
 
 
-:mini:`type sqlite::stmt < sequence`
+:mini:`type sqlite`
+   *TBD*
+
+
+:mini:`meth (Arg₁: sqlite):close`
    *TBD*
 
 

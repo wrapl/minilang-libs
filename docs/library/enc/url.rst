@@ -9,11 +9,11 @@ enc/url
 
 .. rst-class:: mini-api
 
-:mini:`fun decode(String: address): address`
+:mini:`fun encode(Address: address): string`
    *TBD*
 
 
-:mini:`fun encode(Address: address): string`
+:mini:`fun decode(String: address): address`
    *TBD*
 
 

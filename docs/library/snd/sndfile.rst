@@ -13,59 +13,7 @@ snd/sndfile
    *TBD*
 
 
-:mini:`meth sndfile(Arg₁: stream, Arg₂: string, ...): sndfile`
-   *TBD*
-
-
-:mini:`meth sndfile(Arg₁: stream, Arg₂: string, Arg₃₁ is Value₁, ...): sndfile`
-   *TBD*
-
-
-:mini:`meth (Arg₁: sndfile):channels`
-   *TBD*
-
-
-:mini:`meth (Arg₁: sndfile):close`
-   *TBD*
-
-
-:mini:`meth (Arg₁: sndfile):flush`
-   *TBD*
-
-
-:mini:`meth (Arg₁: sndfile):format`
-   *TBD*
-
-
-:mini:`meth (SndFile: sndfile):get(Name: sndfile::string): string`
-   *TBD*
-
-
-:mini:`meth (Arg₁: sndfile):rate`
-   *TBD*
-
-
-:mini:`meth (Arg₁: sndfile):read(Arg₂: matrix)`
-   *TBD*
-
-
-:mini:`meth (Arg₁: sndfile):read(Arg₂: vector)`
-   *TBD*
-
-
 :mini:`meth (SndFile: sndfile):set(Name: sndfile::string, Value: string)`
-   *TBD*
-
-
-:mini:`meth (Arg₁: sndfile):strerror`
-   *TBD*
-
-
-:mini:`meth (Arg₁: sndfile):write(Arg₂: matrix)`
-   *TBD*
-
-
-:mini:`meth (Arg₁: sndfile):write(Arg₂: vector)`
    *TBD*
 
 
@@ -134,5 +82,57 @@ snd/sndfile
    * :mini:`::License`
    * :mini:`::TrackNumber`
    * :mini:`::Genre`
+
+
+:mini:`meth (Arg₁: sndfile):close`
+   *TBD*
+
+
+:mini:`meth (Arg₁: sndfile):flush`
+   *TBD*
+
+
+:mini:`meth (Arg₁: sndfile):write(Arg₂: matrix)`
+   *TBD*
+
+
+:mini:`meth (Arg₁: sndfile):write(Arg₂: vector)`
+   *TBD*
+
+
+:mini:`meth (Arg₁: sndfile):read(Arg₂: matrix)`
+   *TBD*
+
+
+:mini:`meth (Arg₁: sndfile):read(Arg₂: vector)`
+   *TBD*
+
+
+:mini:`meth (SndFile: sndfile):get(Name: sndfile::string): string`
+   *TBD*
+
+
+:mini:`meth (Arg₁: sndfile):format`
+   *TBD*
+
+
+:mini:`meth (Arg₁: sndfile):channels`
+   *TBD*
+
+
+:mini:`meth (Arg₁: sndfile):rate`
+   *TBD*
+
+
+:mini:`meth (Arg₁: sndfile):strerror`
+   *TBD*
+
+
+:mini:`meth sndfile(Arg₁: stream, Arg₂: string, Arg₃₁ is Value₁, ...): sndfile`
+   *TBD*
+
+
+:mini:`meth sndfile(Arg₁: stream, Arg₂: string, ...): sndfile`
+   *TBD*
 
 

@@ -17,15 +17,7 @@ libuv
    *TBD*
 
 
-:mini:`fun sleep(Arg₁: integer)`
-   *TBD*
-
-
-:mini:`type uvfile`
-   *TBD*
-
-
-:mini:`meth (Arg₁: uvfile):close`
+:mini:`meth (Arg₁: uvfile):write(Arg₂: string)`
    *TBD*
 
 
@@ -33,7 +25,15 @@ libuv
    *TBD*
 
 
-:mini:`meth (Arg₁: uvfile):write(Arg₂: string)`
+:mini:`meth (Arg₁: uvfile):close`
+   *TBD*
+
+
+:mini:`fun sleep(Arg₁: integer)`
+   *TBD*
+
+
+:mini:`type uvfile`
    *TBD*
 
 

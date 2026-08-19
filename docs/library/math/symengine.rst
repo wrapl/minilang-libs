@@ -13,87 +13,87 @@ math/symengine
    *TBD*
 
 
-:mini:`meth (Arg₁: basic) !== (Arg₂: basic)`
+:mini:`type basiciterator`
    *TBD*
 
 
-:mini:`meth (Arg₁: basic) !== (Arg₂: real)`
+:mini:`meth (Arg₁: real) > (Arg₂: basic)`
    *TBD*
 
 
-:mini:`meth (Arg₁: basic) * (Arg₂: basic)`
+:mini:`meth (Arg₁: basicset):inf`
    *TBD*
 
 
-:mini:`meth (Arg₁: basic) * (Arg₂: real)`
+:mini:`meth (Arg₁: real) * (Arg₂: basic)`
    *TBD*
 
 
-:mini:`meth (Arg₁: basic) + (Arg₂: basic)`
+:mini:`meth (Arg₁: basic):math::abs`
    *TBD*
 
 
-:mini:`meth (Arg₁: basic) + (Arg₂: real)`
+:mini:`meth (Arg₁: basic):math::floor`
    *TBD*
 
 
-:mini:`meth -(Arg₁: basic)`
+:mini:`meth (Arg₁: basic):math::atan`
    *TBD*
 
 
-:mini:`meth (Arg₁: basic) - (Arg₂: basic)`
+:mini:`meth (Arg₁: real) < (Arg₂: basic)`
    *TBD*
 
 
-:mini:`meth (Arg₁: basic) - (Arg₂: real)`
+:mini:`meth (Arg₁: basic):math::asin`
    *TBD*
 
 
-:mini:`meth (Arg₁: basic) / (Arg₂: basic)`
+:mini:`meth (Arg₁: basic):math::tan`
    *TBD*
 
 
-:mini:`meth (Arg₁: basic) / (Arg₂: real)`
+:mini:`meth (Arg₁: basic):math::cos`
    *TBD*
 
 
-:mini:`meth (Arg₁: basic) < (Arg₂: basic)`
+:mini:`meth (Arg₁: basic):math::sin`
    *TBD*
 
 
-:mini:`meth (Arg₁: basic) < (Arg₂: real)`
+:mini:`meth (Arg₁: basic):math::log`
    *TBD*
 
 
-:mini:`meth (Arg₁: basic) <= (Arg₂: basic)`
+:mini:`meth (Arg₁: real) !== (Arg₂: basic)`
    *TBD*
 
 
-:mini:`meth (Arg₁: basic) <= (Arg₂: real)`
+:mini:`meth (Arg₁: basic):math::sqrt`
    *TBD*
 
 
-:mini:`meth (Arg₁: basic) == (Arg₂: basic)`
+:mini:`meth (Arg₁: real) - (Arg₂: basic)`
    *TBD*
 
 
-:mini:`meth (Arg₁: basic) == (Arg₂: real)`
+:mini:`meth (Arg₁: basic):solve(Arg₂: string)`
    *TBD*
 
 
-:mini:`meth (Arg₁: basic) > (Arg₂: basic)`
+:mini:`meth (Arg₁: real) == (Arg₂: basic)`
    *TBD*
 
 
-:mini:`meth (Arg₁: basic) > (Arg₂: real)`
+:mini:`meth (Arg₁: basic):simplify`
    *TBD*
 
 
-:mini:`meth (Arg₁: basic) >= (Arg₂: basic)`
+:mini:`meth basic(Arg₁: string)`
    *TBD*
 
 
-:mini:`meth (Arg₁: basic) >= (Arg₂: real)`
+:mini:`meth (Arg₁: real) ^ (Arg₂: basic)`
    *TBD*
 
 
@@ -101,11 +101,63 @@ math/symengine
    *TBD*
 
 
-:mini:`meth (Arg₁: basic) ^ (Arg₂: real)`
+:mini:`meth -(Arg₁: basic)`
    *TBD*
 
 
-:mini:`meth complex(Arg₁: basic)`
+:mini:`type basicset < basic`
+   *TBD*
+
+
+:mini:`meth (Arg₁: real) >= (Arg₂: basic)`
+   *TBD*
+
+
+:mini:`meth (Arg₁: real) / (Arg₂: basic)`
+   *TBD*
+
+
+:mini:`meth (Arg₁: real) + (Arg₂: basic)`
+   *TBD*
+
+
+:mini:`meth (Arg₁: real) <= (Arg₂: basic)`
+   *TBD*
+
+
+:mini:`meth (Arg₁: basic) <= (Arg₂: basic)`
+   *TBD*
+
+
+:mini:`meth (Arg₁: basic) > (Arg₂: real)`
+   *TBD*
+
+
+:mini:`meth (Arg₁: basicfiniteset)[Arg₂: integer]`
+   *TBD*
+
+
+:mini:`meth (Arg₁: basicset):sup`
+   *TBD*
+
+
+:mini:`meth (Arg₁: basic) < (Arg₂: real)`
+   *TBD*
+
+
+:mini:`meth (Arg₁: basic):math::acos`
+   *TBD*
+
+
+:mini:`meth (Arg₁: basic) < (Arg₂: basic)`
+   *TBD*
+
+
+:mini:`meth (Arg₁: basic) !== (Arg₂: real)`
+   *TBD*
+
+
+:mini:`meth (Arg₁: basic):math::exp`
    *TBD*
 
 
@@ -117,59 +169,59 @@ math/symengine
    *TBD*
 
 
-:mini:`meth (Arg₁: basic):math::abs`
+:mini:`meth (Arg₁: basic) ^ (Arg₂: real)`
    *TBD*
 
 
-:mini:`meth (Arg₁: basic):math::acos`
+:mini:`meth (Arg₁: basic) == (Arg₂: basic)`
    *TBD*
 
 
-:mini:`meth (Arg₁: basic):math::asin`
+:mini:`meth (Arg₁: basic) >= (Arg₂: real)`
    *TBD*
 
 
-:mini:`meth (Arg₁: basic):math::atan`
+:mini:`meth (Arg₁: basic) >= (Arg₂: basic)`
    *TBD*
 
 
-:mini:`meth (Arg₁: basic):math::cos`
+:mini:`meth (Arg₁: basic) <= (Arg₂: real)`
    *TBD*
 
 
-:mini:`meth (Arg₁: basic):math::exp`
+:mini:`meth (Arg₁: basic) * (Arg₂: real)`
    *TBD*
 
 
-:mini:`meth (Arg₁: basic):math::floor`
+:mini:`meth (Arg₁: basic) > (Arg₂: basic)`
    *TBD*
 
 
-:mini:`meth (Arg₁: basic):math::log`
+:mini:`meth (Arg₁: basic) * (Arg₂: basic)`
    *TBD*
 
 
-:mini:`meth (Arg₁: basic):math::sin`
+:mini:`meth (Arg₁: basic) - (Arg₂: real)`
    *TBD*
 
 
-:mini:`meth (Arg₁: basic):math::sqrt`
+:mini:`meth (Arg₁: basic) !== (Arg₂: basic)`
    *TBD*
 
 
-:mini:`meth (Arg₁: basic):math::tan`
+:mini:`meth (Arg₁: basic) == (Arg₂: real)`
    *TBD*
 
 
-:mini:`meth real(Arg₁: basic)`
+:mini:`meth (Arg₁: basic) / (Arg₂: real)`
    *TBD*
 
 
-:mini:`meth (Arg₁: basic):simplify`
+:mini:`meth (Arg₁: basic) / (Arg₂: basic)`
    *TBD*
 
 
-:mini:`meth (Arg₁: basic):solve(Arg₂: string)`
+:mini:`meth (Arg₁: basic) + (Arg₂: basic)`
    *TBD*
 
 
@@ -177,71 +229,19 @@ math/symengine
    *TBD*
 
 
-:mini:`meth (Arg₁: basicfiniteset)[Arg₂: integer]`
+:mini:`meth (Arg₁: basic) - (Arg₂: basic)`
    *TBD*
 
 
-:mini:`type basiciterator`
+:mini:`meth (Arg₁: basic) + (Arg₂: real)`
    *TBD*
 
 
-:mini:`type basicset < basic`
+:mini:`meth real(Arg₁: basic)`
    *TBD*
 
 
-:mini:`meth (Arg₁: basicset):inf`
-   *TBD*
-
-
-:mini:`meth (Arg₁: basicset):sup`
-   *TBD*
-
-
-:mini:`meth (Arg₁: real) !== (Arg₂: basic)`
-   *TBD*
-
-
-:mini:`meth (Arg₁: real) * (Arg₂: basic)`
-   *TBD*
-
-
-:mini:`meth (Arg₁: real) + (Arg₂: basic)`
-   *TBD*
-
-
-:mini:`meth (Arg₁: real) - (Arg₂: basic)`
-   *TBD*
-
-
-:mini:`meth (Arg₁: real) / (Arg₂: basic)`
-   *TBD*
-
-
-:mini:`meth (Arg₁: real) < (Arg₂: basic)`
-   *TBD*
-
-
-:mini:`meth (Arg₁: real) <= (Arg₂: basic)`
-   *TBD*
-
-
-:mini:`meth (Arg₁: real) == (Arg₂: basic)`
-   *TBD*
-
-
-:mini:`meth (Arg₁: real) > (Arg₂: basic)`
-   *TBD*
-
-
-:mini:`meth (Arg₁: real) >= (Arg₂: basic)`
-   *TBD*
-
-
-:mini:`meth (Arg₁: real) ^ (Arg₂: basic)`
-   *TBD*
-
-
-:mini:`meth basic(Arg₁: string)`
+:mini:`meth complex(Arg₁: basic)`
    *TBD*
 
 

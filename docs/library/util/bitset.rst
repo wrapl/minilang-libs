@@ -13,23 +13,15 @@ util/bitset
    *TBD*
 
 
-:mini:`meth bitset(): bitset`
-   *TBD*
-
-
-:mini:`meth (Arg₁: bitset):count`
-   *TBD*
-
-
-:mini:`meth (Arg₁: bitset):set(Arg₂: integer::range)`
-   *TBD*
-
-
-:mini:`meth (Arg₁: bitset):set(Arg₂: integer)`
+:mini:`meth (Arg₁: string::buffer):append(Arg₂: bitset)`
    *TBD*
 
 
 :mini:`meth (Arg₁: bitset):size`
+   *TBD*
+
+
+:mini:`meth (Arg₁: bitset):count`
    *TBD*
 
 
@@ -41,7 +33,15 @@ util/bitset
    *TBD*
 
 
-:mini:`meth (Arg₁: string::buffer):append(Arg₂: bitset)`
+:mini:`meth (Arg₁: bitset):set(Arg₂: integer::range)`
+   *TBD*
+
+
+:mini:`meth (Arg₁: bitset):set(Arg₂: integer)`
+   *TBD*
+
+
+:mini:`meth bitset(): bitset`
    *TBD*
 
 

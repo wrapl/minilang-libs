@@ -17,35 +17,7 @@ web/uri
    *TBD*
 
 
-:mini:`type query < sequence`
-   *TBD*
-
-
-:mini:`meth query(Arg₁: string)`
-   *TBD*
-
-
-:mini:`meth uri(Arg₁: string)`
-   *TBD*
-
-
-:mini:`type uri`
-   *TBD*
-
-
-:mini:`meth uri()`
-   *TBD*
-
-
-:mini:`meth (Arg₁: uri):fragment`
-   *TBD*
-
-
-:mini:`meth (Arg₁: uri):host`
-   *TBD*
-
-
-:mini:`meth (Arg₁: uri):ip`
+:mini:`meth (Arg₁: uri):port`
    *TBD*
 
 
@@ -53,7 +25,19 @@ web/uri
    *TBD*
 
 
-:mini:`meth (Arg₁: uri):port`
+:mini:`meth (Arg₁: uri):ip`
+   *TBD*
+
+
+:mini:`meth uri()`
+   *TBD*
+
+
+:mini:`meth (Arg₁: uri):user`
+   *TBD*
+
+
+:mini:`meth (Arg₁: uri):fragment`
    *TBD*
 
 
@@ -61,11 +45,27 @@ web/uri
    *TBD*
 
 
+:mini:`type query < sequence`
+   *TBD*
+
+
+:mini:`meth (Arg₁: uri):host`
+   *TBD*
+
+
+:mini:`meth uri(Arg₁: string)`
+   *TBD*
+
+
 :mini:`meth (Arg₁: uri):scheme`
    *TBD*
 
 
-:mini:`meth (Arg₁: uri):user`
+:mini:`meth query(Arg₁: string)`
+   *TBD*
+
+
+:mini:`type uri`
    *TBD*
 
 

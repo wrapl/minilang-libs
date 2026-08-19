@@ -13,72 +13,20 @@ io/terminal
    *TBD*
 
 
-:mini:`meth (Arg₁: attrs):get(Arg₂: cflag)`
+:mini:`meth (Arg₁: terminal):attrs(Arg₂: attrs, Arg₃: integer)`
    *TBD*
 
 
-:mini:`meth (Arg₁: attrs):get(Arg₂: iflag)`
+:mini:`meth (Arg₁: terminal):winsize`
    *TBD*
 
 
-:mini:`meth (Arg₁: attrs):get(Arg₂: lflag)`
-   *TBD*
-
-
-:mini:`meth (Arg₁: attrs):get(Arg₂: oflag)`
+:mini:`meth (Arg₁: terminal):attrs`
    *TBD*
 
 
 :mini:`meth (Arg₁: attrs):set(Arg₂: cflag, Arg₃: boolean)`
    *TBD*
-
-
-:mini:`meth (Arg₁: attrs):set(Arg₂: iflag, Arg₃: boolean)`
-   *TBD*
-
-
-:mini:`meth (Arg₁: attrs):set(Arg₂: lflag, Arg₃: boolean)`
-   *TBD*
-
-
-:mini:`meth (Arg₁: attrs):set(Arg₂: oflag, Arg₃: boolean)`
-   *TBD*
-
-
-:mini:`meth (Arg₁: attrs):setraw`
-   *TBD*
-
-
-:mini:`type cflag < enum`
-   * :mini:`::CSIZE`
-   * :mini:`::CS5`
-   * :mini:`::CS6`
-   * :mini:`::CS7`
-   * :mini:`::CS8`
-   * :mini:`::CSTOPB`
-   * :mini:`::CREAD`
-   * :mini:`::PARENB`
-   * :mini:`::PARODD`
-   * :mini:`::HUPCL`
-   * :mini:`::CLOCAL`
-
-
-:mini:`type iflag < enum`
-   * :mini:`::IGNBRK`
-   * :mini:`::BRKINT`
-   * :mini:`::IGNPAR`
-   * :mini:`::PARMRK`
-   * :mini:`::INPCK`
-   * :mini:`::ISTRIP`
-   * :mini:`::INLCR`
-   * :mini:`::IGNCR`
-   * :mini:`::ICRNL`
-   * :mini:`::IUCLC`
-   * :mini:`::IXON`
-   * :mini:`::IXANY`
-   * :mini:`::IXOFF`
-   * :mini:`::IMAXBEL`
-   * :mini:`::IUTF8`
 
 
 :mini:`type lflag < enum`
@@ -98,6 +46,42 @@ io/terminal
    * :mini:`::PENDIN`
    * :mini:`::IEXTEN`
    * :mini:`::EXTPROC`
+
+
+:mini:`type cflag < enum`
+   * :mini:`::CSIZE`
+   * :mini:`::CS5`
+   * :mini:`::CS6`
+   * :mini:`::CS7`
+   * :mini:`::CS8`
+   * :mini:`::CSTOPB`
+   * :mini:`::CREAD`
+   * :mini:`::PARENB`
+   * :mini:`::PARODD`
+   * :mini:`::HUPCL`
+   * :mini:`::CLOCAL`
+
+
+:mini:`type terminal < stream::fd`
+   *TBD*
+
+
+:mini:`type iflag < enum`
+   * :mini:`::IGNBRK`
+   * :mini:`::BRKINT`
+   * :mini:`::IGNPAR`
+   * :mini:`::PARMRK`
+   * :mini:`::INPCK`
+   * :mini:`::ISTRIP`
+   * :mini:`::INLCR`
+   * :mini:`::IGNCR`
+   * :mini:`::ICRNL`
+   * :mini:`::IUCLC`
+   * :mini:`::IXON`
+   * :mini:`::IXANY`
+   * :mini:`::IXOFF`
+   * :mini:`::IMAXBEL`
+   * :mini:`::IUTF8`
 
 
 :mini:`type oflag < enum`
@@ -134,19 +118,35 @@ io/terminal
    * :mini:`::XTABS`
 
 
-:mini:`type terminal < stream::fd`
+:mini:`meth (Arg₁: attrs):setraw`
    *TBD*
 
 
-:mini:`meth (Arg₁: terminal):attrs`
+:mini:`meth (Arg₁: attrs):set(Arg₂: lflag, Arg₃: boolean)`
    *TBD*
 
 
-:mini:`meth (Arg₁: terminal):attrs(Arg₂: attrs, Arg₃: integer)`
+:mini:`meth (Arg₁: attrs):get(Arg₂: cflag)`
    *TBD*
 
 
-:mini:`meth (Arg₁: terminal):winsize`
+:mini:`meth (Arg₁: attrs):set(Arg₂: oflag, Arg₃: boolean)`
+   *TBD*
+
+
+:mini:`meth (Arg₁: attrs):set(Arg₂: iflag, Arg₃: boolean)`
+   *TBD*
+
+
+:mini:`meth (Arg₁: attrs):get(Arg₂: lflag)`
+   *TBD*
+
+
+:mini:`meth (Arg₁: attrs):get(Arg₂: oflag)`
+   *TBD*
+
+
+:mini:`meth (Arg₁: attrs):get(Arg₂: iflag)`
    *TBD*
 
 

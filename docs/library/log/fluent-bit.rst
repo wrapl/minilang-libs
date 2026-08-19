@@ -13,7 +13,7 @@ log/fluent-bit
    *TBD*
 
 
-:mini:`meth (Arg₁: flbcontext):filter(Arg₂: string)`
+:mini:`meth (Arg₁: flbcontext):set(Arg₂: string, Arg₃: string)`
    *TBD*
 
 
@@ -21,7 +21,7 @@ log/fluent-bit
    *TBD*
 
 
-:mini:`meth (Arg₁: flbcontext):set(Arg₂: string, Arg₃: string)`
+:mini:`meth (Arg₁: flbcontext):filter(Arg₂: string)`
    *TBD*
 
 
@@ -29,15 +29,7 @@ log/fluent-bit
    *TBD*
 
 
-:mini:`meth (Arg₁: flbcontext):use`
-   *TBD*
-
-
-:mini:`type flbinput`
-   *TBD*
-
-
-:mini:`meth (Arg₁: flbinput):set(Arg₂: string, Arg₃: string)`
+:mini:`meth (Arg₁: flbcontext):output(Arg₂: string)`
    *TBD*
 
 
@@ -45,11 +37,19 @@ log/fluent-bit
    *TBD*
 
 
+:mini:`meth (Arg₁: flbinput):set(Arg₂: string, Arg₃: string)`
+   *TBD*
+
+
+:mini:`type flbinput`
+   *TBD*
+
+
 :mini:`type flbfilter`
    *TBD*
 
 
-:mini:`meth (Arg₁: flbcontext):output(Arg₂: string)`
+:mini:`meth (Arg₁: flbcontext):use`
    *TBD*
 
 

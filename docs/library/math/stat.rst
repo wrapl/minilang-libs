@@ -9,11 +9,11 @@ math/stat
 
 .. rst-class:: mini-api
 
-:mini:`fun correlationfunc()`
+:mini:`meth ()`
    *TBD*
 
 
-:mini:`fun countinit()`
+:mini:`type calculator`
    *TBD*
 
 
@@ -21,47 +21,7 @@ math/stat
    *TBD*
 
 
-:mini:`fun variancefunc()`
-   *TBD*
-
-
-:mini:`fun wfunc()`
-   *TBD*
-
-
-:mini:`fun xfunc()`
-   *TBD*
-
-
-:mini:`meth ()`
-   *TBD*
-
-
-:mini:`type accumulator`
-   *TBD*
-
-
-:mini:`fun countupdate(Arg₁: any)`
-   *TBD*
-
-
-:mini:`fun first(Arg₁: any)`
-   *TBD*
-
-
-:mini:`fun inverse(Arg₁: any)`
-   *TBD*
-
-
 :mini:`fun second(Arg₁: any)`
-   *TBD*
-
-
-:mini:`fun sumupdate(Arg₁: any, Arg₂: any)`
-   *TBD*
-
-
-:mini:`type calculator`
    *TBD*
 
 
@@ -70,6 +30,46 @@ math/stat
 
 
 :mini:`type statistic < function`
+   *TBD*
+
+
+:mini:`fun inverse(Arg₁: any)`
+   *TBD*
+
+
+:mini:`type accumulator`
+   *TBD*
+
+
+:mini:`fun sumupdate(Arg₁: any, Arg₂: any)`
+   *TBD*
+
+
+:mini:`fun countupdate(Arg₁: any)`
+   *TBD*
+
+
+:mini:`fun countinit()`
+   *TBD*
+
+
+:mini:`fun first(Arg₁: any)`
+   *TBD*
+
+
+:mini:`fun variancefunc()`
+   *TBD*
+
+
+:mini:`fun correlationfunc()`
+   *TBD*
+
+
+:mini:`fun xfunc()`
+   *TBD*
+
+
+:mini:`fun wfunc()`
    *TBD*
 
 

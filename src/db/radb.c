@@ -4,6 +4,7 @@
 #include <minilang/ml_stream.h>
 #include <minilang/ml_uuid.h>
 #include "radb/radb.h"
+#include "radb/fixed_index2.h"
 #include <libgen.h>
 #include <stdio.h>
 
@@ -23,7 +24,7 @@ typedef struct ml_fixed_store_t {
 ML_TYPE(FixedStoreT, (), "fixed-store");
 // A store for strings.
 
-ML_FUNCTION(FixedStoreOpen) {
+ML_TYPE_FUNCTION(FixedStoreT, open) {
 //<Path
 //>string_store
 // Opens an existing string store at :mini:`Path`.
@@ -36,7 +37,7 @@ ML_FUNCTION(FixedStoreOpen) {
 	return (ml_value_t *)Store;
 }
 
-ML_FUNCTION(FixedStoreCreate) {
+ML_TYPE_FUNCTION(FixedStoreT, create) {
 //<Path
 //<NodeSize
 //>string_store
@@ -101,7 +102,7 @@ typedef struct ml_string_store_reader_t {
 ML_TYPE(StringStoreT, (), "string-store");
 // A store for strings.
 
-ML_FUNCTION(StringStoreOpen) {
+ML_TYPE_FUNCTION(StringStoreT, open) {
 //<Path
 //>string_store
 // Opens an existing string store at :mini:`Path`.
@@ -114,7 +115,7 @@ ML_FUNCTION(StringStoreOpen) {
 	return (ml_value_t *)Store;
 }
 
-ML_FUNCTION(StringStoreCreate) {
+ML_TYPE_FUNCTION(StringStoreT, create) {
 //<Path
 //<NodeSize
 //>string_store
@@ -275,7 +276,7 @@ ML_METHOD("remove", StringStoreT, MLIntegerT, MLIntegerT) {
 
 ML_TYPE(CborStoreT, (), "cbor-store");
 
-ML_FUNCTION(CborStoreOpen) {
+ML_TYPE_FUNCTION(CborStoreT, open) {
 	ML_CHECK_ARG_COUNT(1);
 	ML_CHECK_ARG_TYPE(0, MLStringT);
 	ml_string_store_t *Store = new(ml_string_store_t);
@@ -285,7 +286,7 @@ ML_FUNCTION(CborStoreOpen) {
 	return (ml_value_t *)Store;
 }
 
-ML_FUNCTION(CborStoreCreate) {
+ML_TYPE_FUNCTION(CborStoreT, create) {
 	ML_CHECK_ARG_COUNT(2);
 	ML_CHECK_ARG_TYPE(0, MLStringT);
 	ML_CHECK_ARG_TYPE(1, MLIntegerT);
@@ -325,12 +326,12 @@ ML_METHOD("get", CborStoreT, MLIntegerT) {
 	ml_cbor_reader_t *Cbor = ml_cbor_reader(NULL, NULL, NULL);
 	string_store_reader_t Reader[1];
 	string_store_reader_open(Reader, Store->Handle, Index);
-	unsigned char Buffer[16];
+	unsigned char Buffer[64];
 	size_t Size;
 	do {
-		Size = string_store_reader_read(Reader, Buffer, 16);
+		Size = string_store_reader_read(Reader, Buffer, 64);
 		ml_cbor_reader_read(Cbor, Buffer, Size);
-	} while (Size == 16);
+	} while (Size == 64);
 	return ml_cbor_reader_get(Cbor);
 }
 
@@ -359,7 +360,7 @@ typedef struct {
 } ml_string_key_t;
 
 static int linear_compare_string(string_store_t *Store, ml_string_key_t *Full, uint32_t Index) {
-	if (Full->Length < 16) return 0;
+	if (Full->Length < LINEAR_KEY_SIZE) return 0;
 	return string_store_compare(Store, Full->String, Full->Length, Index);
 }
 
@@ -369,7 +370,7 @@ static size_t linear_insert_string(string_store_t *Store, ml_string_key_t *Full)
 	return Index;
 }
 
-ML_FUNCTION(StringIndexCreate) {
+ML_TYPE_FUNCTION(StringIndexT, create) {
 	ML_CHECK_ARG_COUNT(1);
 	ML_CHECK_ARG_TYPE(0, MLStringT);
 	size_t ChunkSize = 0;
@@ -389,7 +390,7 @@ ML_FUNCTION(StringIndexCreate) {
 	return (ml_value_t *)Store;
 }
 
-ML_FUNCTION(StringIndexOpen) {
+ML_TYPE_FUNCTION(StringIndexT, open) {
 	ML_CHECK_ARG_COUNT(1);
 	ML_CHECK_ARG_TYPE(0, MLStringT);
 	const char *Prefix = ml_string_value(Args[0]);
@@ -424,11 +425,11 @@ ML_METHOD("search", StringIndexT, MLAddressT) {
 	CHECK_HANDLE(Store);
 	ml_string_key_t Full = {ml_address_value(Args[1]), ml_address_length(Args[1])};
 	linear_key_t Key = {0,};
-	if (Full.Length < 16) {
+	if (Full.Length < LINEAR_KEY_SIZE) {
 		memcpy(Key, Full.String, Full.Length);
 	} else {
-		memcpy(Key, Full.String, 15);
-		Key[15] = 1;
+		memcpy(Key, Full.String, LINEAR_KEY_SIZE - 1);
+		Key[LINEAR_KEY_SIZE - 1] = 1;
 	}
 	uint32_t Hash = string_hash(Full.String, Full.Length);
 	size_t Index = linear_index_search(Store->Handle, Hash, Key, &Full);
@@ -441,11 +442,11 @@ ML_METHOD("insert", StringIndexT, MLAddressT) {
 	CHECK_HANDLE(Store);
 	ml_string_key_t Full = {ml_address_value(Args[1]), ml_address_length(Args[1])};
 	linear_key_t Key = {0,};
-	if (Full.Length < 16) {
+	if (Full.Length < LINEAR_KEY_SIZE) {
 		memcpy(Key, Full.String, Full.Length);
 	} else {
-		memcpy(Key, Full.String, 15);
-		Key[15] = 1;
+		memcpy(Key, Full.String, LINEAR_KEY_SIZE - 1);
+		Key[LINEAR_KEY_SIZE - 1] = 1;
 	}
 	uint32_t Hash = string_hash(Full.String, Full.Length);
 	size_t Index = linear_index_insert(Store->Handle, Hash, Key, &Full);
@@ -457,11 +458,11 @@ ML_METHOD("delete", StringIndexT, MLAddressT) {
 	CHECK_HANDLE(Store);
 	ml_string_key_t Full = {ml_address_value(Args[1]), ml_address_length(Args[1])};
 	linear_key_t Key = {0,};
-	if (Full.Length < 16) {
+	if (Full.Length < LINEAR_KEY_SIZE) {
 		memcpy(Key, Full.String, Full.Length);
 	} else {
-		memcpy(Key, Full.String, 15);
-		Key[15] = 1;
+		memcpy(Key, Full.String, LINEAR_KEY_SIZE - 1);
+		Key[LINEAR_KEY_SIZE - 1] = 1;
 	}
 	uint32_t Hash = string_hash(Full.String, Full.Length);
 	size_t Index = linear_index_delete(Store->Handle, Hash, Key, &Full);
@@ -491,6 +492,84 @@ ML_METHOD("count", StringIndexT) {
 
 typedef struct {
 	const ml_type_t *Type;
+	fixed_index2_t *Handle;
+} ml_fixed_index_t;
+
+ML_TYPE(FixedIndexT, (), "fixed-index");
+
+ML_TYPE_FUNCTION(FixedIndexT, create) {
+	ML_CHECK_ARG_COUNT(1);
+	ML_CHECK_ARG_TYPE(0, MLStringT);
+	const char *Prefix = ml_string_value(Args[0]);
+	int Size = ml_integer_value(Args[1]);
+	ml_fixed_index_t *Store = new(ml_fixed_index_t);
+	Store->Type = FixedIndexT;
+	Store->Handle = fixed_index2_create(Prefix, Size, 512);
+	CHECK_HANDLE(Store);
+	return (ml_value_t *)Store;
+}
+
+ML_TYPE_FUNCTION(FixedIndexT, open) {
+	ML_CHECK_ARG_COUNT(1);
+	ML_CHECK_ARG_TYPE(0, MLStringT);
+	const char *Prefix = ml_string_value(Args[0]);
+	ml_fixed_index_t *Store = new(ml_fixed_index_t);
+	Store->Type = FixedIndexT;
+	Store->Handle = fixed_index2_open(Prefix, 0);
+	CHECK_HANDLE(Store);
+	return (ml_value_t *)Store;
+}
+
+ML_METHOD("search", FixedIndexT, MLAddressT) {
+	ml_fixed_index_t *Store = (ml_fixed_index_t *)Args[0];
+	CHECK_HANDLE(Store);
+	if (ml_address_length(Args[1]) != linear_index_get_extra(Store->Handle)) return ml_error("SizeError", "Key size does not match index");
+	size_t Index = fixed_index2_search(Store->Handle, ml_address_value(Args[1]));
+	return Index == INVALID_INDEX ? MLNil : ml_integer(Index);
+}
+
+ML_METHOD("insert", FixedIndexT, MLAddressT) {
+	ml_fixed_index_t *Store = (ml_fixed_index_t *)Args[0];
+	CHECK_HANDLE(Store);
+	if (ml_address_length(Args[1]) != linear_index_get_extra(Store->Handle)) return ml_error("SizeError", "Key size does not match index");
+	size_t Index = fixed_index2_insert(Store->Handle, ml_address_value(Args[1]));
+	return ml_integer(Index);
+}
+
+ML_METHOD("delete", FixedIndexT, MLAddressT) {
+	ml_fixed_index_t *Store = (ml_fixed_index_t *)Args[0];
+	CHECK_HANDLE(Store);
+	if (ml_address_length(Args[1]) != linear_index_get_extra(Store->Handle)) return ml_error("SizeError", "Key size does not match index");
+	size_t Index = fixed_index2_delete(Store->Handle, ml_address_value(Args[1]));
+	if (Index != INVALID_INDEX) {
+		return ml_integer(Index);
+	} else {
+		return MLNil;
+	}
+}
+
+ML_METHOD("get", FixedIndexT, MLIntegerT) {
+	ml_fixed_index_t *Store = (ml_fixed_index_t *)Args[0];
+	CHECK_HANDLE(Store);
+	return ml_address(fixed_index2_get(Store->Handle, ml_integer_value(Args[1])), linear_index_get_extra(Store->Handle));
+}
+
+ML_METHOD("count", FixedIndexT) {
+	ml_fixed_index_t *Store = (ml_fixed_index_t *)Args[0];
+	CHECK_HANDLE(Store);
+	return ml_integer(fixed_index2_count(Store->Handle));
+}
+
+ML_METHOD("close", FixedIndexT) {
+	ml_fixed_index_t *Store = (ml_fixed_index_t *)Args[0];
+	CHECK_HANDLE(Store);
+	fixed_index2_close(Store->Handle);
+	Store->Handle = NULL;
+	return MLNil;
+}
+
+typedef struct {
+	const ml_type_t *Type;
 	linear_index_t *Handle;
 	fixed_store_t *Values;
 } ml_uuid_index_t;
@@ -507,7 +586,7 @@ static size_t linear_insert_uuid(fixed_store_t *Store, void *Full) {
 	return Index;
 }
 
-ML_FUNCTION(UUIDIndexCreate) {
+ML_TYPE_FUNCTION(UUIDIndexT, create) {
 	ML_CHECK_ARG_COUNT(1);
 	ML_CHECK_ARG_TYPE(0, MLStringT);
 	const char *Prefix = ml_string_value(Args[0]);
@@ -522,7 +601,7 @@ ML_FUNCTION(UUIDIndexCreate) {
 	return (ml_value_t *)Store;
 }
 
-ML_FUNCTION(UUIDIndexOpen) {
+ML_TYPE_FUNCTION(UUIDIndexT, open) {
 	ML_CHECK_ARG_COUNT(1);
 	ML_CHECK_ARG_TYPE(0, MLStringT);
 	const char *Prefix = ml_string_value(Args[0]);
@@ -586,20 +665,11 @@ ML_METHOD("close", UUIDIndexT) {
 
 ML_LIBRARY_ENTRY0(db_radb) {
 #include "radb_init.c"
-	stringmap_insert(FixedStoreT->Exports, "open", FixedStoreOpen);
-	stringmap_insert(FixedStoreT->Exports, "create", FixedStoreCreate);
-	stringmap_insert(StringStoreT->Exports, "open", StringStoreOpen);
-	stringmap_insert(StringStoreT->Exports, "create", StringStoreCreate);
-	stringmap_insert(CborStoreT->Exports, "open", CborStoreOpen);
-	stringmap_insert(CborStoreT->Exports, "create", CborStoreCreate);
-	stringmap_insert(StringIndexT->Exports, "open", StringIndexOpen);
-	stringmap_insert(StringIndexT->Exports, "create", StringIndexCreate);
-	stringmap_insert(UUIDIndexT->Exports, "open", UUIDIndexOpen);
-	stringmap_insert(UUIDIndexT->Exports, "create", UUIDIndexCreate);
 	Slot[0] = ml_module("radb",
 		"fixed_store", FixedStoreT,
 		"string_store", StringStoreT,
 		"cbor_store", CborStoreT,
+		"fixed_index", FixedIndexT,
 		"string_index", StringIndexT,
 		"uuid_index", UUIDIndexT,
 	NULL);

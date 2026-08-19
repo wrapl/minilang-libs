@@ -25,23 +25,63 @@ graph/graphviz
    *TBD*
 
 
+:mini:`meth (Arg₁: node):out`
+   *TBD*
+
+
+:mini:`meth (Arg₁: node) --> (Arg₂: node)`
+   *TBD*
+
+
+:mini:`meth (Arg₁: object):get(Arg₂: string)`
+   *TBD*
+
+
+:mini:`meth (Arg₁: node):edges`
+   *TBD*
+
+
+:mini:`meth (Arg₁: object):set(Arg₂: object)`
+   *TBD*
+
+
+:mini:`type object`
+   *TBD*
+
+
+:mini:`meth graph(Arg₁: string)`
+   *TBD*
+
+
+:mini:`meth (Arg₁: string::buffer):append(Arg₂: node)`
+   *TBD*
+
+
+:mini:`meth graph(Arg₁: string, Arg₂: graphdesc)`
+   *TBD*
+
+
+:mini:`meth (Arg₁: node):remove`
+   *TBD*
+
+
+:mini:`type node < object`
+   *TBD*
+
+
+:mini:`meth (Arg₁: graph):layout(Arg₂: string)`
+   *TBD*
+
+
+:mini:`meth (Arg₁: node) --- (Arg₂: node)`
+   *TBD*
+
+
 :mini:`type graph < object`
    *TBD*
 
 
-:mini:`meth (Arg₁: graph)[Arg₂: string]`
-   *TBD*
-
-
-:mini:`meth (Arg₁: graph):attrs(Arg₂: type)`
-   *TBD*
-
-
 :mini:`meth (Arg₁: graph):nodes`
-   *TBD*
-
-
-:mini:`meth (Arg₁: string::buffer):append(Arg₂: graph)`
    *TBD*
 
 
@@ -52,19 +92,7 @@ graph/graphviz
    * :mini:`::StrictUndirected`
 
 
-:mini:`type node < object`
-   *TBD*
-
-
-:mini:`meth (Arg₁: node) --- (Arg₂: node)`
-   *TBD*
-
-
-:mini:`meth (Arg₁: node) --> (Arg₂: node)`
-   *TBD*
-
-
-:mini:`meth (Arg₁: node):edges`
+:mini:`meth (Arg₁: graph):attrs(Arg₂: type)`
    *TBD*
 
 
@@ -72,39 +100,15 @@ graph/graphviz
    *TBD*
 
 
-:mini:`meth (Arg₁: node):out`
-   *TBD*
-
-
-:mini:`meth (Arg₁: node):remove`
-   *TBD*
-
-
-:mini:`meth (Arg₁: string::buffer):append(Arg₂: node)`
-   *TBD*
-
-
-:mini:`type object`
-   *TBD*
-
-
-:mini:`meth (Arg₁: object):get(Arg₂: string)`
-   *TBD*
-
-
 :mini:`meth (Arg₁: object):set(Arg₂: string, Arg₃: string)`
    *TBD*
 
 
-:mini:`meth (Arg₁: object):set(Arg₂: object)`
+:mini:`meth (Arg₁: graph)[Arg₂: string]`
    *TBD*
 
 
-:mini:`meth graph(Arg₁: string)`
-   *TBD*
-
-
-:mini:`meth graph(Arg₁: string, Arg₂: graphdesc)`
+:mini:`meth (Arg₁: string::buffer):append(Arg₂: graph)`
    *TBD*
 
 

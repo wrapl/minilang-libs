@@ -13,34 +13,6 @@ db/ravs
    *TBD*
 
 
-:mini:`fun versionstoreopen(Arg₁: string)`
-   *TBD*
-
-
-:mini:`type versionstore`
-   *TBD*
-
-
-:mini:`meth (Arg₁: versionstore):add(Arg₂: any)`
-   *TBD*
-
-
-:mini:`meth (Arg₁: versionstore):change(Arg₂: string)`
-   *TBD*
-
-
-:mini:`meth (Arg₁: versionstore):changes(Arg₂: integer)`
-   *TBD*
-
-
-:mini:`meth (Arg₁: versionstore):close`
-   *TBD*
-
-
-:mini:`meth (Arg₁: versionstore):get(Arg₂: integer)`
-   *TBD*
-
-
 :mini:`meth (Arg₁: versionstore):get(Arg₂: integer, Arg₃: integer)`
    *TBD*
 
@@ -49,7 +21,35 @@ db/ravs
    *TBD*
 
 
+:mini:`meth (Arg₁: versionstore):get(Arg₂: integer)`
+   *TBD*
+
+
 :mini:`meth (Arg₁: versionstore):set(Arg₂: integer, Arg₃: any)`
+   *TBD*
+
+
+:mini:`meth (Arg₁: versionstore):add(Arg₂: any)`
+   *TBD*
+
+
+:mini:`meth (Arg₁: versionstore):changes(Arg₂: integer)`
+   *TBD*
+
+
+:mini:`meth (Arg₁: versionstore):change(Arg₂: string)`
+   *TBD*
+
+
+:mini:`meth (Arg₁: versionstore):close`
+   *TBD*
+
+
+:mini:`fun versionstoreopen(Arg₁: string)`
+   *TBD*
+
+
+:mini:`type versionstore`
    *TBD*
 
 

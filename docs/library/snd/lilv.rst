@@ -13,51 +13,7 @@ snd/lilv
    *TBD*
 
 
-:mini:`type instance`
-   *TBD*
-
-
-:mini:`meth (Arg₁: instance):activate`
-   *TBD*
-
-
-:mini:`meth (Arg₁: instance):connect(Arg₂: integer, Arg₃: buffer)`
-   *TBD*
-
-
-:mini:`meth (Arg₁: instance):run(Arg₂: integer)`
-   *TBD*
-
-
-:mini:`type plugin`
-   *TBD*
-
-
-:mini:`meth (Arg₁: plugin)[Arg₂: integer]`
-   *TBD*
-
-
-:mini:`meth (Arg₁: plugin)[Arg₂: string]`
-   *TBD*
-
-
-:mini:`meth (Arg₁: plugin):class`
-   *TBD*
-
-
-:mini:`meth (Arg₁: plugin):extension_data`
-   *TBD*
-
-
-:mini:`meth (Arg₁: plugin):instantiate(Arg₂: real)`
-   *TBD*
-
-
-:mini:`meth (Arg₁: plugin):name`
-   *TBD*
-
-
-:mini:`meth (Arg₁: plugin):num_ports`
+:mini:`meth (Arg₁: port):symbol`
    *TBD*
 
 
@@ -65,19 +21,19 @@ snd/lilv
    *TBD*
 
 
+:mini:`meth (Arg₁: port):name`
+   *TBD*
+
+
 :mini:`meth (Arg₁: plugin):ports`
    *TBD*
 
 
-:mini:`meth (Arg₁: plugin):required_features`
+:mini:`meth (Arg₁: plugin):instantiate(Arg₂: real)`
    *TBD*
 
 
-:mini:`meth (Arg₁: plugin):uri`
-   *TBD*
-
-
-:mini:`type pluginclass`
+:mini:`meth (Arg₁: plugin)[Arg₂: string]`
    *TBD*
 
 
@@ -85,23 +41,11 @@ snd/lilv
    *TBD*
 
 
-:mini:`type port`
+:mini:`meth (Arg₁: plugin):class`
    *TBD*
 
 
-:mini:`meth (Arg₁: port):classes`
-   *TBD*
-
-
-:mini:`meth (Arg₁: port):name`
-   *TBD*
-
-
-:mini:`meth (Arg₁: port):properties`
-   *TBD*
-
-
-:mini:`meth (Arg₁: port):range`
+:mini:`type pluginclass`
    *TBD*
 
 
@@ -109,7 +53,63 @@ snd/lilv
    *TBD*
 
 
-:mini:`meth (Arg₁: port):symbol`
+:mini:`meth (Arg₁: port):properties`
+   *TBD*
+
+
+:mini:`meth (Arg₁: port):classes`
+   *TBD*
+
+
+:mini:`meth (Arg₁: port):range`
+   *TBD*
+
+
+:mini:`meth (Arg₁: instance):run(Arg₂: integer)`
+   *TBD*
+
+
+:mini:`meth (Arg₁: plugin):uri`
+   *TBD*
+
+
+:mini:`meth (Arg₁: plugin):name`
+   *TBD*
+
+
+:mini:`meth (Arg₁: plugin):required_features`
+   *TBD*
+
+
+:mini:`meth (Arg₁: plugin)[Arg₂: integer]`
+   *TBD*
+
+
+:mini:`type port`
+   *TBD*
+
+
+:mini:`meth (Arg₁: plugin):num_ports`
+   *TBD*
+
+
+:mini:`meth (Arg₁: instance):activate`
+   *TBD*
+
+
+:mini:`type plugin`
+   *TBD*
+
+
+:mini:`meth (Arg₁: plugin):extension_data`
+   *TBD*
+
+
+:mini:`type instance`
+   *TBD*
+
+
+:mini:`meth (Arg₁: instance):connect(Arg₂: integer, Arg₃: buffer)`
    *TBD*
 
 

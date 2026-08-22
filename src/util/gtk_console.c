@@ -980,6 +980,7 @@ static gtk_console_settings_t *gtk_console_settings(gtk_console_t *Console, GtkS
 
 	gtk_window_set_child(GTK_WINDOW(Settings->Dialog), Box);
 	gtk_window_set_default_size(GTK_WINDOW(Settings->Dialog), 800, -1);
+	gtk_window_set_transient_for(GTK_WINDOW(Settings->Dialog), GTK_WINDOW(Console->Window));
 	Settings->CssProvider = gtk_css_provider_new();
 	gtk_style_context_add_provider(
 		gtk_widget_get_style_context(Preview),

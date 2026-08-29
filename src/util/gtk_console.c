@@ -896,7 +896,6 @@ static gtk_console_settings_t *gtk_console_settings(gtk_console_t *Console, GtkS
 	if (Console->StyleScheme) {
 		const char *StyleId = gtk_source_style_scheme_get_id(Console->StyleScheme);
 		for (const gchar * const *Ptr = StyleIds; *Ptr; ++Ptr) {
-			ML_LOG_INFO(NULL, "Comparing %s <-> %s", *Ptr, StyleId);
 			if (!strcmp(*Ptr, StyleId)) {
 				gtk_drop_down_set_selected(GTK_DROP_DOWN(StyleDropDown), Ptr - StyleIds);
 				break;

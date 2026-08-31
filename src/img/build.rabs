@@ -11,6 +11,10 @@ scope("cairo";) do
 	]
 	PREBUILDS := old + [GIR]
 	so_module("img/cairo.so", [file("cairo.o")], [GIR], Extra is; Library) do
-		execute("patchelf", Library, "--replace-needed", GIR, "\\$ORIGIN/../gir.so")
+		if PLATFORM = "Darwin" then
+			execute("install_name_tool", "-change", GIR, "@loader_path/gir.so", Library)
+		else
+			execute("patchelf", Library, "--replace-needed", GIR, "\\$ORIGIN/../gir.so")
+		end
 	end
 end

@@ -683,7 +683,7 @@ int gtk_console_append(gtk_console_t *Console, const char *Buffer, int Length) {
 	GtkTextBuffer *LogBuffer = gtk_text_view_get_buffer(GTK_TEXT_VIEW(Console->LogView));
 	gtk_text_buffer_get_end_iter(LogBuffer, End);
 
-	if (g_utf8_validate(Buffer, Length, NULL)) {
+	if (g_utf8_validate_len(Buffer, Length, NULL)) {
 		gtk_text_buffer_insert_with_tags(LogBuffer, End, Buffer, Length, Console->OutputTag, NULL);
 	} else {
 		gtk_text_buffer_insert_with_tags(LogBuffer, End, "<", 1, Console->BinaryTag, NULL);
@@ -711,7 +711,9 @@ ml_value_t *gtk_console_print(gtk_console_t *Console, int Count, ml_value_t **Ar
 		ml_value_t *Result = ml_stringbuffer_append(Buffer, Args[I]);
 		if (ml_is_error(Result)) return Result;
 	}
-	ml_stringbuffer_drain(Buffer, Console, (void *)gtk_console_append);
+	size_t Length = ml_stringbuffer_length(Buffer);
+	const char *Flattened = ml_stringbuffer_get_string(Buffer);
+	gtk_console_append(Console, Flattened, Length);
 	while (g_main_context_pending(NULL)) g_main_context_iteration(NULL, FALSE);
 	return MLNil;
 }

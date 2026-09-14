@@ -83,6 +83,15 @@ ML_METHOD("get", FixedStoreT, MLIntegerT) {
 	return ml_buffer(Value, Length);
 }
 
+ML_METHOD("alloc", FixedStoreT) {
+//<Store
+//>integer
+// Allocates a new slot in :mini:`Store`.
+	ml_fixed_store_t *Store = (ml_fixed_store_t *)Args[0];
+	CHECK_HANDLE(Store);
+	return ml_integer(fixed_store_alloc(Store->Handle));
+}
+
 typedef struct ml_string_store_t {
 	const ml_type_t *Type;
 	string_store_t *Handle;
@@ -181,6 +190,15 @@ ML_METHOD("set", StringStoreT, MLIntegerT, MLAddressT) {
 	return Args[2];
 }
 
+ML_METHOD("alloc", StringStoreT) {
+//<Store
+//>integer
+// Allocates a new slot in :mini:`Store`.
+	ml_string_store_t *Store = (ml_string_store_t *)Args[0];
+	CHECK_HANDLE(Store);
+	return ml_integer(string_store_alloc(Store->Handle));
+}
+
 static void ML_TYPED_FN(ml_stream_write, StringStoreWriterT, ml_state_t *Caller, ml_string_store_writer_t *Writer, const void *Address, int Count) {
 	size_t Total = string_store_writer_write(Writer->Handle, Address, Count);
 	ML_RETURN(ml_integer(Total));
@@ -250,7 +268,7 @@ ML_METHOD("read", StringStoreT, MLIntegerT) {
 	return (ml_value_t *)Reader;
 }
 
-ML_METHOD("search", StringStoreT, MLIntegerT, MLIntegerT) {
+ML_METHOD("search32", StringStoreT, MLIntegerT, MLIntegerT) {
 	ml_string_store_t *Store = (ml_string_store_t *)Args[0];
 	CHECK_HANDLE(Store);
 	size_t Index = ml_integer_value(Args[1]);
@@ -258,7 +276,7 @@ ML_METHOD("search", StringStoreT, MLIntegerT, MLIntegerT) {
 	return string_store_value_search_uint32(Store->Handle, Index, Value) ? MLSome : MLNil;
 }
 
-ML_METHOD("insert", StringStoreT, MLIntegerT, MLIntegerT) {
+ML_METHOD("insert32", StringStoreT, MLIntegerT, MLIntegerT) {
 	ml_string_store_t *Store = (ml_string_store_t *)Args[0];
 	CHECK_HANDLE(Store);
 	size_t Index = ml_integer_value(Args[1]);
@@ -266,7 +284,7 @@ ML_METHOD("insert", StringStoreT, MLIntegerT, MLIntegerT) {
 	return string_store_value_insert_uint32(Store->Handle, Index, Value) ? MLSome : MLNil;
 }
 
-ML_METHOD("remove", StringStoreT, MLIntegerT, MLIntegerT) {
+ML_METHOD("remove32", StringStoreT, MLIntegerT, MLIntegerT) {
 	ml_string_store_t *Store = (ml_string_store_t *)Args[0];
 	CHECK_HANDLE(Store);
 	size_t Index = ml_integer_value(Args[1]);
@@ -344,6 +362,15 @@ ML_METHOD("set", CborStoreT, MLIntegerT, MLAnyT) {
 	ml_value_t *Error = ml_cbor_encode_to(Writer, (void *)string_store_writer_write, NULL, Args[2]);
 	if (Error) return Error;
 	return Args[2];
+}
+
+ML_METHOD("alloc", CborStoreT) {
+//<Store
+//>integer
+// Allocates a new slot in :mini:`Store`.
+	ml_string_store_t *Store = (ml_string_store_t *)Args[0];
+	CHECK_HANDLE(Store);
+	return ml_integer(string_store_alloc(Store->Handle));
 }
 
 typedef struct {

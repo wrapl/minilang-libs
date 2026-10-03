@@ -464,11 +464,9 @@ typedef struct {
 } stream_context_t;
 
 static cairo_status_t read_from_stream(stream_context_t *Reader, unsigned char *Data, unsigned int Length) {
-	ml_result_state_t *State = ml_result_state(Reader->Context);
+	ML_WAIT_STATE(State, Reader->Context);
 	Reader->read((ml_state_t *)State, Reader->Stream, Data, Length);
-	ml_scheduler_t *Scheduler = ml_context_get_static(Reader->Context, ML_SCHEDULER_INDEX);
-	while (!State->Value) Scheduler->run(Scheduler);
-	ml_value_t *Result = ml_deref(State->Value);
+	ml_value_t *Result = ml_deref(ml_wait(State));
 	if (ml_is_error(Result)) return CAIRO_STATUS_WRITE_ERROR;
 	//if (ml_integer_value(Result) != Length) return CAIRO_STATUS_WRITE_ERROR;
 	return CAIRO_STATUS_SUCCESS;
@@ -496,11 +494,9 @@ ML_METHOD("write_to_png", CairoSurfaceT, MLStringT) {
 }
 
 static cairo_status_t write_to_stream(stream_context_t *Writer, const unsigned char *Data, unsigned int Length) {
-	ml_result_state_t *State = ml_result_state(Writer->Context);
+	ML_WAIT_STATE(State, Writer->Context);
 	Writer->write((ml_state_t *)State, Writer->Stream, Data, Length);
-	ml_scheduler_t *Scheduler = ml_context_get_static(Writer->Context, ML_SCHEDULER_INDEX);
-	while (!State->Value) Scheduler->run(Scheduler);
-	ml_value_t *Result = ml_deref(State->Value);
+	ml_value_t *Result = ml_deref(ml_wait(State));
 	if (ml_is_error(Result)) return CAIRO_STATUS_WRITE_ERROR;
 	if (ml_integer_value(Result) != Length) return CAIRO_STATUS_WRITE_ERROR;
 	return CAIRO_STATUS_SUCCESS;

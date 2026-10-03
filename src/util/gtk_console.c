@@ -1157,9 +1157,14 @@ gtk_console_t *gtk_console(ml_state_t *Caller, ml_getter_t GlobalGet, void *Glob
 	gtk_window_set_title(GTK_WINDOW(Console->Window), "Minilang");
 
 	GtkWidget *ReplBox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 2);
-	gtk_box_append(GTK_BOX(ReplBox), InputPanel);
-	gtk_box_append(GTK_BOX(ReplBox), Console->LogScrolled);
 
+	gtk_box_append(GTK_BOX(ReplBox), Console->LogScrolled);
+	gtk_box_append(GTK_BOX(ReplBox), gtk_separator_new(GTK_ORIENTATION_HORIZONTAL));
+	gtk_box_append(GTK_BOX(ReplBox), InputPanel);
+	gtk_widget_set_margin_top(ReplBox, 2);
+	gtk_widget_set_margin_bottom(ReplBox, 2);
+	gtk_widget_set_margin_start(ReplBox, 2);
+	gtk_widget_set_margin_end(ReplBox, 2);
 	gtk_paned_set_start_child(GTK_PANED(Console->Paned), OutputPane);
 	gtk_paned_set_end_child(GTK_PANED(Console->Paned), ReplBox);
 	gtk_paned_set_position(GTK_PANED(Console->Paned), 600);

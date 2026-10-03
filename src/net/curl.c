@@ -60,7 +60,7 @@ struct curl_multi_t {
 	ml_type_t *Type;
 	CURLM *Handle;
 	curl_t *Queue;
-	ml_scheduler_t *Scheduler;
+	ml_context_t *Context;
 	pthread_mutex_t Lock[1];
 };
 
@@ -225,8 +225,7 @@ static size_t stream_read_callback(char *Buffer, size_t Size, size_t N, stream_c
 	State->Base.run = (ml_state_fn)stream_read_start;
 	State->Buffer = Buffer;
 	State->Size = Size * N;
-	ml_scheduler_t *Scheduler = State->Curl->Multi->Scheduler;
-	Scheduler->add(Scheduler, (ml_state_t *)State, MLNil);
+	ml_state_schedule((ml_state_t *)State, MLNil);
 	sem_wait(State->Ready);
 	if (ml_is_error(State->Result)) return CURL_READFUNC_ABORT;
 	if (State->Result == MLNil) return 0;
@@ -237,8 +236,7 @@ static size_t stream_write_callback(char *Buffer, size_t Size, size_t N, stream_
 	State->Base.run = (ml_state_fn)stream_write_start;
 	State->Buffer = Buffer;
 	State->Size = Size * N;
-	ml_scheduler_t *Scheduler = State->Curl->Multi->Scheduler;
-	Scheduler->add(Scheduler, (ml_state_t *)State, MLNil);
+	ml_state_schedule((ml_state_t *)State, MLNil);
 	sem_wait(State->Ready);
 	if (ml_is_error(State->Result)) return CURL_WRITEFUNC_ERROR;
 	if (State->Result == MLNil) return 0;
@@ -339,8 +337,7 @@ static void function_start(function_callback_t *State, ml_value_t *Value) {
 static size_t function_read_callback(char *Buffer, size_t Size, size_t N, function_callback_t *State) {
 	State->Base.run = (ml_state_fn)function_start;
 	State->Result = ml_address(Buffer, Size * N);
-	ml_scheduler_t *Scheduler = State->Curl->Multi->Scheduler;
-	Scheduler->add(Scheduler, (ml_state_t *)State, MLNil);
+	ml_state_schedule((ml_state_t *)State, MLNil);
 	sem_wait(State->Ready);
 	if (ml_is_error(State->Result)) return CURL_READFUNC_ABORT;
 	if (State->Result == MLNil) return 0;
@@ -350,8 +347,7 @@ static size_t function_read_callback(char *Buffer, size_t Size, size_t N, functi
 static size_t function_write_callback(char *Buffer, size_t Size, size_t N, function_callback_t *State) {
 	State->Base.run = (ml_state_fn)function_start;
 	State->Result = ml_buffer(Buffer, Size * N);
-	ml_scheduler_t *Scheduler = State->Curl->Multi->Scheduler;
-	Scheduler->add(Scheduler, (ml_state_t *)State, MLNil);
+	ml_state_schedule((ml_state_t *)State, MLNil);
 	sem_wait(State->Ready);
 	if (ml_is_error(State->Result)) return CURL_WRITEFUNC_ERROR;
 	if (State->Result == MLNil) return 0;
@@ -446,7 +442,6 @@ static void *multi_thread_fn(void *Arg) {
 		}
 		int Remaining;
 		CURLMsg *Message;
-		ml_scheduler_t *Scheduler = Multi->Scheduler;
 		while ((Message = curl_multi_info_read(Multi->Handle, &Remaining))) {
 			if (Message->msg == CURLMSG_DONE) {
 				curl_t *Curl = NULL;
@@ -455,7 +450,7 @@ static void *multi_thread_fn(void *Arg) {
 				if (Message->data.result != CURLE_OK) {
 					Result = ml_error("CurlError", "%s", Curl->Error);
 				}
-				Scheduler->add(Scheduler, Curl->Caller, Result);
+				ml_state_schedule(Curl->Caller, Result);
 				Curl->Caller = NULL;
 				curl_multi_remove_handle(Multi->Handle, Curl->Handle);
 			}
@@ -473,7 +468,7 @@ ML_METHODX("perform", CurlT) {
 	pthread_mutex_lock(DefaultMulti->Lock);
 	Curl->Next = DefaultMulti->Queue;
 	DefaultMulti->Queue = Curl;
-	DefaultMulti->Scheduler = ml_context_get_scheduler(Caller->Context);
+	DefaultMulti->Context = Caller->Context;
 	pthread_mutex_unlock(DefaultMulti->Lock);
 	curl_multi_wakeup(DefaultMulti->Handle);
 }

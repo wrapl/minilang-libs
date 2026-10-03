@@ -151,7 +151,6 @@ ML_METHOD(Effect, MLStringT) {
 
 typedef struct {
 	ml_state_t Base;
-	ml_value_t *Result;
 	sox_effect_t *Handle;
 	ml_value_t *GetOpts;
 	ml_value_t *Start;
@@ -162,10 +161,6 @@ typedef struct {
 	sox_effect_handler_t Handler[1];
 } ml_effect_t;
 
-static void ml_effect_run(ml_effect_t *Effect, ml_value_t *Value) {
-	Effect->Result = Value;
-}
-
 static int ml_effect_getopts(sox_effect_t *E, int Argc, char *Argv[]) {
 	ml_effect_t *Effect = E->priv;
 	ml_value_t *Opts = ml_list();
@@ -173,11 +168,10 @@ static int ml_effect_getopts(sox_effect_t *E, int Argc, char *Argv[]) {
 	ml_value_t **Args = ml_alloc_args(2);
 	Args[0] = (ml_value_t *)Effect;
 	Args[1] = Opts;
-	Effect->Result = NULL;
-	ml_call((ml_state_t *)Effect, Effect->GetOpts, 2, Args);
-	ml_scheduler_t *Scheduler = ml_context_get_static(Effect->Base.Context, ML_SCHEDULER_INDEX);
-	while (!Effect->Result) Scheduler->run(Scheduler);
-	if (ml_is_error(Effect->Result)) return SOX_EINVAL;
+	ML_WAIT_STATE(State, Effect->Base.Context);
+	ml_call(State, Effect->GetOpts, 2, Args);
+	ml_value_t *Result = ml_wait(State);
+	if (ml_is_error(Result)) return SOX_EINVAL;
 	return SOX_SUCCESS;
 }
 
@@ -185,11 +179,10 @@ static int ml_effect_start(sox_effect_t *E) {
 	ml_effect_t *Effect = E->priv;
 	ml_value_t **Args = ml_alloc_args(1);
 	Args[0] = (ml_value_t *)Effect;
-	Effect->Result = NULL;
-	ml_call((ml_state_t *)Effect, Effect->Start, 1, Args);
-	ml_scheduler_t *Scheduler = ml_context_get_static(Effect->Base.Context, ML_SCHEDULER_INDEX);
-	while (!Effect->Result) Scheduler->run(Scheduler);
-	if (ml_is_error(Effect->Result)) return SOX_EINVAL;
+	ML_WAIT_STATE(State, Effect->Base.Context);
+	ml_call(State, Effect->Start, 1, Args);
+	ml_value_t *Result = ml_wait(State);
+	if (ml_is_error(Result)) return SOX_EINVAL;
 	return SOX_SUCCESS;
 }
 
@@ -199,14 +192,13 @@ static int ml_effect_flow(sox_effect_t *E, const sox_sample_t *IBuf, sox_sample_
 	Args[0] = (ml_value_t *)Effect;
 	Args[1] = ml_address((void *)IBuf, ISamp[0] * sizeof(sox_sample_t));
 	Args[2] = ml_buffer((void *)OBuf, OSamp[0] * sizeof(sox_sample_t));
-	Effect->Result = NULL;
-	ml_call((ml_state_t *)Effect, Effect->Flow, 5, Args);
-	ml_scheduler_t *Scheduler = ml_context_get_static(Effect->Base.Context, ML_SCHEDULER_INDEX);
-	while (!Effect->Result) Scheduler->run(Scheduler);
-	if (ml_is_error(Effect->Result)) return SOX_EINVAL;
-	if (!ml_is(Effect->Result, MLTupleT)) return SOX_EINVAL;
-	ISamp[0] = ml_integer_value(ml_tuple_get(Effect->Result, 1));
-	OSamp[0] = ml_integer_value(ml_tuple_get(Effect->Result, 2));
+	ML_WAIT_STATE(State, Effect->Base.Context);
+	ml_call(State, Effect->Flow, 5, Args);
+	ml_value_t *Result = ml_wait(State);
+	if (ml_is_error(Result)) return SOX_EINVAL;
+	if (!ml_is(Result, MLTupleT)) return SOX_EINVAL;
+	ISamp[0] = ml_integer_value(ml_tuple_get(Result, 1));
+	OSamp[0] = ml_integer_value(ml_tuple_get(Result, 2));
 	return SOX_SUCCESS;
 }
 
@@ -215,12 +207,11 @@ static int ml_effect_drain(sox_effect_t *E, sox_sample_t *OBuf, size_t *OSamp) {
 	ml_value_t **Args = ml_alloc_args(2);
 	Args[0] = (ml_value_t *)Effect;
 	Args[1] = ml_buffer((void *)OBuf, OSamp[0] * sizeof(sox_sample_t));
-	Effect->Result = NULL;
-	ml_call((ml_state_t *)Effect, Effect->Drain, 2, Args);
-	ml_scheduler_t *Scheduler = ml_context_get_static(Effect->Base.Context, ML_SCHEDULER_INDEX);
-	while (!Effect->Result) Scheduler->run(Scheduler);
-	if (ml_is_error(Effect->Result)) return SOX_EINVAL;
-	OSamp[0] = ml_integer_value(Effect->Result);
+	ML_WAIT_STATE(State, Effect->Base.Context);
+	ml_call(State, Effect->Drain, 2, Args);
+	ml_value_t *Result = ml_wait(State);
+	if (ml_is_error(Result)) return SOX_EINVAL;
+	OSamp[0] = ml_integer_value(Result);
 	return SOX_SUCCESS;
 }
 
@@ -228,11 +219,10 @@ static int ml_effect_stop(sox_effect_t *E) {
 	ml_effect_t *Effect = E->priv;
 	ml_value_t **Args = ml_alloc_args(1);
 	Args[0] = (ml_value_t *)Effect;
-	Effect->Result = NULL;
-	ml_call((ml_state_t *)Effect, Effect->Stop, 1, Args);
-	ml_scheduler_t *Scheduler = ml_context_get_static(Effect->Base.Context, ML_SCHEDULER_INDEX);
-	while (!Effect->Result) Scheduler->run(Scheduler);
-	if (ml_is_error(Effect->Result)) return SOX_EINVAL;
+	ML_WAIT_STATE(State, Effect->Base.Context);
+	ml_call(State, Effect->Stop, 1, Args);
+	ml_value_t *Result = ml_wait(State);
+	if (ml_is_error(Result)) return SOX_EINVAL;
 	return SOX_SUCCESS;
 }
 
@@ -240,11 +230,10 @@ static int ml_effect_kill(sox_effect_t *E) {
 	ml_effect_t *Effect = E->priv;
 	ml_value_t **Args = ml_alloc_args(1);
 	Args[0] = (ml_value_t *)Effect;
-	Effect->Result = NULL;
-	ml_call((ml_state_t *)Effect, Effect->Kill, 1, Args);
-	ml_scheduler_t *Scheduler = ml_context_get_static(Effect->Base.Context, ML_SCHEDULER_INDEX);
-	while (!Effect->Result) Scheduler->run(Scheduler);
-	if (ml_is_error(Effect->Result)) return SOX_EINVAL;
+	ML_WAIT_STATE(State, Effect->Base.Context);
+	ml_call(State, Effect->Kill, 1, Args);
+	ml_value_t *Result = ml_wait(State);
+	if (ml_is_error(Result)) return SOX_EINVAL;
 	return SOX_SUCCESS;
 }
 
@@ -270,7 +259,6 @@ ML_METHODVX(Effect, MLNamesT) {
 	ml_effect_t *Effect = new(ml_effect_t);
 	Effect->Base.Type = MLEffectT;
 	Effect->Base.Context = Caller->Context;
-	Effect->Base.run = (ml_state_fn)ml_effect_run;
 	int I = 0;
 	ML_NAMES_FOREACH(Args[0], Iter) {
 		const char *Option = ml_string_value(Iter->Value);

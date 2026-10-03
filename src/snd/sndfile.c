@@ -12,7 +12,6 @@ typedef struct {
 	ml_state_t Base;
 	SNDFILE *Handle;
 	ml_value_t *Stream;
-	ml_value_t *Result;
 	void (*read)(ml_state_t *, ml_value_t *, void *, int );
 	void (*write)(ml_state_t *, ml_value_t *, const void *, int );
 	void (*seek)(ml_state_t *, ml_value_t *, int64_t Offset, int Mode);
@@ -23,35 +22,27 @@ typedef struct {
 ML_TYPE(SndFileT, (), "sndfile");
 
 static sf_count_t sndfile_seek(sf_count_t Offset, int Whence, sndfile_t *SndFile) {
-	SndFile->Result = NULL;
-	SndFile->seek((ml_state_t *)SndFile, SndFile->Stream, Offset, Whence);
-	ml_scheduler_t *Scheduler = ml_context_get_static(SndFile->Base.Context, ML_SCHEDULER_INDEX);
-	while (!SndFile->Result) Scheduler->run(Scheduler);
-	return ml_integer_value(SndFile->Result);
+	ML_WAIT_STATE(State, SndFile->Base.Context);
+	SndFile->seek((ml_state_t *)State, SndFile->Stream, Offset, Whence);
+	return ml_integer_value(ml_wait(State));
 }
 
 static sf_count_t sndfile_read(void *Buffer, sf_count_t Count, sndfile_t *SndFile) {
-	SndFile->Result = NULL;
-	SndFile->read((ml_state_t *)SndFile, SndFile->Stream, Buffer, Count);
-	ml_scheduler_t *Scheduler = ml_context_get_static(SndFile->Base.Context, ML_SCHEDULER_INDEX);
-	while (!SndFile->Result) Scheduler->run(Scheduler);
-	return ml_integer_value(SndFile->Result);
+	ML_WAIT_STATE(State, SndFile->Base.Context);
+	SndFile->read((ml_state_t *)State, SndFile->Stream, Buffer, Count);
+	return ml_integer_value(ml_wait(State));
 }
 
 static sf_count_t sndfile_write(void *Buffer, sf_count_t Count, sndfile_t *SndFile) {
-	SndFile->Result = NULL;
-	SndFile->write((ml_state_t *)SndFile, SndFile->Stream, Buffer, Count);
-	ml_scheduler_t *Scheduler = ml_context_get_static(SndFile->Base.Context, ML_SCHEDULER_INDEX);
-	while (!SndFile->Result) Scheduler->run(Scheduler);
-	return ml_integer_value(SndFile->Result);
+	ML_WAIT_STATE(State, SndFile->Base.Context);
+	SndFile->write((ml_state_t *)State, SndFile->Stream, Buffer, Count);
+	return ml_integer_value(ml_wait(State));
 }
 
 static sf_count_t sndfile_tell(sndfile_t *SndFile) {
-	SndFile->Result = NULL;
-	SndFile->tell((ml_state_t *)SndFile, SndFile->Stream);
-	ml_scheduler_t *Scheduler = ml_context_get_static(SndFile->Base.Context, ML_SCHEDULER_INDEX);
-	while (!SndFile->Result) Scheduler->run(Scheduler);
-	return ml_integer_value(SndFile->Result);
+	ML_WAIT_STATE(State, SndFile->Base.Context);
+	SndFile->tell((ml_state_t *)State, SndFile->Stream);
+	return ml_integer_value(ml_wait(State));
 }
 
 static sf_count_t sndfile_get_filelen(sndfile_t *SndFile) {
@@ -116,9 +107,9 @@ ML_FLAGS2(SndFileFormatT, "sndfile::format",
 	"EndMask", SF_FORMAT_ENDMASK
 );
 
-static void sndfile_run(sndfile_t *SndFile, ml_value_t *Value) {
-	SndFile->Result = Value;
-}
+//static void sndfile_run(sndfile_t *SndFile, ml_value_t *Value) {
+//	SndFile->Result = Value;
+//}
 
 ML_METHODVX(SndFileT, MLStreamT, MLStringT, MLNamesT) {
 //>sndfile
@@ -128,7 +119,7 @@ ML_METHODVX(SndFileT, MLStreamT, MLStringT, MLNamesT) {
 	SndFile->Base.Type = SndFileT;
 	SndFile->Base.Caller = Caller;
 	SndFile->Base.Context = Caller->Context;
-	SndFile->Base.run = (ml_state_fn)sndfile_run;
+	//SndFile->Base.run = (ml_state_fn)sndfile_run;
 	SndFile->Stream = Stream;
 	SndFile->read = ml_typed_fn_get(Stream->Type, ml_stream_read) ?: ml_stream_read_method;
 	SndFile->write = ml_typed_fn_get(Stream->Type, ml_stream_write) ?: ml_stream_write_method;
@@ -179,7 +170,7 @@ ML_METHODVX(SndFileT, MLStreamT, MLStringT) {
 	SndFile->Base.Type = SndFileT;
 	SndFile->Base.Caller = Caller;
 	SndFile->Base.Context = Caller->Context;
-	SndFile->Base.run = (ml_state_fn)sndfile_run;
+	//SndFile->Base.run = (ml_state_fn)sndfile_run;
 	SndFile->Stream = Stream;
 	SndFile->read = ml_typed_fn_get(Stream->Type, ml_stream_read) ?: ml_stream_read_method;
 	SndFile->write = ml_typed_fn_get(Stream->Type, ml_stream_write) ?: ml_stream_write_method;

@@ -1503,11 +1503,9 @@ static void gir_closure_marshal(GClosure *Closure, GValue *Dest, guint NumArgs, 
 	MLArgs[0] = _value_to_ml(Args, NULL);
 	for (guint I = 1; I < NumArgs; ++I) MLArgs[I] = _value_to_ml(Args + I, Info->Args[I]);
 	//ml_value_t *Value = ml_call_wait(Info->Context, Info->Function, NumArgs, MLArgs);
-	ml_result_state_t *State = ml_result_state(Info->Context);
+	ML_WAIT_STATE(State, Info->Context);
 	ml_call(State, Info->Function, NumArgs, MLArgs);
-	ml_scheduler_t *Scheduler = ml_context_get_static(Info->Context, ML_SCHEDULER_INDEX);
-	while (!State->Value) Scheduler->run(Scheduler);
-	ml_value_t *Value = State->Value;
+	ml_value_t *Value = ml_wait(State);
 	if (ml_is_error(Value)) ML_LOG_ERROR(Value, "Closure returned error");
 	if (Dest) {
 		if (ml_is(Value, MLBooleanT)) {
@@ -1701,6 +1699,25 @@ int ml_gir_queue_fill(gir_scheduler_t *Scheduler) {
 }
 
 typedef struct {
+	ml_state_t Base;
+	GMainContext *MainContext;
+} ml_gir_loop_state_t;
+
+static void ml_gir_loop_wake(ml_scheduler_t *Scheduler, ml_gir_loop_state_t *State) {
+	g_main_context_wakeup(State->MainContext);
+}
+
+static void ml_gir_loop_fn(ml_gir_loop_state_t *State, ml_value_t *Value) {
+	ml_scheduler_t *Scheduler = ml_context_get_scheduler(State->Base.Context);
+	Scheduler->wake = (void *)ml_gir_loop_wake;
+	Scheduler->WakeData = State;
+	while (g_main_context_iteration(State->MainContext, !Scheduler->Queue->Fill));
+	Scheduler->wake = NULL;
+	Scheduler->WakeData = NULL;
+	ml_state_schedule((ml_state_t *)State, Value);
+}
+
+typedef struct {
 	ml_state_t *State;
 	ml_value_t *Result;
 } ml_gir_sleep_t;
@@ -1712,7 +1729,7 @@ static gboolean sleep_run(void *Data) {
 	return G_SOURCE_REMOVE;
 }
 
-void ml_gir_queue_sleep(gir_scheduler_t *Scheduler, ml_state_t *State, double Duration, ml_value_t *Result) {
+/*void ml_gir_queue_sleep(gir_scheduler_t *Scheduler, ml_state_t *State, double Duration, ml_value_t *Result) {
 	ml_gir_sleep_t *Sleep = GC_malloc_uncollectable(sizeof(ml_gir_sleep_t));
 	Sleep->State = State;
 	Sleep->Result = Result;
@@ -1730,7 +1747,7 @@ static gir_scheduler_t *gir_scheduler(ml_context_t *Context) {
 	Scheduler->MainContext = g_main_context_default();
 	ml_context_set_static(Context, ML_SCHEDULER_INDEX, Scheduler);
 	return Scheduler;
-}
+}*/
 
 ML_FUNCTIONX(MLSleep) {
 //@sleep
@@ -1745,7 +1762,7 @@ ML_FUNCTIONX(MLSleep) {
 
 ML_FUNCTIONX(GirInstall) {
 //@gir::install
-	gir_scheduler(Caller->Context);
+	//gir_scheduler(Caller->Context);
 	ML_RETURN(MLNil);
 }
 
@@ -1823,7 +1840,7 @@ static void ML_TYPED_FN(ml_stream_write, (ml_type_t *)GOutputStreamT, ml_state_t
 
 void ml_gir_loop_init(ml_context_t *Context) {
 	MainLoop = g_main_loop_new(NULL, TRUE);
-	gir_scheduler(Context);
+	//gir_scheduler(Context);
 }
 
 void ml_gir_loop_run() {
@@ -2410,11 +2427,8 @@ static void callable_invoke(ffi_cif *Cif, void *Return, void **Params, void *Dat
 		break;
 	}
 	}
-	ml_result_state_t *State = ml_result_state(Instance->Context);
-	ml_call(State, Instance->Function, Arg - Args, Args);
-	ml_scheduler_t *Scheduler = ml_context_get_static(Instance->Context, ML_SCHEDULER_INDEX);
-	while (!State->Value) Scheduler->run(Scheduler);
-	ml_value_t *Result = ml_deref(State->Value);
+	ml_value_t *Result = ml_call_wait(Instance->Context, Instance->Function, Arg - Args, Args);
+	Result = ml_deref(Result);
 	if (ml_is_error(Result)) ML_LOG_ERROR(Result, "Callback returned error");
 	for (gi_inst_t *Inst = Callback->InstOut; Inst->Opcode != GIB_DONE;) switch ((Inst++)->Opcode) {
 	case GIB_BOOLEAN: *(gboolean *)Return = ml_boolean_value(Result); break;
@@ -2879,9 +2893,169 @@ typedef struct {
 	void *Aux[];
 } gir_function_t;
 
+typedef struct {
+	ml_state_t *Caller;
+	gir_function_t *Function;
+	GIArgument *ArgsOut, *ArgsReturn;
+	GValue *Values;
+	GIArgument Arguments[];
+} gir_function_call_t;
+
+static gboolean gir_function_call_func(gpointer *Data) {
+	gir_function_call_t *Call = (gir_function_call_t *)Data;
+	gir_function_t *Function = Call->Function;
+	GError *Error = 0;
+	gboolean Invoked = g_function_info_invoke(
+		Function->Info,
+		Call->Arguments, Function->NumArgsIn,
+		Call->ArgsOut, Function->NumArgsOut,
+		Call->ArgsReturn,
+		&Error
+	);
+	GIArgument *Outputs = Call->ArgsReturn, *ArgOut = Outputs;
+	ml_state_t *Caller = Call->Caller;
+	if (!Invoked || Error) {
+		ml_state_schedule(Caller, ml_error("InvokeError", "Error: %s", Error->message));
+		return G_SOURCE_REMOVE;
+	}
+	ml_value_t *Results, **Result;
+	if (Function->NumResults > 1) {
+		Results = ml_tuple(Function->NumResults);
+		Result = ((ml_tuple_t *)Results)->Values;
+	} else {
+		Results = MLNil;
+		Result = &Results;
+	}
+	int Free = 0;
+	for (gi_inst_t *Inst = Function->InstOut; Inst->Opcode != GIB_DONE;) switch ((Inst++)->Opcode) {
+	case GIB_SKIP: ArgOut++; break;
+	case GIB_BOOLEAN: *Result++ = ml_boolean((ArgOut++)->v_boolean); break;
+	case GIB_INT8: *Result++ = ml_integer((ArgOut++)->v_int8); break;
+	case GIB_UINT8: *Result++ = ml_integer((ArgOut++)->v_uint8); break;
+	case GIB_INT16: *Result++ = ml_integer((ArgOut++)->v_int16); break;
+	case GIB_UINT16: *Result++ = ml_integer((ArgOut++)->v_uint16); break;
+	case GIB_INT32: *Result++ = ml_integer((ArgOut++)->v_int32); break;
+	case GIB_UINT32: *Result++ = ml_integer((ArgOut++)->v_uint32); break;
+	case GIB_INT64: *Result++ = ml_integer((ArgOut++)->v_int64); break;
+	case GIB_UINT64: *Result++ = ml_integer((ArgOut++)->v_uint64); break;
+	case GIB_FLOAT: *Result++ = ml_real((ArgOut++)->v_float); break;
+	case GIB_DOUBLE: *Result++ = ml_real((ArgOut++)->v_double); break;
+	case GIB_STRING: *Result++ = ml_string((ArgOut++)->v_string, -1); break;
+	case GIB_ARRAY: {
+		break;
+	}
+	case GIB_ARRAY_ZERO: {
+		break;
+	}
+	case GIB_ARRAY_LENGTH: {
+		int Aux = (Inst++)->Aux;
+		ml_value_t *(*to_value)(void *, void *);
+		int Size;
+		switch ((Inst++)->Opcode) {
+		case GIB_BOOLEAN: to_value = boolean_to_value; Size = sizeof(gboolean); break;
+		case GIB_INT8: to_value = int8_to_value; Size = sizeof(gint8); break;
+		case GIB_UINT8: to_value = uint8_to_value; Size = sizeof(guint8); break;
+		case GIB_INT16: to_value = int16_to_value; Size = sizeof(gint16); break;
+		case GIB_UINT16: to_value = uint16_to_value; Size = sizeof(guint16); break;
+		case GIB_INT32: to_value = int32_to_value; Size = sizeof(gint32); break;
+		case GIB_UINT32: to_value = uint32_to_value; Size = sizeof(guint32); break;
+		case GIB_INT64: to_value = int64_to_value; Size = sizeof(gint64); break;
+		case GIB_UINT64: to_value = uint64_to_value; Size = sizeof(guint64); break;
+		case GIB_FLOAT: to_value = float_to_value; Size = sizeof(gfloat); break;
+		case GIB_DOUBLE: to_value = double_to_value; Size = sizeof(gdouble); break;
+		case GIB_STRING: to_value = string_to_value; Size = sizeof(gchararray); break;
+		case GIB_GTYPE: to_value = gtype_to_value; Size = sizeof(GType); break;
+		//case GIB_BYTES: to_value = bytes_to_value; Size = sizeof(gpointer); break;
+		default: {
+			ml_state_schedule(Caller, ml_error("TypeError", "Unsupported array type"));
+			return G_SOURCE_REMOVE;
+		}
+		}
+		void *Array = (ArgOut++)->v_pointer;
+		if (to_value == int8_to_value || to_value == uint8_to_value) {
+			if (Array) {
+				size_t Length = Outputs[Aux].v_int64;
+				char *Buffer = snew(Length + 1);
+				memcpy(Buffer, Array, Length);
+				Buffer[Length] = 0;
+				*Result++ = ml_address(Buffer, Length);
+			} else {
+				*Result++ = MLNil;
+			}
+		} else {
+			ml_value_t *List = ml_list();
+			if (Array) {
+				size_t Length = Outputs[Aux].v_int64;
+				void *Ptr = Array;
+				for (size_t I = 0; I < Length; ++I) {
+					ml_list_put(List, to_value(Ptr, NULL));
+					Ptr += Size;
+				}
+			}
+			*Result++ = List;
+		}
+		if (Free) {
+			g_free(Array);
+			Free = 0;
+		}
+		break;
+	}
+	case GIB_STRUCT: {
+		struct_instance_t *Instance = new(struct_instance_t);
+		Instance->Type = Function->Aux[(Inst++)->Aux];
+		Instance->Value = (ArgOut++)->v_pointer;
+		*Result++ = (ml_value_t *)Instance;
+		if (Free) {
+			// TODO: mark instance for cleanup
+			Free = 0;
+		}
+		break;
+	}
+	case GIB_UNION: {
+		union_instance_t *Instance = new(union_instance_t);
+		Instance->Type = Function->Aux[(Inst++)->Aux];
+		Instance->Value = (ArgOut++)->v_pointer;
+		*Result++ = (ml_value_t *)Instance;
+		if (Free) {
+			// TODO: mark instance for cleanup
+			Free = 0;
+		}
+		break;
+	}
+	case GIB_ENUM: {
+		enum_t *Enum = (enum_t *)Function->Aux[(Inst++)->Aux];
+		*Result++ = (ml_value_t *)Enum->ByIndex[(ArgOut++)->v_int];
+		break;
+	}
+	case GIB_OBJECT: {
+		ml_type_t *Type = (ml_type_t *)Function->Aux[(Inst++)->Aux];
+		*Result++ = ml_gir_instance_get((ArgOut++)->v_pointer, Type);
+		break;
+	}
+	case GIB_HASH: {
+		ghash_to_map_t Convert[1];
+		Convert->Map = ml_map();
+		ptr_to_value(&Inst, Function->Aux, Convert->Key);
+		ptr_to_value(&Inst, Function->Aux, Convert->Value);
+		GHashTable *Hash = (GHashTable *)((ArgOut++)->v_pointer);
+		if (Hash) g_hash_table_foreach(Hash, (GHFunc)ghash_to_map, Convert);
+		*Result++ = Convert->Map;
+		if (Free) {
+			g_hash_table_destroy(Hash);
+			Free = 0;
+		}
+		break;
+	}
+	case GIB_FREE: Free = 1; break;
+	}
+	ml_state_schedule(Caller, Results);
+	return G_SOURCE_REMOVE;
+}
+
 static void gir_function_call(ml_state_t *Caller, gir_function_t *Function, int Count, ml_value_t **Args) {
 	ML_CHECKX_ARG_COUNT(Function->NumInputs);
 	size_t NumArgs = Function->NumArgsIn + Function->NumArgsOut + Function->NumOutputs;
+//	gir_function_call_t *Call = xnew(gir_function_call_t, NumArgs, GIArgument);
 	GIArgument Arguments[NumArgs];
 	memset(Arguments, 0, NumArgs * sizeof(GIArgument));
 	GValue Values[Function->NumValues];
@@ -4449,7 +4623,12 @@ ML_LIBRARY_ENTRY(gir) {
 	stringmap_insert(GirModuleT->Exports, "sleep", MLSleep);
 	stringmap_insert(GirModuleT->Exports, "install", GirInstall);
 	//stringmap_insert(Globals, "gir", MLGirTypelibT);
-	gir_scheduler(Caller->Context);
+	//gir_scheduler(Caller->Context);
+	ml_gir_loop_state_t *State = new(ml_gir_loop_state_t);
+	State->Base.Context = Caller->Context;
+	State->Base.run = (ml_state_fn)ml_gir_loop_fn;
+	State->MainContext = g_main_context_default();
+	ml_state_schedule((ml_state_t *)State, MLNil);
 	Slot[0] = GirModule;
 	ML_RETURN(GirModule);
 }

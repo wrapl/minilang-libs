@@ -13,23 +13,23 @@ db/radb
    *TBD*
 
 
-:mini:`meth (Store: cborstore):count`
+:mini:`meth (Arg₁: uuidindex):close`
    *TBD*
 
 
-:mini:`type fixedindex`
+:mini:`meth (Arg₁: uuidindex):count`
    *TBD*
 
 
-:mini:`meth (Arg₁: fixedindex):search(Arg₂: address)`
+:mini:`meth (Arg₁: uuidindex):get(Arg₂: integer)`
    *TBD*
 
 
-:mini:`type fixedstore`
-   A store for strings.
+:mini:`meth (Arg₁: uuidindex):delete(Arg₂: uuid)`
+   *TBD*
 
 
-:mini:`meth (Arg₁: stringstore):append(Arg₂: integer)`
+:mini:`meth (Arg₁: uuidindex):insert(Arg₂: uuid)`
    *TBD*
 
 
@@ -49,27 +49,23 @@ db/radb
    *TBD*
 
 
-:mini:`meth (Arg₁: fixedindex):close`
-   *TBD*
-
-
 :mini:`meth (Store: stringstore):close`
    Closes :mini:`Store`.
 
 
-:mini:`meth (Store: fixedstore):close`
-   Closes :mini:`Store`.
+:mini:`fun fixedstore::create(Path: string, NodeSize: integer): string_store`
+   Creates a new string store at :mini:`Path` with node size :mini:`NodeSize` and default chunk size.
 
 
-:mini:`meth (Arg₁: stringstore):remove(Arg₂: integer, Arg₃: integer)`
+:mini:`meth (Arg₁: stringstore):remove32(Arg₂: integer, Arg₃: integer)`
    *TBD*
 
 
-:mini:`fun fixedindex::create(Arg₁: string)`
+:mini:`meth (Arg₁: fixedindex):delete(Arg₂: address)`
    *TBD*
 
 
-:mini:`meth (Arg₁: stringstore):insert(Arg₂: integer, Arg₃: integer)`
+:mini:`meth (Arg₁: stringstore):insert32(Arg₂: integer, Arg₃: integer)`
    *TBD*
 
 
@@ -77,11 +73,11 @@ db/radb
    *TBD*
 
 
-:mini:`meth (Arg₁: stringstore):search(Arg₂: integer, Arg₃: integer)`
+:mini:`meth (Arg₁: stringstore):search32(Arg₂: integer, Arg₃: integer)`
    *TBD*
 
 
-:mini:`meth (Arg₁: uuidindex):get(Arg₂: integer)`
+:mini:`fun fixedindex::create(Arg₁: string)`
    *TBD*
 
 
@@ -89,7 +85,7 @@ db/radb
    *TBD*
 
 
-:mini:`meth (Arg₁: stringindex):get(Arg₂: integer)`
+:mini:`meth (Arg₁: stringindex):count`
    *TBD*
 
 
@@ -97,11 +93,15 @@ db/radb
    A stream for reading from a string store entry.
 
 
-:mini:`meth (Arg₁: stringindex):insert(Arg₂: address)`
+:mini:`meth (Arg₁: stringindex):delete(Arg₂: address)`
    *TBD*
 
 
 :mini:`meth (Arg₁: stringstore):truncate(Arg₂: integer, Arg₃: integer)`
+   *TBD*
+
+
+:mini:`meth (Arg₁: stringindex):search(Arg₂: address)`
    *TBD*
 
 
@@ -110,10 +110,6 @@ db/radb
 
 
 :mini:`fun stringindex::open(Arg₁: string)`
-   *TBD*
-
-
-:mini:`type stringindex`
    *TBD*
 
 
@@ -129,8 +125,16 @@ db/radb
    A stream for writing to a string store entry.
 
 
-:mini:`fun fixedstore::create(Path: string, NodeSize: integer): string_store`
-   Creates a new string store at :mini:`Path` with node size :mini:`NodeSize` and default chunk size.
+:mini:`meth (Arg₁: cborstore):set(Arg₂: integer, Arg₃: any)`
+   *TBD*
+
+
+:mini:`meth (Store: stringstore):alloc: integer`
+   Allocates a new slot in :mini:`Store`.
+
+
+:mini:`meth (Store: fixedstore):alloc: integer`
+   Allocates a new slot in :mini:`Store`.
 
 
 :mini:`meth (Store: stringstore):set(Index: integer, Value: address): string`
@@ -145,15 +149,15 @@ db/radb
    *TBD*
 
 
-:mini:`meth (Arg₁: fixedindex):count`
+:mini:`meth (Arg₁: fixedindex):close`
    *TBD*
 
 
-:mini:`meth (Arg₁: fixedindex):get(Arg₂: integer)`
-   *TBD*
+:mini:`meth (Store: fixedstore):get(Index: integer): string`
+   Returns the entry at :mini:`Index` in :mini:`Store`.
 
 
-:mini:`meth (Store: fixedstore):count`
+:mini:`meth (Arg₁: fixedindex):insert(Arg₂: address)`
    *TBD*
 
 
@@ -161,15 +165,15 @@ db/radb
    *TBD*
 
 
-:mini:`meth (Arg₁: stringindex):count`
+:mini:`fun stringstore::create(Path: string, NodeSize: integer): string_store`
+   Creates a new string store at :mini:`Path` with node size :mini:`NodeSize` and default chunk size.
+
+
+:mini:`meth (Arg₁: stringindex):get(Arg₂: integer)`
    *TBD*
 
 
-:mini:`meth (Arg₁: stringindex):delete(Arg₂: address)`
-   *TBD*
-
-
-:mini:`meth (Arg₁: stringindex):search(Arg₂: address)`
+:mini:`meth (Arg₁: stringindex):insert(Arg₂: address)`
    *TBD*
 
 
@@ -181,35 +185,39 @@ db/radb
    *TBD*
 
 
-:mini:`meth (Arg₁: cborstore):set(Arg₂: integer, Arg₃: any)`
+:mini:`type stringindex`
    *TBD*
 
 
-:mini:`meth (Store: fixedstore):get(Index: integer): string`
-   Returns the entry at :mini:`Index` in :mini:`Store`.
+:mini:`meth (Arg₁: cborstore):get(Arg₂: integer)`
+   *TBD*
+
+
+:mini:`type fixedstore`
+   A store for strings.
 
 
 :mini:`fun cborstore::open(Arg₁: string)`
    *TBD*
 
 
-:mini:`meth (Arg₁: fixedindex):delete(Arg₂: address)`
+:mini:`meth (Arg₁: fixedindex):count`
    *TBD*
 
 
-:mini:`meth (Arg₁: fixedindex):insert(Arg₂: address)`
+:mini:`meth (Arg₁: fixedindex):search(Arg₂: address)`
    *TBD*
 
 
-:mini:`fun stringstore::create(Path: string, NodeSize: integer): string_store`
-   Creates a new string store at :mini:`Path` with node size :mini:`NodeSize` and default chunk size.
+:mini:`meth (Store: fixedstore):close`
+   Closes :mini:`Store`.
 
 
 :mini:`fun fixedstore::open(Path: string): string_store`
    Opens an existing string store at :mini:`Path`.
 
 
-:mini:`meth (Arg₁: cborstore):get(Arg₂: integer)`
+:mini:`meth (Arg₁: stringstore):append(Arg₂: integer)`
    *TBD*
 
 
@@ -217,19 +225,23 @@ db/radb
    *TBD*
 
 
-:mini:`meth (Arg₁: uuidindex):count`
+:mini:`meth (Arg₁: fixedindex):get(Arg₂: integer)`
    *TBD*
 
 
-:mini:`meth (Arg₁: uuidindex):delete(Arg₂: uuid)`
+:mini:`type fixedindex`
    *TBD*
 
 
-:mini:`meth (Arg₁: uuidindex):close`
+:mini:`meth (Store: fixedstore):count`
    *TBD*
 
 
-:mini:`meth (Arg₁: uuidindex):insert(Arg₂: uuid)`
+:mini:`meth (Store: cborstore):count`
    *TBD*
+
+
+:mini:`meth (Store: cborstore):alloc: integer`
+   Allocates a new slot in :mini:`Store`.
 
 

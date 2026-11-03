@@ -1167,7 +1167,7 @@ gtk_console_t *gtk_console(ml_state_t *Caller, ml_getter_t GlobalGet, void *Glob
 	gtk_widget_set_margin_end(ReplBox, 2);
 	gtk_paned_set_start_child(GTK_PANED(Console->Paned), OutputPane);
 	gtk_paned_set_end_child(GTK_PANED(Console->Paned), ReplBox);
-	gtk_paned_set_position(GTK_PANED(Console->Paned), 600);
+	gtk_paned_set_position(GTK_PANED(Console->Paned), 0);
 
 	if (g_key_file_has_key(Console->Config, "gtk-console", "font", NULL)) {
 		const char *FontName = g_key_file_get_string(Console->Config, "gtk-console", "font", NULL);

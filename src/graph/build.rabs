@@ -15,3 +15,20 @@ scope("graphviz";) do
 end>:
 
 so_module("graph/graphviz.so", [file("graphviz.o")], ["-lcdt", "-lcgraph", "-lgvc"], Tags is ["standard"])
+
+scope("adaptagrams";) do
+	let Dir := file("adaptagrams")
+	let Adaptagrams := meta("adaptagrams") => fun() do
+		Dir:rmdir:mkdir:chdir
+		execute("git clone --recursive https://github.com/mjwybrow/adaptagrams.git .")
+		execute("cd cola && autoreconf -vi")
+		execute('cd cola && ./configure --prefix={PATH}')
+		execute("cd cola && make clean")
+		execute("cd cola && make -j4")
+		execute("cd cola && make install")
+	end
+	PREBUILDS := old + [Adaptagrams]
+	CFLAGS := old + ["-I", "include"]
+	LDFLAGS := old + ["-L", "lib"]
+	so_module("graph/adaptagrams.so", [file("adaptagrams.o")], ["-lcola"])
+end

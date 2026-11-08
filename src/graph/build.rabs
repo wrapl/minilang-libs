@@ -30,5 +30,5 @@ scope("adaptagrams";) do
 	PREBUILDS := old + [Adaptagrams]
 	CFLAGS := old + ["-I", "include"]
 	LDFLAGS := old + ["-L", "lib"]
-	so_module("graph/adaptagrams.so", [file("adaptagrams.o")], ["-lcola"])
+	so_module("graph/adaptagrams.so", [file("adaptagrams.o")], ["lib/libcola.a", "lib/libvpsc.a"])
 end

@@ -32,36 +32,11 @@ ML_METHOD(RectangleT, MLRealT, MLRealT, MLRealT, MLRealT, MLBooleanT) {
 ML_METHOD("append", MLStringBufferT, RectangleT) {
 	ml_stringbuffer_t *Buffer = (ml_stringbuffer_t *)Args[0];
 	rectangle_t *Rectangle = (rectangle_t *)Args[1];
-	//ml_stringbuffer_printf(Buffer, "[(%f, %f) x (%f, %f)]",
-}
-
-ML_TYPE(FDLayoutT, (), "fdlayout");
-
-struct fdlayout_t : public gc {
-	ml_type_t *Type;
-	cola::ConstrainedFDLayout Value;
-	fdlayout_t(const vpsc::Rectangles &Rs, const std::vector<cola::Edge> &Es, const double IdealLength) :
-		Type(FDLayoutT), Value(Rs, Es, IdealLength) {}
-};
-
-ML_METHOD(FDLayoutT, MLListT, MLListT, MLRealT) {
-	vpsc::Rectangles Rects;
-	ML_LIST_FOREACH(Args[0], Iter) {
-		if (!ml_is(Iter->Value, RectangleT)) return ml_error("TypeError", "Expected rectangle");
-		Rects.push_back(&((rectangle_t *)Iter->Value)->Value);
-	}
-	std::vector<cola::Edge> Edges;
-	ML_LIST_FOREACH(Args[1], Iter) {
-		if (!ml_is(Iter->Value, MLTupleT)) return ml_error("TypeError", "Expected tuple");
-		if (ml_tuple_size(Iter->Value) < 2) return ml_error("ShapeError", "Expected at least 2 values");
-		unsigned A = ml_integer_value(ml_tuple_get(Iter->Value, 1));
-		unsigned B = ml_integer_value(ml_tuple_get(Iter->Value, 2));
-		if (A == B) return ml_error("RangeError", "Invalid edge");
-		if (A < 1 || B < 1 || A > Rects.size() || B > Rects.size()) return ml_error("RangeError", "Invalid edge");
-		Edges.push_back(cola::Edge(A - 1, B - 1));
-	}
-	double IdealLength = ml_real_value(Args[2]);
-	return (ml_value_t *)new fdlayout_t(Rects, Edges, IdealLength);
+	ml_stringbuffer_printf(Buffer, "[(%f, %f) x (%f, %f)]",
+		Rectangle->Value.getMinX(), Rectangle->Value.getMaxX(),
+		Rectangle->Value.getMinY(), Rectangle->Value.getMaxY()
+	);
+	return MLSome;
 }
 
 ML_ENUM2(DimT, "dim",
@@ -84,24 +59,6 @@ ML_METHOD("append", MLStringBufferT, ConstraintT) {
 	std::string String = Constraint->Value->toString();
 	ml_stringbuffer_write(Buffer, String.c_str(), String.size());
 	return MLSome;
-}
-
-ML_METHOD("constraints", FDLayoutT, MLListT) {
-	cola::CompoundConstraints Constraints;
-	ML_LIST_FOREACH(Args[1], Iter) {
-		if (!ml_is(Iter->Value, ConstraintT)) return ml_error("TypeError", "Expected constraint");
-		constraint_t *Constraint = (constraint_t *)Iter->Value;
-		Constraints.push_back(Constraint->Value);
-	}
-	fdlayout_t *Layout = (fdlayout_t *)Args[0];
-	Layout->Value.setConstraints(Constraints);
-	return (ml_value_t *)Layout;
-}
-
-ML_METHOD("run", FDLayoutT) {
-	fdlayout_t *Layout = (fdlayout_t *)Args[0];
-	Layout->Value.run();
-	return (ml_value_t *)Layout;
 }
 
 ML_TYPE(AlignmentConstraintT, (ConstraintT), "constraint::alignment");
@@ -144,10 +101,109 @@ ML_METHOD("add", BoundaryConstraintT, MLIntegerT, MLRealT) {
 	return (ml_value_t *)Constraint;
 }
 
+ML_TYPE(ClusterT, (), "cluster");
+
+struct cluster_t : public gc {
+	ml_type_t *Type;
+	cola::Cluster *Value;
+	cluster_t(ml_type_t *Type, cola::Cluster *Value) : Type(Type), Value(Value) {}
+};
+
+ML_METHOD("add", ClusterT, MLIntegerT) {
+	cluster_t *Cluster = (cluster_t *)Args[0];
+	Cluster->Value->addChildNode(ml_integer_value(Args[1]));
+	return (ml_value_t *)Cluster;
+}
+
+ML_METHOD("add", ClusterT, ClusterT) {
+	cluster_t *Cluster = (cluster_t *)Args[0];
+	cluster_t *Child = (cluster_t *)Args[1];
+	Cluster->Value->addChildCluster(Child->Value);
+	return (ml_value_t *)Cluster;
+}
+
+ML_TYPE(RectangularClusterT, (ClusterT), "cluster::rectangular");
+
+ML_METHOD(RectangularClusterT) {
+	return (ml_value_t *)new cluster_t(RectangularClusterT, new cola::RectangularCluster());
+}
+
+ML_METHOD(RectangularClusterT, MLIntegerT) {
+	return (ml_value_t *)new cluster_t(RectangularClusterT, new cola::RectangularCluster(ml_integer_value(Args[0])));
+}
+
+ML_TYPE(ConvexClusterT, (ClusterT), "cluster::convex");
+
+ML_METHOD(ConvexClusterT) {
+	return (ml_value_t *)new cluster_t(ConvexClusterT, new cola::ConvexCluster());
+}
+
+ML_TYPE(LayoutT, (), "layout");
+
+struct layout_t : public gc {
+	ml_type_t *Type;
+	vpsc::Rectangles Rects;
+	std::vector<cola::Edge> Edges;
+	cola::RootCluster Cluster;
+	cola::CompoundConstraints Constraints;
+	layout_t() : Type(LayoutT) {}
+};
+
+ML_METHOD(LayoutT) {
+	return (ml_value_t *)new layout_t();
+}
+
+ML_METHOD("add", LayoutT, RectangleT) {
+	layout_t *Layout = (layout_t *)Args[0];
+	rectangle_t *Rect = (rectangle_t *)Args[1];
+	Layout->Rects.push_back(&Rect->Value);
+	return (ml_value_t *)Layout;
+}
+
+ML_METHOD("node", LayoutT, MLIntegerT) {
+	layout_t *Layout = (layout_t *)Args[0];
+	Layout->Cluster.addChildNode(ml_integer_value(Args[1]));
+	return (ml_value_t *)Layout;
+}
+
+ML_METHOD("edge", LayoutT, MLIntegerT, MLIntegerT) {
+	layout_t *Layout = (layout_t *)Args[0];
+	Layout->Edges.push_back(cola::Edge(ml_integer_value(Args[1]), ml_integer_value(Args[2])));
+	return (ml_value_t *)Layout;
+}
+
+ML_METHOD("add", LayoutT, ClusterT) {
+	layout_t *Layout = (layout_t *)Args[0];
+	cluster_t *Cluster = (cluster_t *)Args[1];
+	Layout->Cluster.addChildCluster(Cluster->Value);
+	return (ml_value_t *)Layout;
+}
+
+ML_METHOD("add", LayoutT, ConstraintT) {
+	layout_t *Layout = (layout_t *)Args[0];
+	constraint_t *Constraint = (constraint_t *)Args[1];
+	Layout->Constraints.push_back(Constraint->Value);
+	return (ml_value_t *)Layout;
+}
+
+ML_METHOD("fd_layout", LayoutT) {
+	layout_t *Layout = (layout_t *)Args[0];
+	cola::ConstrainedFDLayout FDLayout(Layout->Rects, Layout->Edges, 1);
+	FDLayout.run();
+	return (ml_value_t *)Layout;
+}
+
 ML_LIBRARY_ENTRY0(adaptagrams) {
+	stringmap_insert(ConstraintT->Exports, "alignment", AlignmentConstraintT);
+	stringmap_insert(ConstraintT->Exports, "boundary", BoundaryConstraintT);
+	stringmap_insert(ClusterT->Exports, "rectangular", RectangularClusterT);
+	stringmap_insert(ClusterT->Exports, "convex", ConvexClusterT);
 #include "adaptagrams_init.cpp"
 	Slot[0] = ml_module("adaptagrams",
 		"rectangle", RectangleT,
-		"fdlayout", FDLayoutT,
+		"dim", DimT,
+		"constraint", ConstraintT,
+		"cluster", ClusterT,
+		"layout", LayoutT,
 	NULL);
 }
